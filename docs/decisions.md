@@ -86,6 +86,22 @@ Statuses: **Accepted** means the working project direction; **Proposed** needs i
 - Use readable light foregrounds on the red background in both themes. Active Daylight badges have white text and darker fills; inactive badges retain dark text on their pale fill.
 - Place turn arrows at opposite ends of the full-width tell-tale row. L and R are exclusive; Z toggles synchronized hazards. Selecting a direction cancels hazards; disabling hazards clears both signals.
 
+## D12 — Bundle Bricolage Grotesque
+
+- Date: 2026-10-06
+- Status: Accepted
+- Use the official Bricolage Grotesque Regular, SemiBold, and Bold across the interface, replacing Helvetica Neue.
+- Bundle the unmodified font files and OFL license into the app and load them before QML; no machine-wide installation or runtime network dependency.
+- Provenance and file hashes: [font assets](../assets/fonts/bricolage/README.md).
+
+## D13 — Street speed prominence for the UI baseline
+
+- Date: 2026-10-06
+- Status: Accepted
+- Increase Street speed digits from 91 to 128 px and move the lower-section boundary down by 40 px (y=336 → 376).
+- Compress Street's information/fuel strip: smaller primary information value, inline distance unit, compact fuel gauge, and no duplicate information-cycle hint (the footer retains it).
+- Track mode keeps its existing dimensions and lap layout. This is a visual baseline, not completion of hardware or data-integration milestones.
+
 ## New decision template
 
 ```markdown

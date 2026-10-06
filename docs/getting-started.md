@@ -6,6 +6,8 @@ This is a native desktop application. Qt creates the window; QML describes its a
 
 The app opens at 800 × 480 logical pixels. On a Retina display, macOS uses extra physical pixels for sharp rendering. This is our first design canvas, not a confirmed final screen specification.
 
+The interface uses bundled **Bricolage Grotesque**. You do not need to install it on your Mac. Font files and license live under `assets/fonts/bricolage/`; registration happens in `app/Fonts.h`.
+
 ## Requirements
 
 - Apple Command Line Tools (C++ compiler).

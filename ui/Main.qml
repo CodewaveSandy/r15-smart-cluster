@@ -16,16 +16,25 @@ Window {
     property bool shiftPulse: true
     readonly property bool shiftRed: shiftWarning && (!shiftFlashing || shiftPulse)
     readonly property bool lightPalette: display.light && !shiftRed
-    color: shiftRed ? "#8f172a" : display.light ? "#eff3f5" : "#090e14"
+    color: display.light ? "#eff3f5" : "#090e14"
+    Rectangle {
+        anchors.fill: parent
+        visible: window.shiftRed
+        gradient: Gradient {
+            GradientStop { position: 0; color: "#492731" }
+            GradientStop { position: 0.55; color: "#b34c48" }
+            GradientStop { position: 1; color: "#64303b" }
+        }
+    }
     Timer {
         interval: 300; running: window.shiftFlashing; repeat: true
         onTriggered: window.shiftPulse = !window.shiftPulse
     }
     onShiftFlashingChanged: shiftPulse = true
     readonly property color ink: lightPalette ? "#122333" : "#edf4fb"
-    readonly property color muted: lightPalette ? "#4d6577" : "#91a4b7"
-    readonly property color panel: lightPalette ? "#e0e8ec" : "#14202c"
-    readonly property color line: lightPalette ? "#c7d3db" : "#253544"
+    readonly property color muted: shiftRed ? "#f0d5d0" : lightPalette ? "#4d6577" : "#91a4b7"
+    readonly property color panel: shiftRed ? "#352730" : lightPalette ? "#e0e8ec" : "#14202c"
+    readonly property color line: shiftRed ? "#527f6268" : lightPalette ? "#c7d3db" : "#253544"
     readonly property color accent: lightPalette ? "#007757" : "#78e4c1"
     readonly property color amber: lightPalette ? "#946000" : "#f5d45b"
     readonly property color red: lightPalette ? "#bf263a" : "#ff7980"
@@ -44,7 +53,7 @@ Window {
     Timer { interval: 450; running: true; repeat: true; onTriggered: window.blink = !window.blink }
     Connections { target: display; function onChanged() { window.infoIndex = 0 } }
 
-    component Label: Text { color: window.ink; font.family: "Helvetica Neue"; font.pixelSize: 14 }
+    component Label: Text { color: window.ink; font.family: Qt.application.font.family; font.pixelSize: 14 }
     component Rule: Rectangle { height: 1; color: window.line }
     component Lamp: Rectangle {
         property string label
@@ -257,11 +266,11 @@ Window {
             }
             Label {
                 objectName: "speedValue"
-                x: display.track ? 28 : 210; y: display.track ? 231 : 222
+                x: display.track ? 28 : 210; y: display.track ? 231 : 220
                 width: display.track ? 255 : 380; horizontalAlignment: display.track ? Text.AlignLeft : Text.AlignHCenter
-                text: Math.round(bike.speed * (display.imperial ? 0.621371 : 1)); font.pixelSize: display.track ? 79 : 91; font.weight: Font.Bold
+                text: Math.round(bike.speed * (display.imperial ? 0.621371 : 1)); font.pixelSize: display.track ? 79 : 128; font.weight: Font.Bold
             }
-            Label { x: display.track ? 225 : 590; y: display.track ? 277 : 277; text: display.imperial ? "mph" : "km/h"; color: window.muted; font.pixelSize: 16 }
+            Label { x: display.track ? 225 : 590; y: display.track ? 277 : 306; text: display.imperial ? "mph" : "km/h"; color: window.muted; font.pixelSize: 16 }
             Item {
                 visible: display.track
                 x: 365; y: 239
@@ -269,21 +278,21 @@ Window {
                 Label { y: 20; text: window.lap(ride.currentLap); font.pixelSize: 42; font.weight: Font.DemiBold }
                 Label { y: 72; text: "K  start / next lap     B  stop"; color: window.muted; font.pixelSize: 10 }
             }
-            Rule { x: 28; y: 336; width: 744 }
-            Label { x: 28; y: 351; text: window.activePage; color: window.accent; font.pixelSize: 10; font.letterSpacing: 2 }
-            Label { x: 28; y: 367; text: window.pageValue(window.activePage); font.pixelSize: 31; font.weight: Font.DemiBold }
-            Label { x: 29; y: 408; text: window.pageUnit(window.activePage); color: window.muted; font.pixelSize: 10 }
-            Label { x: 267; y: 351; text: display.track ? "FASTEST LAP" : "BIKE / COOLANT"; color: window.muted; font.pixelSize: 10; font.letterSpacing: 1 }
-            Label { x: 267; y: 377; text: display.track ? window.lap(ride.fastestLap) : "12.8 V  /  " + (bike.coolantWarning ? "115" : "84") + "°C"; font.pixelSize: 23 }
-            Label { x: 267; y: 409; text: display.track ? "LATEST  " + window.lap(ride.latestLap) : "Enter  cycle information"; color: window.muted; font.pixelSize: 10 }
-            Rectangle { x: 537; y: 353; width: 1; height: 65; color: window.line }
-            Label { x: 565; y: 351; text: "FUEL"; color: window.muted; font.pixelSize: 10; font.letterSpacing: 2 }
-            Label { x: 687; y: 347; width: 85; horizontalAlignment: Text.AlignRight; text: bike.fuel + "%"; color: bike.fuel <= 15 ? window.amber : window.ink; font.pixelSize: 23 }
-            Rectangle { x: 565; y: 383; width: 207; height: 13; color: window.panel
+            Rule { x: 28; y: display.track ? 336 : 376; width: 744 }
+            Label { x: 28; y: display.track ? 351 : 386; text: window.activePage; color: window.accent; font.pixelSize: 10; font.letterSpacing: 2 }
+            Label { x: 28; y: display.track ? 367 : 399; text: window.pageValue(window.activePage); font.pixelSize: display.track ? 31 : 26; font.weight: Font.DemiBold }
+            Label { x: display.track ? 29 : 203; y: display.track ? 408 : 411; text: window.pageUnit(window.activePage); color: window.muted; font.pixelSize: 10 }
+            Label { x: 267; y: display.track ? 351 : 386; text: display.track ? "FASTEST LAP" : "BIKE / COOLANT"; color: window.muted; font.pixelSize: 10; font.letterSpacing: 1 }
+            Label { x: 267; y: display.track ? 377 : 402; text: display.track ? window.lap(ride.fastestLap) : "12.8 V  /  " + (bike.coolantWarning ? "115" : "84") + "°C"; font.pixelSize: 23 }
+            Label { visible: display.track; x: 267; y: 409; text: display.track ? "LATEST  " + window.lap(ride.latestLap) : "Enter  cycle information"; color: window.muted; font.pixelSize: 10 }
+            Rectangle { x: 537; y: display.track ? 353 : 387; width: 1; height: display.track ? 65 : 40; color: window.line }
+            Label { x: 565; y: display.track ? 351 : 386; text: "FUEL"; color: window.muted; font.pixelSize: 10; font.letterSpacing: 2 }
+            Label { x: 687; y: display.track ? 347 : 379; width: 85; horizontalAlignment: Text.AlignRight; text: bike.fuel + "%"; color: bike.fuel <= 15 ? window.amber : window.ink; font.pixelSize: 23 }
+            Rectangle { x: 565; y: display.track ? 383 : 410; width: 207; height: display.track ? 13 : 10; color: window.panel
                 Rectangle { width: parent.width * bike.fuel / 100; height: parent.height; color: bike.fuel <= 15 ? window.amber : window.accent }
             }
-            Label { x: 565; y: 403; text: "E"; color: window.muted; font.pixelSize: 11 }
-            Label { x: 760; y: 403; text: "F"; color: window.muted; font.pixelSize: 11 }
+            Label { x: 565; y: display.track ? 403 : 423; text: "E"; color: window.muted; font.pixelSize: 11 }
+            Label { x: 760; y: display.track ? 403 : 423; text: "F"; color: window.muted; font.pixelSize: 11 }
         }
 
         Item {

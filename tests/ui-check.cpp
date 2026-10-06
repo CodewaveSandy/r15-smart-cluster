@@ -7,9 +7,11 @@
 #include "BikeState.h"
 #include "DisplaySettings.h"
 #include "RideComputer.h"
+#include "Fonts.h"
 
 int main(int argc, char **argv) {
     QGuiApplication app(argc, argv);
+    if (!loadClusterFonts()) return 1;
     app.setOrganizationName("R15Tests"); app.setApplicationName("CockpitTests");
     QTemporaryDir prefs;
     QSettings::setDefaultFormat(QSettings::IniFormat);

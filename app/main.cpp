@@ -4,12 +4,14 @@
 #include "BikeState.h"
 #include "DisplaySettings.h"
 #include "RideComputer.h"
+#include "Fonts.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationName("R15 Smart Cluster");
     app.setOrganizationName("R15SmartCluster");
+    if (!loadClusterFonts()) return 1;
     BikeState bike;
     DisplaySettings display;
     RideComputer ride(&bike);

@@ -54,6 +54,10 @@ No dedicated simulator adapter, per-signal freshness/availability contract, firm
 
 | 2026-10-06 | RPM and signal refinement | Thicker bar, 4k–8k midrange, full-background shift alert, Daylight badge contrast, and exclusive turn signals with Z hazards |
 
+| 2026-10-06 | Bricolage Grotesque | Bundled official Regular/SemiBold/Bold and license; build and both tests passed; Street/Track, settings, Daylight, and help renders visually reviewed |
+
+| 2026-10-06 | Street speed prominence | Larger 128 px speed readout; 40 px extra central height; compressed lower strip; build and both tests passed; Street render reviewed |
+
 ## Next update template
 
 Record the date, meaningful changes, verification performed and outcome, remaining issues, and next action. Do not mark planned features as completed or imply mocked behavior is a real integration.
