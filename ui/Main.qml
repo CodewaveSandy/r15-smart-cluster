@@ -11,14 +11,24 @@ Window {
     minimumHeight: 480; maximumHeight: 480
     visible: true
     title: "R15 Smart Cluster · Desktop simulator"
-    color: display.light ? "#eff3f5" : "#090e14"
-    readonly property color ink: display.light ? "#122333" : "#edf4fb"
-    readonly property color muted: display.light ? "#4d6577" : "#91a4b7"
-    readonly property color panel: display.light ? "#e0e8ec" : "#14202c"
-    readonly property color line: display.light ? "#c7d3db" : "#253544"
-    readonly property color accent: display.light ? "#007757" : "#78e4c1"
-    readonly property color amber: display.light ? "#946000" : "#f5d45b"
-    readonly property color red: display.light ? "#bf263a" : "#ff7980"
+    readonly property bool shiftWarning: bike.rpm >= 10500
+    readonly property bool shiftFlashing: bike.rpm >= 11400
+    property bool shiftPulse: true
+    readonly property bool shiftRed: shiftWarning && (!shiftFlashing || shiftPulse)
+    readonly property bool lightPalette: display.light && !shiftRed
+    color: shiftRed ? "#8f172a" : display.light ? "#eff3f5" : "#090e14"
+    Timer {
+        interval: 300; running: window.shiftFlashing; repeat: true
+        onTriggered: window.shiftPulse = !window.shiftPulse
+    }
+    onShiftFlashingChanged: shiftPulse = true
+    readonly property color ink: lightPalette ? "#122333" : "#edf4fb"
+    readonly property color muted: lightPalette ? "#4d6577" : "#91a4b7"
+    readonly property color panel: lightPalette ? "#e0e8ec" : "#14202c"
+    readonly property color line: lightPalette ? "#c7d3db" : "#253544"
+    readonly property color accent: lightPalette ? "#007757" : "#78e4c1"
+    readonly property color amber: lightPalette ? "#946000" : "#f5d45b"
+    readonly property color red: lightPalette ? "#bf263a" : "#ff7980"
     property string screen: "dashboard"
     property int selection: 0
     property int infoIndex: 0
@@ -42,7 +52,7 @@ Window {
         property color activeColor: window.amber
         width: lampText.implicitWidth + 18; height: 25; radius: 5
         color: active ? activeColor : window.panel
-        Label { id: lampText; anchors.centerIn: parent; text: parent.label; color: parent.active ? "#101820" : window.muted; font.pixelSize: 10; font.bold: true }
+        Label { id: lampText; anchors.centerIn: parent; text: parent.label; color: parent.active ? (window.lightPalette ? "#ffffff" : "#101820") : window.muted; font.pixelSize: 10; font.bold: true }
     }
     function distance(km, decimals) { return (km * (display.imperial ? 0.621371 : 1)).toFixed(decimals) }
     function lap(ms) {
@@ -155,6 +165,7 @@ Window {
             case Qt.Key_1: case Qt.Key_2: case Qt.Key_3: case Qt.Key_4: case Qt.Key_5: case Qt.Key_6: bike.setGear(event.key - Qt.Key_0); break
             case Qt.Key_L: bike.toggleLeft(); break
             case Qt.Key_R: bike.toggleRight(); break
+            case Qt.Key_Z: bike.toggleHazards(); break
             case Qt.Key_H: bike.toggleHighBeam(); break
             case Qt.Key_E: bike.toggleEngineWarning(); break
             case Qt.Key_Q: bike.toggleQuickShifter(); break
@@ -195,30 +206,24 @@ Window {
         Item {
             visible: window.screen === "dashboard"
             anchors.fill: parent
+            Lamp { objectName: "leftSignal"; x: 28; y: 98; width: 40; label: "←"; active: bike.leftIndicator && window.blink; activeColor: window.accent }
             Row {
-                x: 28; y: 98; spacing: 7
-                Lamp { label: "←"; active: bike.leftIndicator && window.blink; activeColor: window.accent }
-                Lamp { label: "N"; active: bike.gear === 0; activeColor: window.accent }
-                Lamp { label: "BEAM"; active: bike.highBeam; activeColor: "#77baff" }
-                Lamp { label: "TCS"; active: bike.tcsWarning }
-                Lamp { label: "ABS"; active: bike.absWarning }
-                Lamp { label: "ENGINE"; active: bike.engineWarning }
-                Lamp { label: "TEMP"; active: bike.coolantWarning; activeColor: window.red }
-                Lamp { label: "MSG"; active: bike.messagePending; activeColor: window.accent }
-                Lamp { label: "CALL"; active: bike.incomingCall; activeColor: window.accent }
-                Lamp { label: "→"; active: bike.rightIndicator && window.blink; activeColor: window.accent }
+                x: 90; y: 98; spacing: 19
+                Lamp { width: 52; label: "N"; active: bike.gear === 0; activeColor: window.accent }
+                Lamp { width: 52; label: "BEAM"; active: bike.highBeam; activeColor: window.lightPalette ? "#246bb0" : "#77baff" }
+                Lamp { width: 52; label: "TCS"; active: bike.tcsWarning }
+                Lamp { width: 52; label: "ABS"; active: bike.absWarning }
+                Lamp { width: 52; label: "ENGINE"; active: bike.engineWarning }
+                Lamp { width: 52; label: "TEMP"; active: bike.coolantWarning; activeColor: window.red }
+                Lamp { width: 52; label: "MSG"; active: bike.messagePending; activeColor: window.accent }
+                Lamp { width: 52; label: "CALL"; active: bike.incomingCall; activeColor: window.accent }
+                Lamp { width: 52; label: "HAZ"; active: bike.hazards && window.blink }
             }
-            Row {
-                x: 645; y: 106; spacing: 7
-                Repeater {
-                    model: 5
-                    Rectangle { required property int index; width: 19; height: 7; radius: 3; color: bike.rpm >= 9000 + index * 750 ? (index < 3 ? window.amber : window.red) : window.line }
-                }
-            }
+            Lamp { objectName: "rightSignal"; x: 732; y: 98; width: 40; label: "→"; active: bike.rightIndicator && window.blink; activeColor: window.accent }
             // The larger track tachometer retains the same color thresholds as Street.
             Item {
                 id: tach
-                x: 28; y: 144; width: 744; height: display.track ? 73 : 55
+                x: 28; y: 144; width: 744; height: display.track ? 91 : 83
                 Row {
                     width: parent.width
                     Repeater {
@@ -228,7 +233,7 @@ Window {
                 }
                 Rectangle {
                     id: rpmTrack
-                    y: 20; width: parent.width; height: display.track ? 34 : 20
+                    y: 20; width: parent.width; height: display.track ? 52 : 44
                     color: window.panel
                     Item {
                         width: rpmTrack.width * Math.max(0, Math.min(bike.rpm, 13000)) / 13000
@@ -240,8 +245,8 @@ Window {
                                 GradientStop { position: 0; color: "#4cdb88" }
                                 GradientStop { position: 3500 / 13000; color: "#4cdb88" }
                                 GradientStop { position: 4500 / 13000; color: "#f5d45b" }
-                                GradientStop { position: 6500 / 13000; color: "#f5d45b" }
-                                GradientStop { position: 7500 / 13000; color: "#f06464" }
+                                GradientStop { position: 7500 / 13000; color: "#f5d45b" }
+                                GradientStop { position: 8500 / 13000; color: "#f06464" }
                                 GradientStop { position: 1; color: "#f06464" }
                             }
                         }
@@ -252,9 +257,9 @@ Window {
             }
             Label {
                 objectName: "speedValue"
-                x: display.track ? 28 : 210; y: display.track ? 213 : 198
+                x: display.track ? 28 : 210; y: display.track ? 231 : 222
                 width: display.track ? 255 : 380; horizontalAlignment: display.track ? Text.AlignLeft : Text.AlignHCenter
-                text: Math.round(bike.speed * (display.imperial ? 0.621371 : 1)); font.pixelSize: display.track ? 89 : 110; font.weight: Font.Bold
+                text: Math.round(bike.speed * (display.imperial ? 0.621371 : 1)); font.pixelSize: display.track ? 79 : 91; font.weight: Font.Bold
             }
             Label { x: display.track ? 225 : 590; y: display.track ? 277 : 277; text: display.imperial ? "mph" : "km/h"; color: window.muted; font.pixelSize: 16 }
             Item {
@@ -379,7 +384,7 @@ Window {
                             "Tab    Street / Track       Enter or PgUp / PgDn    information pages",
                             "S    settings       F1    show / hide this guide       Esc    back",
                             "Q    quick shifter       P    app connection       M / I    message / call",
-                            "L / R    turn indicators       H    high beam       E    engine warning",
+                            "L / R    exclusive turn signals       Z    hazards       H    beam       E    engine",
                             "A    ABS       T    TCS       C    coolant warning       [ / ]    fuel",
                             "K    start / record lap       B    stop lap       (Track layout only)",
                             "Space    reset bike signals       Trips / laps reset separately in settings"]
@@ -388,7 +393,7 @@ Window {
             }
         }
         Rule { x: 28; y: 439; width: 744 }
-        Label { x: 28; y: 452; text: window.screen === "dashboard" ? "Tab  mode     Enter  info     S  settings     F1  controls" : "Esc  back     F1  controls"; color: window.muted; font.pixelSize: 10 }
+        Label { x: 28; y: 452; text: window.screen === "dashboard" ? "Tab  mode    Enter  info    S  settings    Z  hazards    F1  controls" : "Esc  back     F1  controls"; color: window.muted; font.pixelSize: 10 }
         Label { x: 580; y: 452; width: 192; horizontalAlignment: Text.AlignRight; text: "SIMULATED · NO BIKE CONNECTED"; color: window.muted; font.pixelSize: 9 }
     }
 }

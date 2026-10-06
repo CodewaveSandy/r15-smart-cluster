@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     bike.setGear(-1);
     ok &= check(bike.gear() == 0, "Neutral lower bound failed");
     bike.toggleLeft(); bike.toggleRight(); bike.toggleHighBeam(); bike.toggleEngineWarning();
-    ok &= check(bike.leftIndicator() && bike.rightIndicator() && bike.highBeam() && bike.engineWarning(), "Indicator toggles failed");
+    ok &= check(!bike.leftIndicator() && bike.rightIndicator() && bike.highBeam() && bike.engineWarning(), "Indicator toggles failed");
     bike.reset();
     ok &= check(bike.speed() == 0 && bike.rpm() == 0 && bike.gear() == 0 && bike.fuel() == 72
                 && !bike.leftIndicator() && !bike.rightIndicator() && !bike.highBeam() && !bike.engineWarning(), "Reset failed");
@@ -40,5 +40,21 @@ int main(int argc, char **argv)
     bike.toggleQuickShifter(); bike.toggleAbs(); bike.toggleTcs(); bike.toggleCoolant();
     bike.reset();
     ok &= check(!bike.quickShifter() && !bike.absWarning() && !bike.tcsWarning() && !bike.coolantWarning() && !bike.phoneConnected(), "Extended signal reset failed");
+    bike.toggleLeft();
+    ok &= check(bike.leftIndicator() && !bike.rightIndicator(), "Left signal must be exclusive");
+    bike.toggleRight();
+    ok &= check(!bike.leftIndicator() && bike.rightIndicator(), "Right must cancel left");
+    bike.toggleHazards();
+    ok &= check(bike.hazards() && bike.leftIndicator() && bike.rightIndicator(), "Hazards must enable both sides");
+    bike.toggleLeft();
+    ok &= check(!bike.hazards() && bike.leftIndicator() && !bike.rightIndicator(), "Left must cancel hazards");
+    bike.toggleHazards(); bike.toggleRight();
+    ok &= check(!bike.hazards() && !bike.leftIndicator() && bike.rightIndicator(), "Right must cancel hazards");
+    bike.toggleRight();
+    ok &= check(!bike.leftIndicator() && !bike.rightIndicator(), "Same-side toggle must turn off");
+    bike.toggleHazards(); bike.toggleHazards();
+    ok &= check(!bike.hazards() && !bike.leftIndicator() && !bike.rightIndicator(), "Hazard off must clear both");
+    bike.toggleHazards(); bike.reset();
+    ok &= check(!bike.hazards() && !bike.leftIndicator() && !bike.rightIndicator(), "Reset must clear hazards");
     return ok ? 0 : 1;
 }

@@ -33,9 +33,9 @@ Source: user-provided photo and explanation, 2026-10-06. The photo appears to il
 | AVG / economy / speed | Information pages retained, unavailable values shown | Fuel consumption input and exact OEM unit/menu mapping not yet verified |
 | TCS | Warning tell-tale and information page | Warning simulated; actual control status unknown |
 | ABS / engine | Separate tell-tales | Keyboard simulated |
-| Turn / high beam | Separate tell-tales | Keyboard simulated |
+| Turn / high beam | Turn arrows at opposite edges; exclusive L/R, synchronized Z hazards | Keyboard simulated |
 | Message / call | Indicators gated on simulated app connection | No phone integration |
-| Five shift lights | Five staged lights above tach | Demo thresholds 9,000 / 9,750 / 10,500 / 11,250 / 12,000 RPM |
+| Shift indication | On-screen dots removed at user request; background red at 10,500 RPM, alternating red/normal every 300 ms from 11,400 | User-selected prototype thresholds; physical OEM shift light remains outside this UI |
 
 Warnings currently use clearly labeled badges instead of final OEM-standard pictograms. Final symbol artwork, physical LED placement, light behavior, and vehicle configuration support remain engineering work. The Yamaha emblem is not functional instrumentation and is not reproduced in the custom interface.
 

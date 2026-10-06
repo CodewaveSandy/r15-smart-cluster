@@ -13,6 +13,7 @@ class BikeState : public QObject
     Q_PROPERTY(int fuel READ fuel NOTIFY changed)
     Q_PROPERTY(bool leftIndicator READ leftIndicator NOTIFY changed)
     Q_PROPERTY(bool rightIndicator READ rightIndicator NOTIFY changed)
+    Q_PROPERTY(bool hazards READ hazards NOTIFY changed)
     Q_PROPERTY(bool highBeam READ highBeam NOTIFY changed)
     Q_PROPERTY(bool engineWarning READ engineWarning NOTIFY changed)
     Q_PROPERTY(bool quickShifter READ quickShifter NOTIFY changed)
@@ -31,8 +32,9 @@ public:
     int rpm() const { return m_rpm; }
     int gear() const { return m_gear; }
     int fuel() const { return m_fuel; }
-    bool leftIndicator() const { return m_left; }
-    bool rightIndicator() const { return m_right; }
+    bool leftIndicator() const { return m_hazards || m_left; }
+    bool rightIndicator() const { return m_hazards || m_right; }
+    bool hazards() const { return m_hazards; }
     bool highBeam() const { return m_highBeam; }
     bool engineWarning() const { return m_engineWarning; }
 
@@ -58,13 +60,14 @@ public:
     Q_INVOKABLE void adjustRpm(int delta) { m_rpm = qBound(0, m_rpm + delta, 13000); emit changed(); }
     Q_INVOKABLE void setGear(int gear) { m_gear = qBound(0, gear, 6); emit changed(); }
     Q_INVOKABLE void adjustFuel(int delta) { m_fuel = qBound(0, m_fuel + delta, 100); emit changed(); }
-    Q_INVOKABLE void toggleLeft() { m_left = !m_left; emit changed(); }
-    Q_INVOKABLE void toggleRight() { m_right = !m_right; emit changed(); }
+    Q_INVOKABLE void toggleLeft() { const bool enable = m_hazards || !m_left; m_hazards = false; m_left = enable; m_right = false; emit changed(); }
+    Q_INVOKABLE void toggleRight() { const bool enable = m_hazards || !m_right; m_hazards = false; m_right = enable; m_left = false; emit changed(); }
+    Q_INVOKABLE void toggleHazards() { m_hazards = !m_hazards; m_left = m_right = false; emit changed(); }
     Q_INVOKABLE void toggleHighBeam() { m_highBeam = !m_highBeam; emit changed(); }
     Q_INVOKABLE void toggleEngineWarning() { m_engineWarning = !m_engineWarning; emit changed(); }
     Q_INVOKABLE void reset() {
         m_speed = 0; m_rpm = 0; m_gear = 0; m_fuel = 72;
-        m_left = m_right = m_highBeam = m_engineWarning = false;
+        m_hazards = m_left = m_right = m_highBeam = m_engineWarning = false;
         m_qs = m_phone = m_abs = m_tcs = m_coolant = m_message = m_call = false;
         emit changed();
     }
@@ -77,6 +80,7 @@ private:
     int m_rpm = 0;
     int m_gear = 0;
     int m_fuel = 72;
+    bool m_hazards = false;
     bool m_left = false;
     bool m_right = false;
     bool m_highBeam = false;

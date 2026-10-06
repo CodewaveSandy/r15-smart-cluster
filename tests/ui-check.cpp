@@ -97,5 +97,38 @@ int main(int argc, char **argv) {
     bike.toggleAbs(); bike.toggleTcs(); bike.toggleCoolant(); bike.toggleEngineWarning();
     bike.toggleMessage(); bike.toggleCall(); bike.toggleHighBeam();
     capture("warnings");
+    // Exact thresholds, both theme palettes, and deterministic red/normal flashing.
+    for (bool light : {false, true}) {
+        display.setLight(light);
+        bike.reset(); bike.adjustRpm(10499);
+        check(!window->property("shiftRed").toBool(), "Shift warning below threshold");
+        bike.adjustRpm(1);
+        check(window->property("shiftRed").toBool() && !window->property("shiftFlashing").toBool(), "10500 must be steady red");
+        capture(light ? "shift-day" : "shift-night");
+        bike.adjustRpm(899);
+        check(window->property("shiftRed").toBool() && !window->property("shiftFlashing").toBool(), "11399 must stay steady");
+        bike.adjustRpm(1);
+        check(window->property("shiftRed").toBool() && window->property("shiftFlashing").toBool(), "11400 must begin flashing on red");
+        QTest::qWait(330);
+        check(!window->property("shiftRed").toBool(), "Shift flash must return to normal background");
+        QTest::qWait(300);
+        check(window->property("shiftRed").toBool(), "Shift flash must return to red");
+        bike.adjustRpm(-1);
+        check(window->property("shiftRed").toBool() && !window->property("shiftFlashing").toBool(), "Leaving flash range must return to steady red");
+        bike.adjustRpm(-900);
+        check(!window->property("shiftRed").toBool(), "Dropping below 10500 must restore theme");
+    }
+    key(Qt::Key_Z);
+    check(bike.hazards(), "Hazard shortcut failed");
+    auto *left = window->findChild<QObject *>("leftSignal");
+    auto *right = window->findChild<QObject *>("rightSignal");
+    window->setProperty("blink", true);
+    check(left->property("active").toBool() && right->property("active").toBool(), "Hazards must illuminate together");
+    window->setProperty("blink", false);
+    check(!left->property("active").toBool() && !right->property("active").toBool(), "Hazards must extinguish together");
+    key(Qt::Key_L); check(bike.leftIndicator() && !bike.rightIndicator() && !bike.hazards(), "Left key must cancel hazard");
+    key(Qt::Key_R); check(!bike.leftIndicator() && bike.rightIndicator(), "Right key must cancel left");
+    bike.toggleHighBeam(); bike.toggleAbs(); bike.toggleTcs(); bike.toggleCoolant(); bike.togglePhone(); bike.toggleQuickShifter();
+    capture("daylight-badges");
     return ok ? 0 : 1;
 }

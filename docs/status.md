@@ -52,6 +52,8 @@ No dedicated simulator adapter, per-signal freshness/availability contract, firm
 
 | 2026-10-06 | OEM-based cockpit and settings | State and offscreen UI interaction tests; rendered screen review; no real vehicle or phone connection |
 
+| 2026-10-06 | RPM and signal refinement | Thicker bar, 4k–8k midrange, full-background shift alert, Daylight badge contrast, and exclusive turn signals with Z hazards |
+
 ## Next update template
 
 Record the date, meaningful changes, verification performed and outcome, remaining issues, and next action. Do not mark planned features as completed or imply mocked behavior is a real integration.

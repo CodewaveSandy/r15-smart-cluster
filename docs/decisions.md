@@ -77,6 +77,15 @@ Statuses: **Accepted** means the working project direction; **Proposed** needs i
 - Preserve trips, lap information, warnings, and additional fields from the [reference inventory](reference/oem-inventory.md). Clearly distinguish samples and unavailable values from integrated vehicle data.
 - Add physical-style configuration navigation with theme, units, clock/date, and vehicle information.
 
+## D11 — Larger tachometer, background shift alert, and hazards
+
+- Date: 2026-10-06
+- Status: Accepted; supersedes D09's upper transition and D10's on-screen shift lights.
+- RPM fill height is 44 px in Street and 52 px in Track. Midrange is 4,000–8,000 RPM, with blends at 3,500–4,500 and 7,500–8,500 RPM.
+- Remove the five on-screen shift dots. At 10,500 RPM show a steady red background; at 11,400 RPM alternate red/normal every 300 ms. Below 10,500 restore the selected theme. These are user-requested simulator thresholds, not verified engine limits.
+- Use readable light foregrounds on the red background in both themes. Active Daylight badges have white text and darker fills; inactive badges retain dark text on their pale fill.
+- Place turn arrows at opposite ends of the full-width tell-tale row. L and R are exclusive; Z toggles synchronized hazards. Selecting a direction cancels hazards; disabling hazards clears both signals.
+
 ## New decision template
 
 ```markdown

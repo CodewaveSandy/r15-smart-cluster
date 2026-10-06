@@ -31,7 +31,8 @@ Click the app window before trying these keys:
 | Down / Up arrow | Decrease / increase RPM by 500 |
 | 1–6 | Select gear |
 | N or 0 | Select neutral |
-| L / R | Toggle left / right indicator |
+| L / R | Toggle left / right indicator; cancels the other direction and hazards |
+| Z | Toggle synchronized hazards; switching off clears both arrows |
 | H | Toggle high-beam state |
 | E | Toggle engine warning |
 | [ / ] | Decrease / increase fuel by 5 percentage points |
@@ -47,6 +48,12 @@ Click the app window before trying these keys:
 | Space | Reset bike signals (trips and laps reset in settings) |
 
 Values are independent controls for exploring UI states; this is not a physics-based motorcycle simulation. Simulator limits (180 km/h, 13,000 rpm) are not claims about the R15's specifications. No key sends data to a real bike.
+
+## Shift warning
+
+At **10,500 RPM** the background turns red. At **11,400 RPM** it alternates red/normal every **300 ms**. Dropping below those thresholds returns to steady red or the normal theme. This replaces the on-screen shift-light dots. Arrow keys change RPM by 500, so the simulator reaches the flashing range at 11,500 when stepping upward from zero; automated checks cover the exact 11,400 boundary.
+
+The thicker RPM bar blends green/yellow at 3,500–4,500 and yellow/red at 7,500–8,500 RPM. VVA still uses its separate above-7,500 rule.
 
 ## Settings and information
 
