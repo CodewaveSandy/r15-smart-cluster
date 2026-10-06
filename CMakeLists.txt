@@ -9,7 +9,7 @@ if(Qt6_VERSION VERSION_GREATER_EQUAL 6.8)
     qt_policy(SET QTP0004 NEW)
 endif()
 
-qt_add_executable(r15-cluster MACOSX_BUNDLE app/main.cpp app/BikeState.h)
+qt_add_executable(r15-cluster MACOSX_BUNDLE app/main.cpp app/BikeState.h app/DisplaySettings.h app/RideComputer.h)
 qt_add_qml_module(r15-cluster
     URI R15Cluster
     VERSION 1.0
@@ -23,8 +23,15 @@ set_target_properties(r15-cluster PROPERTIES
 
 include(CTest)
 if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
     qt_add_executable(state-check tests/state-check.cpp app/BikeState.h)
     target_include_directories(state-check PRIVATE app)
     target_link_libraries(state-check PRIVATE Qt6::Core)
     add_test(NAME simulator-state COMMAND state-check)
+    qt_add_executable(ui-check tests/ui-check.cpp app/BikeState.h app/DisplaySettings.h app/RideComputer.h)
+    target_include_directories(ui-check PRIVATE app)
+    target_compile_definitions(ui-check PRIVATE PROJECT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(ui-check PRIVATE Qt6::Quick Qt6::Test)
+    add_test(NAME cockpit-ui COMMAND ui-check)
+    set_tests_properties(cockpit-ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
 endif()

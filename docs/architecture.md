@@ -1,7 +1,7 @@
 # Technical architecture
 
 Last updated: 2026-10-06
-Status: desktop app builds and launches. Basic state and dashboard exist; full adapter/input architecture remains planned.
+Status: desktop app builds and launches. OEM-based layouts, display preferences, and session ride computer exist; full adapter architecture remains planned.
 
 ## Stack
 
@@ -58,7 +58,7 @@ CMakeLists.txt
 
 Create source folders when they are needed rather than scaffolding unused systems.
 
-Current implementation includes `app/`, `ui/`, `scripts/`, and `tests/`. The desktop-only BikeState currently owns simulator mutation methods and QML maps keys directly to them. Dedicated simulator adapters, semantic menu inputs, and per-value freshness/availability are next steps, not completed features.
+Current implementation includes `app/`, `ui/`, `scripts/`, and `tests/`. The desktop-only BikeState owns simulator mutation methods. QML maps keyboard inputs to display actions and simulator actions separately by screen. DisplaySettings owns persisted mode/theme/units and validated clock offset. RideComputer owns session-only distance and monotonic lap timing. Dedicated simulator adapters and per-value freshness/availability are pending.
 
 ## Later hardware architecture
 

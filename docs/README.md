@@ -14,6 +14,7 @@ Build a polished replacement instrument cluster for the Yamaha R15 V4 (2026), pr
 | [Milestones](milestones.md) | Delivery phases and completion criteria |
 | [Status](status.md) | Current progress, next actions, blockers, and session history |
 | [Getting started](getting-started.md) | Build, launch, keyboard controls, and the edit/preview workflow |
+| [OEM reference inventory](reference/oem-inventory.md) | Saved reference photo, dashboard details, and real-versus-simulated behavior |
 
 ## How to maintain these documents
 

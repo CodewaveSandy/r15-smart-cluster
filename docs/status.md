@@ -1,7 +1,7 @@
 # Current status
 
 Last updated: 2026-10-06
-Current phase: M1 complete; M2 and M3 have an initial foundation.
+Current phase: M1 complete; M2–M4 in progress, with OEM-based dashboard and configuration screens implemented.
 
 ## Completed
 
@@ -16,15 +16,23 @@ Current phase: M1 complete; M2 and M3 have an initial foundation.
 - Passed the CTest state check covering bounds, indicator toggles, reset, and change notifications.
 - Passed offscreen QML startup smoke check. Native app launch and window title confirmed through the UI tool.
 
+## Latest increment — OEM reference
+
+- Saved the user's photo and a functional inventory under `docs/reference/`.
+- Added distinct Street/Track layouts, gear-first status row, QS/VVA, app/phone battery, clock/date, warning badges, shift lights, and lower information pages.
+- Added persistent Midnight/Daylight themes, units, display mode, and clock offset; keyboard-operated settings, clock editor, and vehicle info.
+- Added session trip counters and monotonic lap timing. Unavailable efficiency/average-speed data remains visibly unavailable.
+- Offscreen interaction tests and rendered review cover Street, Track, settings, date editor, vehicle info, Daylight, and help. Native visual capture was not needed for this increment.
+
 ## Not implemented yet
 
-No dedicated simulator source, freshness/availability contract, semantic menu navigation, firmware, serial adapter, projection receiver, or hardware integration yet. The UI is an initial design, not a finalized theme. Native screenshot capture was unreliable and then failed with a macOS capture error, so keyboard interaction and detailed visual acceptance are not yet independently confirmed through the UI tool.
+No dedicated simulator adapter, per-signal freshness/availability contract, firmware, serial adapter, projection receiver, or real vehicle integration yet. Warning badges are textual placeholders for final pictograms; factory menu ordering and all economy unit variants remain unverified. The navigation/Maps screen is still pending.
 
 ## Next actions
 
-1. User previews the open dashboard and tries the documented controls.
+1. User previews Street/Track and settings and reviews the reference inventory.
 2. Complete BikeState availability/freshness and separate simulator/input contracts (M2).
-3. Refine the first dashboard theme and finish visual/input verification (M3).
+3. Refine final icon artwork and missing-data/warning presentation; investigate real projection feasibility.
 
 ## Dependencies and unanswered questions
 
@@ -42,6 +50,9 @@ No dedicated simulator source, freshness/availability contract, semantic menu na
 | 2026-10-06 | First desktop app | Build and CTest passed; offscreen QML startup passed; native window opened. Detailed native capture/input verification limited by capture failure |
 | 2026-10-06 | Dashboard visual revision | Replaced segmented RPM blocks with a continuous bar; green/yellow blend at 3,500–4,500 and yellow/red at 6,500–7,500 RPM. Removed the top branding and desktop-simulator badge |
 
+| 2026-10-06 | OEM-based cockpit and settings | State and offscreen UI interaction tests; rendered screen review; no real vehicle or phone connection |
+
 ## Next update template
 
 Record the date, meaningful changes, verification performed and outcome, remaining issues, and next action. Do not mark planned features as completed or imply mocked behavior is a real integration.
+

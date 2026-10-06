@@ -67,6 +67,16 @@ Statuses: **Accepted** means the working project direction; **Proposed** needs i
 - Keep colors anchored to the full RPM scale as the fill grows. These are user-selected visual thresholds, not verified engine limits.
 - Remove the dashboard's top branding and desktop-simulator badge. Simulation remains identified in the window title and lower status text.
 
+## D10 — Preserve the OEM information hierarchy
+
+- Date: 2026-10-06
+- Status: Accepted
+- Start with gear, display mode, QS, VVA, app/phone battery, and clock. Place speed/RPM in the middle and selectable information plus fuel below.
+- Street and Track select different UI layouts; they do not send riding-mode commands to the motorcycle. Theme remains an independent setting.
+- Show QS only when enabled; simulate VVA strictly above 7,500 RPM as specified by the user. Phone battery belongs to the connected phone, not the bike.
+- Preserve trips, lap information, warnings, and additional fields from the [reference inventory](reference/oem-inventory.md). Clearly distinguish samples and unavailable values from integrated vehicle data.
+- Add physical-style configuration navigation with theme, units, clock/date, and vehicle information.
+
 ## New decision template
 
 ```markdown

@@ -24,6 +24,8 @@ Candidate OEM data to inventory: speed, RPM, gear/neutral, fuel, temperature whe
 
 ## Current scope: desktop prototype
 
+The user supplied an OEM cluster photo and detailed behavior on 2026-10-06. The [reference inventory](reference/oem-inventory.md) is the detailed source for the gear-first header, Street/Track layouts, QS/VVA/app indicators, trip/lap pages, warnings, and configuration screens.
+
 - Run locally on the user's M1 MacBook Air.
 - Develop a Qt/QML dashboard at an initial 800 × 480 target resolution.
 - Supply simulated bike data and keyboard inputs before hardware arrives.

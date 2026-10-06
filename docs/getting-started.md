@@ -35,9 +35,28 @@ Click the app window before trying these keys:
 | H | Toggle high-beam state |
 | E | Toggle engine warning |
 | [ / ] | Decrease / increase fuel by 5 percentage points |
-| Space | Reset simulation |
+| Tab | Switch Street / Track layout |
+| Enter / Page Down / Page Up | Cycle lower information pages |
+| S | Open settings |
+| F1 | Open / close all keyboard controls |
+| Q | Toggle QS enabled |
+| P | Toggle app connection and sample phone battery |
+| A / T / C | Toggle ABS / TCS / coolant warning |
+| M / I | Toggle message / incoming call (requires app connection) |
+| K / B | Start or record next lap / stop lap, in Track layout |
+| Space | Reset bike signals (trips and laps reset in settings) |
 
-Values are independent controls for exploring UI states; this is not a physics-based motorcycle simulation. Simulator limits (180 km/h, 12,000 rpm) are not claims about the R15's specifications. No key sends data to a real bike.
+Values are independent controls for exploring UI states; this is not a physics-based motorcycle simulation. Simulator limits (180 km/h, 13,000 rpm) are not claims about the R15's specifications. No key sends data to a real bike.
+
+## Settings and information
+
+Press **S**, use **Up/Down** to select a row, and **Enter** to activate it. **Esc** returns to the preceding screen. Menu arrows do not change simulated speed or RPM.
+
+Select **Time & date** to open the editor. **Left/Right** chooses a field, **Up/Down** adjusts it, and **Enter** advances to the next field or saves at the Save button. **Esc** cancels. This changes only the cluster clock. Mode, theme, units, and clock offset survive app restarts.
+
+Street and Track are different display layouts. In Track, **K** starts timing; each subsequent K records the completed lap and begins the next. **B** stops and retains the current elapsed value; it does not record it as a completed lap. The next K starts a new lap. Settings can clear the lap session.
+
+The reference details and remaining integration gaps are recorded in [OEM inventory](reference/oem-inventory.md). App connectivity, QS, warnings, battery, and coolant are simulated. Trips accumulate from simulated speed; no real odometer data is read or written. VVA appears above 7,500 RPM and disappears at or below it.
 
 ## Change something and see it
 
@@ -54,7 +73,9 @@ This initial workflow rebuilds the app; it does not hot-reload. Closing only the
 | --- | --- |
 | `ui/Main.qml` | Window, dashboard layout, and temporary keyboard simulation bindings |
 | `app/BikeState.h` | C++ values exposed to QML with change notifications |
-| `app/main.cpp` | Starts Qt and supplies BikeState to the window |
+| `app/main.cpp` | Starts Qt and supplies state, display preferences, and ride computer |
+| `app/DisplaySettings.h` | Persistent display choices and validated clock/date editing |
+| `app/RideComputer.h` | Simulated trip distance and monotonic lap timing |
 | `CMakeLists.txt` | Describes the executable and QML module to the build system |
 | `scripts/preview.sh` | Repeatable build-and-open command |
 | `build/` | Generated files and app; excluded from Git |
@@ -81,6 +102,6 @@ ctest --test-dir build --output-on-failure
 QT_QPA_PLATFORM=offscreen build/r15-cluster.app/Contents/MacOS/r15-cluster --smoke-test
 ```
 
-CTest checks simulator state boundaries, toggles, reset, and notifications. The smoke check verifies QML loads and then exits; it does not replace visual or keyboard interaction testing.
+CTest checks simulator boundaries, VVA/phone behavior, keyboard-driven screens, date validation/save/cancel, persistent preferences, trips, and laps. UI tests render sample screens into `build/previews/` using an offscreen backend and isolated settings. The smoke check verifies QML loads and then exits; it does not replace visual or keyboard interaction testing.
 
 For background, Qt's official [QML module guide](https://doc.qt.io/qt-6/qt6-port-to-qt-add-qml-module.html) explains the module/build approach used here.

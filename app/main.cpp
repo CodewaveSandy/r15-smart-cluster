@@ -2,14 +2,21 @@
 #include <QQmlApplicationEngine>
 #include <QTimer>
 #include "BikeState.h"
+#include "DisplaySettings.h"
+#include "RideComputer.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
     app.setApplicationName("R15 Smart Cluster");
+    app.setOrganizationName("R15SmartCluster");
     BikeState bike;
+    DisplaySettings display;
+    RideComputer ride(&bike);
     QQmlApplicationEngine engine;
-    engine.setInitialProperties({{"bike", QVariant::fromValue(&bike)}});
+    engine.setInitialProperties({{"bike", QVariant::fromValue(&bike)},
+                                 {"display", QVariant::fromValue(&display)},
+                                 {"ride", QVariant::fromValue(&ride)}});
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
                      &app, [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     engine.loadFromModule("R15Cluster", "Main");
