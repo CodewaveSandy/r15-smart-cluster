@@ -102,6 +102,32 @@ Statuses: **Accepted** means the working project direction; **Proposed** needs i
 - Compress Street's information/fuel strip: smaller primary information value, inline distance unit, compact fuel gauge, and no duplicate information-cycle hint (the footer retains it).
 - Track mode keeps its existing dimensions and lap layout. This is a visual baseline, not completion of hardware or data-integration milestones.
 
+## D14 — Keep the original UI; adopt icons and segmented fuel
+
+- Date: 2026-10-07
+- Status: Accepted
+- The user rejected and reverted the futuristic dashboard redesign. Keep the original layout, Bricolage font, continuous RPM gradient and existing shift warning.
+- Adopt only its icon direction and slanted eight-segment fuel gauge with a fuel-pump icon. Draw icons locally in QML Canvas; no external assets or new dependencies. Keep QS/VVA and recognizable TCS/ABS lettering.
+- Extract ClusterIcon, TellTale and FuelGauge as focused presentation components. Replace APP text with a phone pictogram; preserve phone battery behavior and existing simulator controls.
+- Below 15% fuel, immediately show an amber warning and blink the fuel icon/filled segments every 500 ms continuously while the dashboard is visible. Keep the percentage readable; at zero the pump still blinks, with no filled segments. At 15% or above stop blinking and restore the steady gauge.
+- This user-selected warning is presentation behavior for normalized simulator fuel, not a verified Yamaha reserve threshold. Existing reserve-trip calculations are unchanged.
+- Verification: configure/build, both CTest targets and offscreen startup passed. UI tests cover 0/14/15/100%, warning phases, recovery, both themes and both modes. Rendered 800×480 states inspected.
+
+## D15 — Inactive icon contrast
+
+- Date: 2026-10-07
+- Status: Accepted
+- Tell-tales and the phone connection pictogram use 12% opacity when inactive and 100% opacity with their existing status color when active, in both themes. Apply changes immediately without fades. Indicator blink-off phases use the same inactive opacity.
+- Fuel level is an always-present gauge rather than an on/off tell-tale; its existing low-fuel blinking behavior remains unchanged.
+
+## D16 — Fuel severity and finer simulator increments
+
+- Date: 2026-10-07
+- Status: Accepted; supersedes D14's fuel-warning threshold.
+- Fuel gauge is yellow from 10% through 20% inclusive and red below 10%. Blink the icon/filled segments every 500 ms below 20%; exactly 20% remains steady yellow. Percentage remains visible. Above 20% restore the normal gauge.
+- Desktop keys change speed by 1 km/h, RPM by 100 and fuel by 1 percentage point in both directions. These increments affect simulator input only, not vehicle data processing or RPM thresholds.
+- Reserve-trip calculations retain their existing separate semantics. No Yamaha threshold is claimed.
+
 ## New decision template
 
 ```markdown

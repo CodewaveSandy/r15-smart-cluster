@@ -1,6 +1,6 @@
 # Technical architecture
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 Status: desktop app builds and launches. OEM-based layouts, display preferences, and session ride computer exist; full adapter architecture remains planned.
 
 ## Stack
@@ -65,3 +65,7 @@ Current implementation includes `app/`, `ui/`, `scripts/`, and `tests/`. The des
 The proposed final architecture separates a vehicle MCU from the application processor that handles graphics and projection. Exact MCU/SoM/SoC choices are open. Independent warning indication and failure behavior need explicit design and verification; two processors alone do not provide a complete fallback.
 
 See [product scope](product-scope.md) for unresolved bike and hardware questions and [milestones](milestones.md) for validation gates.
+
+## Dashboard presentation components
+
+`ui/components/ClusterIcon.qml` draws local vector pictograms. `TellTale.qml` presents an icon with explicit active/inactive colors and accessibility labels. `FuelGauge.qml` owns segmented-gauge presentation and its low-fuel flash timer, consuming fuel percentage and theme colors from Main.qml. Main.qml retains the existing screen/input shell and layout; fonts and domain/data behavior are unchanged. No hardware knowledge or transport was introduced.

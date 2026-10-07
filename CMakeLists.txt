@@ -14,6 +14,9 @@ qt_add_qml_module(r15-cluster
     URI R15Cluster
     VERSION 1.0
     QML_FILES ui/Main.qml
+        ui/components/ClusterIcon.qml
+        ui/components/TellTale.qml
+        ui/components/FuelGauge.qml
 )
 target_link_libraries(r15-cluster PRIVATE Qt6::Quick)
 function(bundle_cluster_fonts target)

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import "components"
 
 Window {
     id: window
@@ -166,10 +167,10 @@ Window {
             case Qt.Key_Tab: display.track = !display.track; break
             case Qt.Key_PageDown: window.action("next"); break
             case Qt.Key_PageUp: window.action("previous"); break
-            case Qt.Key_Right: bike.adjustSpeed(5); break
-            case Qt.Key_Left: bike.adjustSpeed(-5); break
-            case Qt.Key_Up: bike.adjustRpm(500); break
-            case Qt.Key_Down: bike.adjustRpm(-500); break
+            case Qt.Key_Right: bike.adjustSpeed(1); break
+            case Qt.Key_Left: bike.adjustSpeed(-1); break
+            case Qt.Key_Up: bike.adjustRpm(100); break
+            case Qt.Key_Down: bike.adjustRpm(-100); break
             case Qt.Key_N: case Qt.Key_0: bike.setGear(0); break
             case Qt.Key_1: case Qt.Key_2: case Qt.Key_3: case Qt.Key_4: case Qt.Key_5: case Qt.Key_6: bike.setGear(event.key - Qt.Key_0); break
             case Qt.Key_L: bike.toggleLeft(); break
@@ -186,8 +187,8 @@ Window {
             case Qt.Key_I: bike.toggleCall(); break
             case Qt.Key_K: if (display.track) ride.lapAction(); break
             case Qt.Key_B: if (display.track) ride.stopLap(); break
-            case Qt.Key_BracketLeft: bike.adjustFuel(-5); break
-            case Qt.Key_BracketRight: bike.adjustFuel(5); break
+            case Qt.Key_BracketLeft: bike.adjustFuel(-1); break
+            case Qt.Key_BracketRight: bike.adjustFuel(1); break
             case Qt.Key_Space: bike.reset(); break
             default: event.accepted = false
             }
@@ -201,7 +202,7 @@ Window {
         Label { x: 121; y: 55; text: display.track ? "LAP / PERFORMANCE" : "ROAD / EVERYDAY"; font.pixelSize: 9; color: window.muted; font.letterSpacing: 1 }
         Lamp { objectName: "qsLamp"; x: 288; y: 34; label: "QS"; visible: bike.quickShifter; active: true; activeColor: window.accent }
         Lamp { objectName: "vvaLamp"; x: 344; y: 34; label: "VVA"; visible: bike.vva; active: true; activeColor: window.amber }
-        Lamp { x: 448; y: 34; label: "APP"; active: bike.phoneConnected; activeColor: window.accent }
+        TellTale { x: 448; y: 34; kind: "phone"; description: "Phone connection"; active: bike.phoneConnected; activeColor: window.accent; inactiveColor: window.muted }
         Rectangle {
             x: 508; y: 37; width: 33; height: 17; radius: 2; color: "transparent"; border.color: bike.phoneConnected ? window.accent : window.muted
             Rectangle { x: 34; y: 5; width: 3; height: 7; color: window.muted }
@@ -215,20 +216,17 @@ Window {
         Item {
             visible: window.screen === "dashboard"
             anchors.fill: parent
-            Lamp { objectName: "leftSignal"; x: 28; y: 98; width: 40; label: "←"; active: bike.leftIndicator && window.blink; activeColor: window.accent }
-            Row {
-                x: 90; y: 98; spacing: 19
-                Lamp { width: 52; label: "N"; active: bike.gear === 0; activeColor: window.accent }
-                Lamp { width: 52; label: "BEAM"; active: bike.highBeam; activeColor: window.lightPalette ? "#246bb0" : "#77baff" }
-                Lamp { width: 52; label: "TCS"; active: bike.tcsWarning }
-                Lamp { width: 52; label: "ABS"; active: bike.absWarning }
-                Lamp { width: 52; label: "ENGINE"; active: bike.engineWarning }
-                Lamp { width: 52; label: "TEMP"; active: bike.coolantWarning; activeColor: window.red }
-                Lamp { width: 52; label: "MSG"; active: bike.messagePending; activeColor: window.accent }
-                Lamp { width: 52; label: "CALL"; active: bike.incomingCall; activeColor: window.accent }
-                Lamp { width: 52; label: "HAZ"; active: bike.hazards && window.blink }
-            }
-            Lamp { objectName: "rightSignal"; x: 732; y: 98; width: 40; label: "→"; active: bike.rightIndicator && window.blink; activeColor: window.accent }
+            TellTale { objectName: "leftSignal"; x: 28; y: 98; width: 40; kind: "left"; description: "Left indicator"; active: bike.leftIndicator && window.blink; activeColor: window.accent; inactiveColor: window.muted }
+            TellTale { x: 90; y: 98; width: 52; kind: "neutral"; description: "Neutral"; active: bike.gear === 0; activeColor: window.accent; inactiveColor: window.muted }
+            TellTale { x: 161; y: 98; width: 52; kind: "beam"; description: "High beam"; active: bike.highBeam; activeColor: window.lightPalette ? "#246bb0" : "#77baff"; inactiveColor: window.muted }
+            TellTale { x: 232; y: 98; width: 52; kind: "tcs"; description: "Traction control"; active: bike.tcsWarning; activeColor: window.amber; inactiveColor: window.muted }
+            TellTale { x: 303; y: 98; width: 52; kind: "abs"; description: "ABS warning"; active: bike.absWarning; activeColor: window.amber; inactiveColor: window.muted }
+            TellTale { x: 374; y: 98; width: 52; kind: "engine"; description: "Engine warning"; active: bike.engineWarning; activeColor: window.amber; inactiveColor: window.muted }
+            TellTale { x: 445; y: 98; width: 52; kind: "temp"; description: "Coolant warning"; active: bike.coolantWarning; activeColor: window.red; inactiveColor: window.muted }
+            TellTale { x: 516; y: 98; width: 52; kind: "message"; description: "Message"; active: bike.messagePending; activeColor: window.accent; inactiveColor: window.muted }
+            TellTale { x: 587; y: 98; width: 52; kind: "call"; description: "Incoming call"; active: bike.incomingCall; activeColor: window.accent; inactiveColor: window.muted }
+            TellTale { x: 658; y: 98; width: 52; kind: "hazard"; description: "Hazards"; active: bike.hazards && window.blink; activeColor: window.red; inactiveColor: window.muted }
+            TellTale { objectName: "rightSignal"; x: 732; y: 98; width: 40; kind: "right"; description: "Right indicator"; active: bike.rightIndicator && window.blink; activeColor: window.accent; inactiveColor: window.muted }
             // The larger track tachometer retains the same color thresholds as Street.
             Item {
                 id: tach
@@ -286,13 +284,15 @@ Window {
             Label { x: 267; y: display.track ? 377 : 402; text: display.track ? window.lap(ride.fastestLap) : "12.8 V  /  " + (bike.coolantWarning ? "115" : "84") + "°C"; font.pixelSize: 23 }
             Label { visible: display.track; x: 267; y: 409; text: display.track ? "LATEST  " + window.lap(ride.latestLap) : "Enter  cycle information"; color: window.muted; font.pixelSize: 10 }
             Rectangle { x: 537; y: display.track ? 353 : 387; width: 1; height: display.track ? 65 : 40; color: window.line }
-            Label { x: 565; y: display.track ? 351 : 386; text: "FUEL"; color: window.muted; font.pixelSize: 10; font.letterSpacing: 2 }
-            Label { x: 687; y: display.track ? 347 : 379; width: 85; horizontalAlignment: Text.AlignRight; text: bike.fuel + "%"; color: bike.fuel <= 15 ? window.amber : window.ink; font.pixelSize: 23 }
-            Rectangle { x: 565; y: display.track ? 383 : 410; width: 207; height: display.track ? 13 : 10; color: window.panel
-                Rectangle { width: parent.width * bike.fuel / 100; height: parent.height; color: bike.fuel <= 15 ? window.amber : window.accent }
+            FuelGauge {
+                objectName: "fuelGauge"
+                x: 552; y: display.track ? 348 : 383; width: 220; height: display.track ? 80 : 55
+                compact: !display.track
+                fuelPercent: bike.fuel
+                foreground: window.ink; muted: window.muted; depleted: window.panel
+                accent: window.accent; warning: window.amber; critical: window.red
+                fontFamily: Qt.application.font.family
             }
-            Label { x: 565; y: display.track ? 403 : 423; text: "E"; color: window.muted; font.pixelSize: 11 }
-            Label { x: 760; y: display.track ? 403 : 423; text: "F"; color: window.muted; font.pixelSize: 11 }
         }
 
         Item {
@@ -389,7 +389,7 @@ Window {
             Column {
                 y: 48; spacing: 17
                 Repeater {
-                    model: ["← / →    speed ±5 km/h       ↑ / ↓    RPM ±500       1–6 / N    gear / neutral",
+                    model: ["← / →    speed ±1 km/h       ↑ / ↓    RPM ±100       1–6 / N    gear / neutral",
                             "Tab    Street / Track       Enter or PgUp / PgDn    information pages",
                             "S    settings       F1    show / hide this guide       Esc    back",
                             "Q    quick shifter       P    app connection       M / I    message / call",

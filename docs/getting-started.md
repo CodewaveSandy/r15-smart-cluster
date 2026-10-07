@@ -29,15 +29,15 @@ Click the app window before trying these keys:
 
 | Key | Simulator action |
 | --- | --- |
-| Left / Right arrow | Decrease / increase speed by 5 km/h |
-| Down / Up arrow | Decrease / increase RPM by 500 |
+| Left / Right arrow | Decrease / increase speed by 1 km/h |
+| Down / Up arrow | Decrease / increase RPM by 100 |
 | 1–6 | Select gear |
 | N or 0 | Select neutral |
 | L / R | Toggle left / right indicator; cancels the other direction and hazards |
 | Z | Toggle synchronized hazards; switching off clears both arrows |
 | H | Toggle high-beam state |
 | E | Toggle engine warning |
-| [ / ] | Decrease / increase fuel by 5 percentage points |
+| [ / ] | Decrease / increase fuel by 1 percentage points |
 | Tab | Switch Street / Track layout |
 | Enter / Page Down / Page Up | Cycle lower information pages |
 | S | Open settings |
@@ -53,7 +53,7 @@ Values are independent controls for exploring UI states; this is not a physics-b
 
 ## Shift warning
 
-At **10,500 RPM** the background turns red. At **11,400 RPM** it alternates red/normal every **300 ms**. Dropping below those thresholds returns to steady red or the normal theme. This replaces the on-screen shift-light dots. Arrow keys change RPM by 500, so the simulator reaches the flashing range at 11,500 when stepping upward from zero; automated checks cover the exact 11,400 boundary.
+At **10,500 RPM** the background turns red. At **11,400 RPM** it alternates red/normal every **300 ms**. Dropping below those thresholds returns to steady red or the normal theme. This replaces the on-screen shift-light dots. Arrow keys change RPM by 100, so the simulator reaches the flashing range at 11,400 when stepping upward from zero; automated checks cover the exact 11,400 boundary.
 
 The thicker RPM bar blends green/yellow at 3,500–4,500 and yellow/red at 7,500–8,500 RPM. VVA still uses its separate above-7,500 rule.
 
@@ -114,3 +114,7 @@ QT_QPA_PLATFORM=offscreen build/r15-cluster.app/Contents/MacOS/r15-cluster --smo
 CTest checks simulator boundaries, VVA/phone behavior, keyboard-driven screens, date validation/save/cancel, persistent preferences, trips, and laps. UI tests render sample screens into `build/previews/` using an offscreen backend and isolated settings. The smoke check verifies QML loads and then exits; it does not replace visual or keyboard interaction testing.
 
 For background, Qt's official [QML module guide](https://doc.qt.io/qt-6/qt6-port-to-qt-add-qml-module.html) explains the module/build approach used here.
+
+### Fuel warning preview
+
+On the dashboard, `[` lowers fuel by 1% and `]` raises it. At 10–20% the gauge is yellow; below 10% it is red. Below 20% the pump icon and filled fuel segments flash every 500 ms; the percentage stays visible. Raising fuel to 20% stops flashing. `Space` resets simulated bike values. This works in Street/Track and Midnight/Daylight.

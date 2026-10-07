@@ -35,11 +35,17 @@ int main(int argc, char **argv) {
     auto key = [&](Qt::Key key) { QTest::keyClick(window, key); QCoreApplication::processEvents(); };
     auto screen = [&] { return window->property("screen").toString(); };
     key(Qt::Key_Right); key(Qt::Key_Up); key(Qt::Key_3);
-    check(bike.speed() == 5 && bike.rpm() == 500 && bike.gear() == 3, "Dashboard key routing failed");
+    check(bike.speed() == 1 && bike.rpm() == 100 && bike.gear() == 3, "Dashboard key routing failed");
+    key(Qt::Key_Left); key(Qt::Key_Down);
+    check(bike.speed() == 0 && bike.rpm() == 0, "Decrement steps must match increment steps");
+    key(Qt::Key_Right); key(Qt::Key_Up);
+    const int initialFuel = bike.fuel();
+    key(Qt::Key_BracketLeft); check(bike.fuel() == initialFuel - 1, "Fuel decrement must be one percent");
+    key(Qt::Key_BracketRight); check(bike.fuel() == initialFuel, "Fuel increment must be one percent");
     key(Qt::Key_Q); key(Qt::Key_P);
     check(bike.quickShifter() && bike.phoneConnected(), "QS / phone keys failed");
     check(window->findChild<QObject *>("qsLamp")->property("visible").toBool(), "QS must display when enabled");
-    bike.adjustRpm(7000);
+    bike.adjustRpm(7400);
     check(!window->findChild<QObject *>("vvaLamp")->property("visible").toBool(), "VVA visible at 7500");
     key(Qt::Key_Up);
     check(window->findChild<QObject *>("vvaLamp")->property("visible").toBool(), "VVA missing above 7500");
@@ -132,5 +138,53 @@ int main(int argc, char **argv) {
     key(Qt::Key_R); check(!bike.leftIndicator() && bike.rightIndicator(), "Right key must cancel left");
     bike.toggleHighBeam(); bike.toggleAbs(); bike.toggleTcs(); bike.toggleCoolant(); bike.togglePhone(); bike.toggleQuickShifter();
     capture("daylight-badges");
+    auto *fuel = window->findChild<QObject *>("fuelGauge");
+    check(fuel != nullptr, "Fuel gauge component missing");
+    if (!fuel) return 1;
+    for (bool track : {false, true}) {
+        for (bool light : {false, true}) {
+            display.setTrack(track); display.setLight(light);
+            bike.reset(); bike.adjustFuel(28);
+            check(fuel->property("filledSegments").toInt() == 8, "Full fuel must light eight segments");
+            bike.adjustFuel(-80);
+            check(!fuel->property("lowFuel").toBool() && fuel->property("warningLit").toBool(), "20 percent must stay steady");
+            bike.adjustFuel(-1);
+            check(fuel->property("lowFuel").toBool() && fuel->property("warningLit").toBool(), "Below 20 must immediately begin lit warning");
+            QTest::qWait(550);
+            check(!fuel->property("warningLit").toBool(), "Low fuel must blink off");
+            QTest::qWait(500);
+            check(fuel->property("warningLit").toBool(), "Low fuel must continue blinking on");
+            const QString suffix = QString(track ? "track" : "street") + (light ? "-day" : "-night");
+            capture("fuel-low-" + suffix);
+            fuel->setProperty("pulse", false); capture("fuel-low-off-" + suffix);
+            bike.adjustFuel(-9);
+            check(fuel->property("lowFuel").toBool() && !fuel->property("criticalFuel").toBool(), "10 percent must blink yellow");
+            check(fuel->property("statusColor") == fuel->property("warning"), "10 percent must use yellow warning color");
+            bike.adjustFuel(-1);
+            check(fuel->property("lowFuel").toBool() && fuel->property("criticalFuel").toBool(), "Below 10 must keep blinking and turn red");
+            check(fuel->property("statusColor") == fuel->property("critical"), "Critical fuel must use red color");
+            fuel->setProperty("pulse", true); capture("fuel-critical-" + suffix);
+            bike.adjustFuel(-9);
+            check(fuel->property("lowFuel").toBool() && fuel->property("filledSegments").toInt() == 0, "Empty tank must retain blinking icon with empty gauge");
+            fuel->setProperty("pulse", true); capture("fuel-empty-" + suffix);
+            bike.adjustFuel(20);
+            check(!fuel->property("lowFuel").toBool() && fuel->property("warningLit").toBool(), "Refueling to 20 must stop blinking and restore lit state");
+            QTest::qWait(550);
+            check(fuel->property("warningLit").toBool(), "Recovered fuel must remain steady");
+            bike.adjustFuel(52); capture("icons-fuel-" + suffix);
+        }
+    }
+    for (bool light : {false, true}) {
+        display.setLight(light); display.setTrack(false); bike.reset();
+        const QString suffix = light ? "day" : "night";
+        capture("icons-inactive-" + suffix);
+        auto *icon = left->findChild<QObject *>("tellTaleIcon");
+        check(icon && qAbs(icon->property("opacity").toDouble() - 0.12) < 0.001, "Inactive tell-tale must be barely visible in both themes");
+        bike.toggleLeft(); window->setProperty("blink", true);
+        check(icon && icon->property("opacity").toDouble() == 1.0, "Active tell-tale must be fully opaque immediately");
+        bike.toggleHighBeam(); bike.toggleAbs(); bike.toggleTcs(); bike.toggleCoolant();
+        bike.toggleEngineWarning(); bike.togglePhone(); bike.toggleMessage(); bike.toggleCall();
+        capture("icons-active-" + suffix);
+    }
     return ok ? 0 : 1;
 }

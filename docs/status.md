@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 Current phase: M1 complete; M2–M4 in progress, with OEM-based dashboard and configuration screens implemented.
 
 ## Completed
@@ -24,9 +24,19 @@ Current phase: M1 complete; M2–M4 in progress, with OEM-based dashboard and co
 - Added session trip counters and monotonic lap timing. Unavailable efficiency/average-speed data remains visibly unavailable.
 - Offscreen interaction tests and rendered review cover Street, Track, settings, date editor, vehicle info, Daylight, and help. Native visual capture was not needed for this increment.
 
+## Latest increment — icons and fuel warning
+
+- User reverted the futuristic redesign and retained the original layout, Bricolage font and RPM design.
+- Tell-tale/phone icons are barely visible at 12% opacity when inactive and fully opaque with status color when active in both themes.
+- Replaced dashboard text warning badges with locally drawn pictograms and APP with a phone icon. QS/VVA lettering remains.
+- Added a segmented fuel gauge and fuel-pump icon. Yellow at 10–20%, red below 10%. Below 20%, the icon and filled segments blink every 500 ms; the percentage stays readable. At 20% and above the gauge is steady.
+- Simulator keys now adjust speed/fuel by 1 and RPM by 100; on-screen help and preview guide updated.
+- Extracted three small presentation components; simulator/domain behavior and keyboard controls remain unchanged.
+- Configure/build, both CTest targets and offscreen startup passed. Both modes/themes and low-fuel warning phases were rendered and inspected at 800×480. No QML warnings reported.
+
 ## Not implemented yet
 
-No dedicated simulator adapter, per-signal freshness/availability contract, firmware, serial adapter, projection receiver, or real vehicle integration yet. Warning badges are textual placeholders for final pictograms; factory menu ordering and all economy unit variants remain unverified. The navigation/Maps screen is still pending.
+No dedicated simulator adapter, per-signal freshness/availability contract, firmware, serial adapter, projection receiver, or real vehicle integration yet. factory menu ordering and all economy unit variants remain unverified. The navigation/Maps screen is still pending.
 
 ## Next actions
 
