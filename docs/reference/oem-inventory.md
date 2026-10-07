@@ -27,7 +27,7 @@ Source: user-provided photo and explanation, 2026-10-06. The photo appears to il
 | Trip A / B | Independent session counters, individually resettable | Integrated from simulated speed |
 | Trip F | Distance accumulated at demo fuel level ≤15%; clears above threshold | Prototype threshold, not verified OEM reserve behavior |
 | Current / latest / fastest lap | Monotonic timing, start/record, stop, reset | Keyboard controlled; no track/GPS detection |
-| Fuel / E / F | Percentage and continuous gauge, low-fuel color | Keyboard simulated |
+| Fuel / E / F | Percentage, pump icon and segmented gauge; yellow at 10–20%, red below 10%, blinking below 20% | Keyboard simulated |
 | BATT | Bike battery voltage, separate from phone battery | 12.8 V sample |
 | COOLANT | Temperature and separate warning tell-tale | 84°C/115°C samples |
 | AVG / economy / speed | Information pages retained, unavailable values shown | Fuel consumption input and exact OEM unit/menu mapping not yet verified |
@@ -37,7 +37,7 @@ Source: user-provided photo and explanation, 2026-10-06. The photo appears to il
 | Message / call | Indicators gated on simulated app connection | No phone integration |
 | Shift indication | On-screen dots removed at user request; background red at 10,500 RPM, alternating red/normal every 300 ms from 11,400 | User-selected prototype thresholds; physical OEM shift light remains outside this UI |
 
-Warnings currently use clearly labeled badges instead of final OEM-standard pictograms. Final symbol artwork, physical LED placement, light behavior, and vehicle configuration support remain engineering work. The Yamaha emblem is not functional instrumentation and is not reproduced in the custom interface.
+Warnings now use locally drawn pictograms with dim inactive states. OEM-standard symbol validation, physical LED placement, light behavior, and vehicle configuration support remain engineering work. The Yamaha emblem is not functional instrumentation and is not reproduced in the custom interface.
 
 The photograph includes km/L, L/100km, MPG, km/h, mph and mile/km segment labels. The current prototype supports speed/distance unit conversion and an unavailable economy page; all factory consumption-unit combinations and factory menu ordering still require verification. No OEM data capability should be inferred from a static sample.
 
@@ -51,4 +51,4 @@ The photograph includes km/L, L/100km, MPG, km/h, mph and mile/km segment labels
 - Trip A, Trip B, and lap-session reset.
 - Restore automatic Mac time.
 
-Mode, theme, units, and clock offset persist using local Qt settings. Trip/lap/demo odometer values remain session-only. Tests use an isolated temporary settings directory.
+Mode, theme, units, and clock offset persist through validated asynchronous local Qt settings with visible write failures. Trip/lap/demo odometer values remain session-only. Tests use an isolated temporary settings directory.

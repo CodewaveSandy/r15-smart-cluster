@@ -1,6 +1,6 @@
 # R15 Smart Cluster — project hub
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 Build a polished replacement instrument cluster for the Yamaha R15 V4 (2026), preserving OEM functionality and adding themes, physical-control navigation, full Google Maps navigation, and calls.
 
@@ -15,6 +15,8 @@ Build a polished replacement instrument cluster for the Yamaha R15 V4 (2026), pr
 | [Status](status.md) | Current progress, next actions, blockers, and session history |
 | [Getting started](getting-started.md) | Build, launch, keyboard controls, and the edit/preview workflow |
 | [OEM reference inventory](reference/oem-inventory.md) | Saved reference photo, dashboard details, and real-versus-simulated behavior |
+
+| [Engineering review](engineering-review.md) | Refactor, ownership, failure contracts, verification and hardware assembly gates |
 
 ## How to maintain these documents
 

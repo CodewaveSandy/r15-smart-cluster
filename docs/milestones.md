@@ -1,6 +1,6 @@
 # Development milestones
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 Immediate implementation scope is M0–M3. Begin projection feasibility investigation early in parallel with desktop work; later roadmap phases are not evidence that integrations already work.
 
@@ -8,8 +8,8 @@ Immediate implementation scope is M0–M3. Begin projection feasibility investig
 | --- | --- | --- | --- |
 | M0 | Project reference | Scope, architecture, decision log, roadmap, and status saved with unresolved questions identified | Complete |
 | M1 | Mac development setup | Installed tooling inspected; required setup completed; smallest QML app builds and opens at 800 × 480; commands documented | Complete |
-| M2 | State and simulator | Shared BikeState, simulated source, semantic inputs, and connection/freshness states drive a basic UI without hardware dependencies | In progress: basic state and mutation checks exist |
-| M3 | First polished dashboard | One coherent theme shows core instrumentation; keyboard simulation works; normal, warning, and unavailable-data states visually checked | In progress: Street/Track and Daylight/Midnight rendered and interaction-tested; full missing-data behavior pending |
+| M2 | State and simulator | Shared BikeState, simulated source, semantic inputs, and connection/freshness states drive a basic UI without hardware dependencies | In progress: normalized source boundary, isolated simulator/desktop input, frame freshness/availability and failure tests; full per-signal semantics and hardware input adapters pending |
+| M3 | First polished dashboard | One coherent theme shows core instrumentation; keyboard simulation works; normal, warning, and unavailable-data states visually checked | In progress: Street/Track and Daylight/Midnight rendered and interaction-tested; frame loss and battery/coolant availability checked; full per-signal behavior pending |
 | M4 | Screens and themes | Trips/info, settings, theme selection, and labeled navigation placeholder work through physical-style navigation; second theme shares the data layer | In progress: settings, info, time/date and themes implemented; Maps placeholder pending |
 | M5 | ESP32 bench integration | Verified board and firmware drive buttons/pots over a documented versioned serial protocol; disconnect, malformed data, and reconnect behavior checked | Not started |
 | M6 | Real Maps projection | Selected phone projects real Google Maps; essential bike information coexists; input, reconnect, and call/audio behavior assessed with limitations recorded | Not started |

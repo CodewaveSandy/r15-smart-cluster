@@ -34,14 +34,24 @@ Current phase: M1 complete; M2–M4 in progress, with OEM-based dashboard and co
 - Extracted three small presentation components; simulator/domain behavior and keyboard controls remain unchanged.
 - Configure/build, both CTest targets and offscreen startup passed. Both modes/themes and low-fuel warning phases were rendered and inspected at 800×480. No QML warnings reported.
 
+## Latest increment — architecture and failure boundaries
+
+- Reviewed the complete current source/test/build/docs layout; see [engineering review](engineering-review.md).
+- Split five screens, header, tachometer, theme and desktop input out of Main.qml; retained the approved UI and controls.
+- Introduced normalized unit-qualified snapshots and a concrete simulator behind IBikeDataSource; removed simulator mutation from BikeState.
+- Added frame availability/stale/disconnect handling and independent battery/coolant availability; unavailable readings show dashes and ride accumulation pauses.
+- Moved implementation bodies into focused C++ source files; guarded state lifetime and numeric validation; grouped/no-op notifications reduce unnecessary UI updates.
+- Added validated asynchronous/coalesced preferences with visible persistence errors, bounded rotating background logging, runtime QML diagnostics and an independent startup failure window.
+- Build and five CTest groups pass in normal and UndefinedBehaviorSanitizer configurations; normal baseline images match outside live clock, and failure/unavailable views were rendered and inspected. AddressSanitizer runtime initialization stalled on this host; no ASan pass is claimed.
+
 ## Not implemented yet
 
-No dedicated simulator adapter, per-signal freshness/availability contract, firmware, serial adapter, projection receiver, or real vehicle integration yet. factory menu ordering and all economy unit variants remain unverified. The navigation/Maps screen is still pending.
+No full per-signal freshness/support contract, firmware, serial adapter, physical-input adapter, projection receiver, or real vehicle integration yet. Factory menu ordering and all economy unit variants remain unverified. The navigation/Maps screen is still pending.
 
 ## Next actions
 
-1. User previews Street/Track and settings and reviews the reference inventory.
-2. Complete BikeState availability/freshness and separate simulator/input contracts (M2).
+1. User previews the preserved UI and reviews the engineering/hardware verification gates.
+2. Define versioned ESP32 bench protocol and extend signal availability/support semantics before implementing the serial adapter (M2/M5).
 3. Refine final icon artwork and missing-data/warning presentation; investigate real projection feasibility.
 
 ## Dependencies and unanswered questions

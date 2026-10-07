@@ -58,14 +58,36 @@ CMakeLists.txt
 
 Create source folders when they are needed rather than scaffolding unused systems.
 
-Current implementation includes `app/`, `ui/`, `scripts/`, and `tests/`. The desktop-only BikeState owns simulator mutation methods. QML maps keyboard inputs to display actions and simulator actions separately by screen. DisplaySettings owns persisted mode/theme/units and validated clock offset. RideComputer owns session-only distance and monotonic lap timing. Dedicated simulator adapters and per-value freshness/availability are pending.
+Current implementation separates:
+
+```text
+app/                  startup composition and bundled fonts
+domain/               normalized BikeSnapshot/BikeState; RideComputer
+data/                 IBikeDataSource contract
+  simulator/          simulator observations and desktop mutation
+settings/             validated display preferences and asynchronous storage
+application/          observable UI diagnostics
+diagnostics/          bounded asynchronous rotating log sink
+ui/
+  Main.qml            window, navigation, dependency composition
+  screens/            dashboard, settings, clock, vehicle info, help
+  components/         header, tachometer, fuel, tell-tales, icons, shared text
+  theme/              shared palette and warning timing tokens
+  input/              desktop keyboard-to-semantic-action adapter
+  ErrorScreen.qml     independent startup failure window
+tests/                shared core, failure boundaries and rendered UI checks
+```
+
+The concrete simulator publishes normalized observations through IBikeDataSource. BikeState validates snapshots, owns frame availability/freshness and exposes unit-qualified read-only properties. It has no simulator invokables. RideComputer integrates only available speed and owns monotonic/session timing; startup supplies the simulator demo odometer baseline explicitly. DisplaySettings validates persisted preferences and uses a worker thread for bounded/coalesced writes. QML formats the simulator's battery/coolant observations rather than embedding samples.
+
+Qt signal groups reduce unrelated updates; one-second simulator heartbeats refresh a monotonic three-second freshness watchdog without repainting identical values. Data-source disconnect/invalid/stale states render explicit unavailable readings. Individual battery/coolant availability exists; full per-signal freshness/support semantics remain pending before real integration.
+
+Main.qml coordinates navigation and small presentation formatting/clock-edit helpers. Its validated action vocabulary is back/select/next/previous/up/down/left/right; directional actions are resolved by screen context, independently of the physical input source. DesktopInput translates keys into semantic screen actions or simulator commands. Screens/components have explicit injected dependencies and never parse hardware data. Future physical inputs can use the same action entry point, but their adapter is not implemented.
+
+cluster_core is the shared CMake target used by application and tests. Startup owns QObject lifetimes; guarded borrowed state avoids source-destruction dereferences. Structured diagnostics use bounded background file writes, stderr fallback and visible status for settings/QML/data failures. See [engineering review](engineering-review.md) for exact error contracts, threading/shutdown behavior and remaining hardware gates.
 
 ## Later hardware architecture
 
 The proposed final architecture separates a vehicle MCU from the application processor that handles graphics and projection. Exact MCU/SoM/SoC choices are open. Independent warning indication and failure behavior need explicit design and verification; two processors alone do not provide a complete fallback.
 
 See [product scope](product-scope.md) for unresolved bike and hardware questions and [milestones](milestones.md) for validation gates.
-
-## Dashboard presentation components
-
-`ui/components/ClusterIcon.qml` draws local vector pictograms. `TellTale.qml` presents an icon with explicit active/inactive colors and accessibility labels. `FuelGauge.qml` owns segmented-gauge presentation and its low-fuel flash timer, consuming fuel percentage and theme colors from Main.qml. Main.qml retains the existing screen/input shell and layout; fonts and domain/data behavior are unchanged. No hardware knowledge or transport was introduced.

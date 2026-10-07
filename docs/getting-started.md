@@ -70,7 +70,7 @@ The reference details and remaining integration gaps are recorded in [OEM invent
 ## Change something and see it
 
 1. Quit the app with Command-Q.
-2. Edit `ui/Main.qml`, for example the `accent` color.
+2. Edit `ui/theme/Theme.qml`, for example the `accent` color.
 3. Save and run `bash scripts/preview.sh` again.
 4. The updated application opens.
 
@@ -80,16 +80,20 @@ This initial workflow rebuilds the app; it does not hot-reload. Closing only the
 
 | File | Responsibility |
 | --- | --- |
-| `ui/Main.qml` | Window, dashboard layout, and temporary keyboard simulation bindings |
-| `app/BikeState.h` | C++ values exposed to QML with change notifications |
+| `ui/Main.qml` | Window, navigation and injected dependencies |
+| `ui/screens/` and `ui/components/` | Focused screens and shared instrumentation |
+| `ui/theme/Theme.qml` | Palette and warning timing tokens |
+| `ui/input/DesktopInput.qml` | Keyboard adapter and simulator shortcuts |
+| `domain/BikeState.h` and `.cpp` | Validated normalized observations, availability and freshness |
+| `data/simulator/SimulatorBikeDataSource.*` | Simulated observations and mutation |
 | `app/main.cpp` | Starts Qt and supplies state, display preferences, and ride computer |
-| `app/DisplaySettings.h` | Persistent display choices and validated clock/date editing |
-| `app/RideComputer.h` | Simulated trip distance and monotonic lap timing |
+| `settings/DisplaySettings.h` and `.cpp` | Persistent display choices and validated clock/date editing |
+| `domain/RideComputer.h` and `.cpp` | Simulated trip distance and monotonic lap timing |
 | `CMakeLists.txt` | Describes the executable and QML module to the build system |
 | `scripts/preview.sh` | Repeatable build-and-open command |
 | `build/` | Generated files and app; excluded from Git |
 
-Next we will extract the simulator controls into a dedicated source and define unavailable/stale data behavior. The current state object is a starting point, not the complete hardware contract.
+Simulator controls now live in a dedicated source; frame loss and stale data are explicit. Full per-signal support/freshness and real hardware adapters remain pending. See the [engineering review](engineering-review.md).
 
 ## Build without opening a window
 
@@ -118,3 +122,17 @@ For background, Qt's official [QML module guide](https://doc.qt.io/qt-6/qt6-port
 ### Fuel warning preview
 
 On the dashboard, `[` lowers fuel by 1% and `]` raises it. At 10–20% the gauge is yellow; below 10% it is red. Below 20% the pump icon and filled fuel segments flash every 500 ms; the percentage stays visible. Raising fuel to 20% stops flashing. `Space` resets simulated bike values. This works in Street/Track and Midnight/Daylight.
+
+## Diagnostics and failure previews
+
+The app prints timestamped/category-tagged diagnostics to stderr and writes rotating `cluster.log`, `cluster.log.1`, and `cluster.log.2` files under Qt's application-data directory. On macOS the default is normally `~/Library/Application Support/R15 Smart Cluster/logs/`; startup prints the exact path. Each file is bounded to 512 KiB. Disk failure keeps stderr available. Logs contain software state/errors, not phone message content.
+
+Use a project-local log location when investigating startup:
+
+```sh
+QT_QPA_PLATFORM=offscreen build/r15-cluster.app/Contents/MacOS/r15-cluster --smoke-test --log-directory build/testlogs/manual
+```
+
+To inject a startup failure, append `--test-startup-failure`. The independent error window opens and exit status is intentionally 1. CTest checks this path and also renders it without desktop interaction. Normal startup should exit 0.
+
+A data failure shows dashes and a source-status footer. A preference-save failure leaves the current choices usable but reports that changes are temporary. A runtime UI diagnostic latches a footer error; check logs and restart after resolving the cause. These paths are software checks, not proof of a safe motorcycle installation.

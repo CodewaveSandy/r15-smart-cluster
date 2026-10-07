@@ -10,14 +10,15 @@ Item {
     required property color warning
     required property color critical
     required property string fontFamily
+    property bool available: true
     property bool compact: false
     readonly property int lowFuelThresholdPercent: 20
     readonly property int blinkIntervalMs: 500
-    readonly property bool lowFuel: fuelPercent < lowFuelThresholdPercent
+    readonly property bool lowFuel: available && fuelPercent < lowFuelThresholdPercent
     readonly property int criticalFuelThresholdPercent: 10
-    readonly property bool criticalFuel: fuelPercent < criticalFuelThresholdPercent
-    readonly property color statusColor: criticalFuel ? critical : fuelPercent <= lowFuelThresholdPercent ? warning : accent
-    readonly property int filledSegments: Math.ceil(Math.max(0, Math.min(100, fuelPercent)) / 12.5)
+    readonly property bool criticalFuel: available && fuelPercent < criticalFuelThresholdPercent
+    readonly property color statusColor: criticalFuel ? critical : available && fuelPercent <= lowFuelThresholdPercent ? warning : accent
+    readonly property int filledSegments: available ? Math.ceil(Math.max(0, Math.min(100, fuelPercent)) / 12.5) : 0
     property bool pulse: true
     readonly property bool warningLit: !lowFuel || pulse
     onLowFuelChanged: pulse = true
@@ -31,12 +32,12 @@ Item {
     Text { x: 31; y: 3; text: "FUEL"; font.family: gauge.fontFamily; font.pixelSize: 10; font.letterSpacing: 2; color: gauge.muted }
     Text {
         anchors.right: parent.right; y: -4
-        text: gauge.fuelPercent + "%"; font.family: gauge.fontFamily; font.pixelSize: 23
-        color: gauge.fuelPercent <= gauge.lowFuelThresholdPercent ? gauge.statusColor : gauge.foreground
+        text: gauge.available ? gauge.fuelPercent + "%" : "—"; font.family: gauge.fontFamily; font.pixelSize: 23
+        color: gauge.available && gauge.fuelPercent <= gauge.lowFuelThresholdPercent ? gauge.statusColor : gauge.foreground
     }
     ClusterIcon {
         x: 0; y: gauge.compact ? 18 : 27; width: 24; height: 26; kind: "fuel"
-        tint: gauge.fuelPercent <= gauge.lowFuelThresholdPercent ? gauge.statusColor : gauge.foreground
+        tint: gauge.available && gauge.fuelPercent <= gauge.lowFuelThresholdPercent ? gauge.statusColor : gauge.foreground
         opacity: gauge.warningLit ? 1 : 0
     }
     Row {

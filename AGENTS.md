@@ -240,12 +240,18 @@ Agents must understand the current prototype before extending it.
 
 Known areas that should be improved incrementally:
 
-1.  `ui/Main.qml` currently owns too many screens and responsibilities.
-2.  `BikeState` currently contains simulator mutation behavior.
-3.  A dedicated bike data-source abstraction is not yet fully
-    established.
-4.  Real-signal availability/freshness semantics are not yet modeled.
-5.  Keyboard mappings are still closely tied to the desktop simulation.
+Current factual status updated 2026-10-07; see `docs/engineering-review.md`.
+
+1.  Screens/components/theme are extracted. Main.qml still owns small
+    navigation and clock-draft presentation helpers.
+2.  Simulator mutation is isolated in SimulatorBikeDataSource; verified
+    hardware data sources remain unimplemented.
+3.  IBikeDataSource and normalized snapshots exist. Full per-signal
+    support/freshness and real transport contracts remain incomplete.
+4.  Frame availability/freshness and optional battery/coolant availability
+    exist; complete real-signal semantics still need design.
+5.  DesktopInput isolates keyboard mappings and semantic actions;
+    physical/OEM input adapters remain unimplemented.
 6.  Several displayed vehicle values are intentionally simulated.
 7.  The ESP32 serial protocol is not yet defined.
 8.  Android Auto / CarPlay projection has not yet been proven in the

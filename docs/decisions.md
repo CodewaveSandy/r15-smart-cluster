@@ -128,6 +128,18 @@ Statuses: **Accepted** means the working project direction; **Proposed** needs i
 - Desktop keys change speed by 1 km/h, RPM by 100 and fuel by 1 percentage point in both directions. These increments affect simulator input only, not vehicle data processing or RPM thresholds.
 - Reserve-trip calculations retain their existing separate semantics. No Yamaha threshold is claimed.
 
+## D17 — Layer separation and explicit failure handling
+
+- Date: 2026-10-07
+- Status: Accepted
+- Preserve the approved presentation while extracting focused QML screens/components/theme/desktop input. Keep Main.qml as window/navigation composition with small presentation helpers.
+- Introduce a used IBikeDataSource boundary and concrete simulator; BikeState accepts validated unit-qualified observations only. Separate header/.cpp responsibilities and share cluster_core across app/tests.
+- Add available/disconnected/invalid/stale frame handling with a monotonic three-second freshness default; valid frames recover. Pause distance integration and mask unavailable measurements rather than substituting zero. Battery/coolant carry individual availability.
+- Simulator owns sample measurements and the demo odometer baseline; no vehicle-owned persistence is introduced.
+- Persist validated preferences through one background worker with coalesced bounded writes and observable errors. Add bounded rotating asynchronous diagnostics and an independent startup failure screen; runtime QML errors are logged and surfaced.
+- Safety claims are limited to tested software behavior. Fatal faults, embedded power/boot/watchdog behavior, full per-signal semantics and independent critical indications remain hardware milestones.
+- Rationale, limits, ownership, verification and assembly gates: [engineering review](engineering-review.md).
+
 ## New decision template
 
 ```markdown

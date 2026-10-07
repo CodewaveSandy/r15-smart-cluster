@@ -1496,14 +1496,18 @@ The existing project is a strong prototype foundation, but agents should
 gradually address these known structural issues rather than expanding
 them indefinitely:
 
-1.  `ui/Main.qml` currently owns too many screens and responsibilities.
-2.  `BikeState` currently contains simulator mutation methods.
-3.  A dedicated `IBikeDataSource`/simulator data-source boundary is not
-    yet implemented.
-4.  Availability/freshness semantics for real signals are not yet
-    modeled.
-5.  Keyboard mappings and semantic product navigation are still coupled
-    in the QML shell.
+Current factual status updated 2026-10-07; see `docs/engineering-review.md`.
+
+1.  Screens/components/theme are extracted. Main.qml still owns small
+    navigation and clock-draft presentation helpers.
+2.  Simulator mutation is isolated in SimulatorBikeDataSource; verified
+    hardware data sources remain unimplemented.
+3.  IBikeDataSource and normalized snapshots exist. Full per-signal
+    support/freshness and real transport contracts remain incomplete.
+4.  Frame availability/freshness and optional battery/coolant availability
+    exist; complete real-signal semantics still need design.
+5.  DesktopInput isolates keyboard mappings and semantic actions;
+    physical/OEM input adapters remain unimplemented.
 6.  Several battery/coolant/odometer values are intentionally simulated
     samples.
 7.  Final warning pictograms and independent physical tell-tale behavior
