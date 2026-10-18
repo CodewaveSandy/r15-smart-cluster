@@ -15,7 +15,7 @@ Baseline: 2026-10-18. Current phase: first host implementation.
 
 Architecture, resource/concurrency proposals, style guide, power lifecycle, implementation stages and verification gates are documented. Active documentation describes the project baseline. The first LVGL host slice is implemented: portable observations/quality, model validation, monotonic ignition lifecycle, shared palettes, Bricolage subsets, dashboard layouts/themes and keyboard simulator. Default CMake and scripts/preview.sh build the native SDL2 preview. Host dependency: LVGL 9.2.2 pinned by archive hash; font converter 1.5.3 pinned by lockfile.
 
-Verification: Debug configure/build, portable model/lifecycle/fuel/shift tests and 24 deterministic render scenarios pass. Render tests reject runtime warnings. Representative layouts/themes/fuel/unavailable/warning/lifecycle captures inspected; native Mac mode/theme/speed, key-off/on and unavailable controls exercised. Board flash, UART codec, vehicle adapter and hardware validation remain pending. Settings, persistence, functional trips/laps and final icons are not implemented in this slice.
+Verification: a fresh Debug configure/build completes without compiler warnings; portable model/lifecycle/fuel/shift tests and 24 deterministic render scenarios pass. Rendered outputs match the established first-draft checksums byte-for-byte. Render tests reject runtime warnings. Representative layouts/themes/fuel/unavailable/warning/lifecycle captures inspected; native Mac mode/theme/speed, key-off/on and unavailable controls exercised. Board flash, UART codec, vehicle adapter and hardware validation remain pending. Settings, persistence, functional trips/laps and final icons are not implemented in this slice.
 
 ## Next actions
 

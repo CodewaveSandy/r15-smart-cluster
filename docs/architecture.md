@@ -1,6 +1,6 @@
 # System architecture
 
-Baseline: 2026-10-18. Design stage.
+Baseline: 2026-10-18. Native host preview implemented; hardware firmware pending.
 
 ```text
 Bike harness -> reviewed conditioning / CAN transceiver

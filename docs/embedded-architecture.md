@@ -127,9 +127,9 @@ Other harness signals require individual measured voltage/polarity, pull-up/load
 
 ## Requirements that need resolution
 
-Full Google Maps, Android Auto/CarPlay, calls and audio were earlier requirements. This two-ESP32 LVGL design establishes no projection receiver, decoder, rendering or licensing path. Wi-Fi/BLE support alone does not establish those capabilities. The user explicitly confirmed on 2026-10-18 that full Maps/projection should remain an unresolved requirement to investigate. Retain it pending a separate feasibility proof; do not silently replace full Maps with arrows or a fake map.
+Full Google Maps, Android Auto/CarPlay, calls and audio are product requirements with unresolved implementation feasibility. This two-ESP32 LVGL design establishes no projection receiver, decoder, rendering or licensing path. Wi-Fi/BLE support alone does not establish those capabilities. The user explicitly confirmed on 2026-10-18 that full Maps/projection should remain an unresolved requirement to investigate. Retain it pending a separate feasibility proof; do not silently replace full Maps with arrows or a fake map.
 
-The seven-inch board's physical envelope, viewing angle, brightness, weather exposure and OEM fit need measurement. The original smaller-display discussion is superseded as a purchase plan, not mechanically validated by the new purchase.
+The seven-inch board's physical envelope, viewing angle, brightness, weather exposure and OEM fit need measurement. Purchasing the board does not establish mechanical or environmental suitability.
 
 ## Sources reviewed
 
@@ -137,7 +137,7 @@ Official sources checked 2026-10-18; mutable documentation is background until v
 
 - [Elecrow 7-inch CrowPanel wiki and revision resources](https://media-cdn.elecrow.com/wiki/esp32-display-702727-intelligent-touch-screen-wi-fi26ble-800480-hmi-display.html): candidate family, revision differences and schematic/example discovery. Not confirmation of the purchased revision.
 - [Espressif RGB LCD driver](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/lcd/rgb_lcd.html): scanout buffering and PSRAM/bandwidth tradeoffs.
-- [LVGL 9.2 display integration](https://lvgl.io/docs/open/9.2/porting/display): render modes and flush ownership; reference only, not selected dependency version.
+- [LVGL 9.2 display integration](https://lvgl.io/docs/open/9.2/porting/display): render modes and flush ownership; display integration reference; host dependency is pinned to 9.2.2.
 - [LVGL integration/thread ownership](https://github.com/lvgl/lvgl/blob/master/docs/src/integration/overview.mdx): serialize access to LVGL.
 - [Espressif ESP32-S3 TWAI](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/peripherals/twai.html): controller limitations and listen-only behavior.
 - [TI isolated CAN interface guide](https://www.ti.com/document-viewer/lit/html/slla484): isolation belongs in a designed transceiver interface.

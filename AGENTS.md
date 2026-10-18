@@ -25,4 +25,4 @@ The first LVGL host slice is implemented. Continue incremental implementation an
 
 Do not invent pinouts, CAN IDs, bitrates, signal polarity, calibration or warning semantics. Initial real-bike integration is passive/read-only; active transmission requires explicit reviewed authorization. Keep OEM function during early observation. No claim of compliance or production readiness without evidence.
 
-Routine Git operations remain with the user. Never reset/discard unrelated work, force push or rewrite history. Keep builds, generated exports, temporary screenshots and local IDE state untracked. Before removal/replacement requested in this project reset, preserve necessary source/assets/docs in a verified backup.
+Routine Git operations remain with the user. Never reset/discard unrelated work, force push or rewrite history. Keep builds, generated exports, temporary screenshots and local IDE state untracked. Before removing or replacing project files, preserve necessary source/assets/docs in a verified backup.

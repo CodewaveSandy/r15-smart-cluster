@@ -21,7 +21,7 @@ Implement the geometry and behavior specified here. Capture deterministic 800 x 
 | Lower information | Primary page left, supporting bike/lap information middle, fuel right |
 | Footer divider | y=439; status/hints below |
 
-Use bundled Bricolage Grotesque Regular/SemiBold/Bold under the specified OFL license. Convert font sizes from observed rendered metrics; Validate nominal font sizes against actual rendered baselines. Centralize text styles, tracking, line heights and alignment. Reserve fixed bounds for changing digits and use bounded formatting. Small-font subsets need all actual menu/date/unit/error glyphs, degree sign and unavailable dash; large-font subsets need their actual digits/N/dash/punctuation. Keep font sources, converter version, command and output size reproducible.
+Use bundled Bricolage Grotesque Regular/SemiBold/Bold under the specified OFL license. Choose font sizes from observed rendered metrics; validate nominal font sizes against actual rendered baselines. Centralize text styles, tracking, line heights and alignment. Reserve fixed bounds for changing digits and use bounded formatting. Small-font subsets need all actual menu/date/unit/error glyphs, degree sign and unavailable dash; large-font subsets need their actual digits/N/dash/punctuation. Keep font sources, converter version, command and output size reproducible.
 
 ## Theme tokens
 
@@ -50,7 +50,7 @@ Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens
 
 ## Components and data flow
 
-Create focused Header, Tachometer, SpeedReadout, GearReadout, TellTaleRow, FuelGauge and InfoPanel only as they are ported. Each exposes a small typed update API, owns its LVGL subtree and caches displayed values. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
+Create focused Header, Tachometer, SpeedReadout, GearReadout, TellTaleRow, FuelGauge and InfoPanel as their responsibilities are implemented. Each exposes a small typed update API, owns its LVGL subtree and caches displayed values. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
 
 Screens: Dashboard (Street/Track layouts), Settings, Clock, VehicleInfo, developer Help. Hardware labels must describe actual available controls and time sources; host developer hints remain host-only.  Touch is optional and cannot become required navigation.
 
