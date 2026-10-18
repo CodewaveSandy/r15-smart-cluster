@@ -1,8 +1,10 @@
 #!/bin/bash
 set -euo pipefail
-project_dir="$(cd "$(dirname "$0")/.." && pwd)"
-qt_prefix="$(brew --prefix qt)"
-cmake -S "$project_dir" -B "$project_dir/build" -G Ninja \
-    -DCMAKE_PREFIX_PATH="$qt_prefix" -DCMAKE_BUILD_TYPE=Debug
-cmake --build "$project_dir/build"
-open "$project_dir/build/r15-cluster.app"
+root="$(cd "$(dirname "$0")/.." && pwd)"
+cmake -S "$root" -B "$root/build/lvgl" -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build "$root/build/lvgl" --parallel 4
+if [[ "$(uname -s)" == Darwin ]]; then
+  exec "$root/build/lvgl/r15-preview.app/Contents/MacOS/r15-preview" "$@"
+else
+  exec "$root/build/lvgl/r15-preview" "$@"
+fi

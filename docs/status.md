@@ -1,84 +1,28 @@
-# Current status
+# Project status
 
-Last updated: 2026-10-07
-Current phase: M1 complete; M2–M4 in progress, with OEM-based dashboard and configuration screens implemented.
+Baseline: 2026-10-18. Current phase: first host implementation.
 
-## Completed
+## Established direction
 
-- Reviewed the shared planning conversation and captured the latest project direction.
-- Verified project directory read/write access using a temporary file, then removed it.
-- Inspected Git configuration: local `main` had no commits; origin points to `git@github.com:CodewaveSandy/r15-smart-cluster.git`.
-- Created the centralized documentation hub and roadmap.
-- Installed Qt 6.11.2, CMake 4.4.4, and Ninja 1.13.2 through Homebrew; Apple Clang 17 was already available.
-- Built and launched the native 800 × 480 desktop application.
-- Added basic C++ BikeState and a first QML dashboard with speed, RPM, gear, fuel, and indicator controls.
-- Added `scripts/preview.sh` and the [beginner build/preview guide](getting-started.md).
-- Passed the CTest state check covering bounds, indicator toggles, reset, and change notifications.
-- Passed offscreen QML startup smoke check. Native app launch and window title confirmed through the UI tool.
+- Two ESP32s, UART interconnect and LVGL display rendering.
+- Elecrow 7-inch 800 x 480 HMI family selected; user supplied the vendor wiki. Delivered PCB revision and vehicle MCU model remain unconfirmed.
+- UI geometry, themes, typography and instrument behavior specified in the style guide.
+- Key-on boot and key-off shutdown animations each specified at 1–1.5 s. Retained power circuit and total startup timing remain unverified.
+- User reports investigating the 20-pin harness and identifying most major functions. Detailed pin/voltage/polarity/waveform evidence has not yet been supplied here.
+- Full Maps/projection remains unresolved by explicit user choice.
 
-## Latest increment — OEM reference
+## Current deliverables
 
-- Saved the user's photo and a functional inventory under `docs/reference/`.
-- Added distinct Street/Track layouts, gear-first status row, QS/VVA, app/phone battery, clock/date, warning badges, shift lights, and lower information pages.
-- Added persistent Midnight/Daylight themes, units, display mode, and clock offset; keyboard-operated settings, clock editor, and vehicle info.
-- Added session trip counters and monotonic lap timing. Unavailable efficiency/average-speed data remains visibly unavailable.
-- Offscreen interaction tests and rendered review cover Street, Track, settings, date editor, vehicle info, Daylight, and help. Native visual capture was not needed for this increment.
+Architecture, resource/concurrency proposals, style guide, power lifecycle, implementation stages and verification gates are documented. Active documentation describes the project baseline. The first LVGL host slice is implemented: portable observations/quality, model validation, monotonic ignition lifecycle, shared palettes, Bricolage subsets, dashboard layouts/themes and keyboard simulator. Default CMake and scripts/preview.sh build the native SDL2 preview. Host dependency: LVGL 9.2.2 pinned by archive hash; font converter 1.5.3 pinned by lockfile.
 
-## Latest increment — icons and fuel warning
-
-- User reverted the futuristic redesign and retained the original layout, Bricolage font and RPM design.
-- Tell-tale/phone icons are barely visible at 12% opacity when inactive and fully opaque with status color when active in both themes.
-- Replaced dashboard text warning badges with locally drawn pictograms and APP with a phone icon. QS/VVA lettering remains.
-- Added a segmented fuel gauge and fuel-pump icon. Yellow at 10–20%, red below 10%. Below 20%, the icon and filled segments blink every 500 ms; the percentage stays readable. At 20% and above the gauge is steady.
-- Simulator keys now adjust speed/fuel by 1 and RPM by 100; on-screen help and preview guide updated.
-- Extracted three small presentation components; simulator/domain behavior and keyboard controls remain unchanged.
-- Configure/build, both CTest targets and offscreen startup passed. Both modes/themes and low-fuel warning phases were rendered and inspected at 800×480. No QML warnings reported.
-
-## Latest increment — architecture and failure boundaries
-
-- Reviewed the complete current source/test/build/docs layout; see [engineering review](engineering-review.md).
-- Split five screens, header, tachometer, theme and desktop input out of Main.qml; retained the approved UI and controls.
-- Introduced normalized unit-qualified snapshots and a concrete simulator behind IBikeDataSource; removed simulator mutation from BikeState.
-- Added frame availability/stale/disconnect handling and independent battery/coolant availability; unavailable readings show dashes and ride accumulation pauses.
-- Moved implementation bodies into focused C++ source files; guarded state lifetime and numeric validation; grouped/no-op notifications reduce unnecessary UI updates.
-- Added validated asynchronous/coalesced preferences with visible persistence errors, bounded rotating background logging, runtime QML diagnostics and an independent startup failure window.
-- Build and five CTest groups pass in normal and UndefinedBehaviorSanitizer configurations; normal baseline images match outside live clock, and failure/unavailable views were rendered and inspected. AddressSanitizer runtime initialization stalled on this host; no ASan pass is claimed.
-
-## Not implemented yet
-
-No full per-signal freshness/support contract, firmware, serial adapter, physical-input adapter, projection receiver, or real vehicle integration yet. Factory menu ordering and all economy unit variants remain unverified. The navigation/Maps screen is still pending.
+Verification: Debug configure/build, portable model/lifecycle/fuel/shift tests and 24 deterministic render scenarios pass. Render tests reject runtime warnings. Representative layouts/themes/fuel/unavailable/warning/lifecycle captures inspected; native Mac mode/theme/speed, key-off/on and unavailable controls exercised. Board flash, UART codec, vehicle adapter and hardware validation remain pending. Settings, persistence, functional trips/laps and final icons are not implemented in this slice.
 
 ## Next actions
 
-1. User previews the preserved UI and reviews the engineering/hardware verification gates.
-2. Define versioned ESP32 bench protocol and extend signal availability/support semantics before implementing the serial adapter (M2/M5).
-3. Refine final icon artwork and missing-data/warning presentation; investigate real projection feasibility.
+1. Review architecture, lifecycle exceptions and scope.
+2. Confirm delivered board revision, matching schematic/example and vehicle MCU model.
+3. Preview/tune the host UI; establish the board-specific panel smoke target after revision confirmation.
+4. Refine components/artwork and add remaining navigation/screens with deterministic tests.
+5. Define/test UART, then integrate synthetic bench data before measured bike inputs.
 
-## Dependencies and unanswered questions
-
-- User reported ordering the bench electronics in the earlier chat. Delivery status and exact ESP32 board variant have not been verified.
-- Phone platform and projection approach need selection before the projection proof.
-- Exact bike measurements, connector/protocol, and switch details remain unverified.
-- None of those hardware unknowns blocks starting the Mac application.
-
-## Session log
-
-| Date | Work | Verification / result |
-| --- | --- | --- |
-| 2026-10-06 | Repository access inspection | Read/write probe succeeded; Git remote read locally; remote authentication not tested |
-| 2026-10-06 | Documentation baseline | Scope, stack, decisions, phases, and open questions recorded; no application code changes |
-| 2026-10-06 | First desktop app | Build and CTest passed; offscreen QML startup passed; native window opened. Detailed native capture/input verification limited by capture failure |
-| 2026-10-06 | Dashboard visual revision | Replaced segmented RPM blocks with a continuous bar; green/yellow blend at 3,500–4,500 and yellow/red at 6,500–7,500 RPM. Removed the top branding and desktop-simulator badge |
-
-| 2026-10-06 | OEM-based cockpit and settings | State and offscreen UI interaction tests; rendered screen review; no real vehicle or phone connection |
-
-| 2026-10-06 | RPM and signal refinement | Thicker bar, 4k–8k midrange, full-background shift alert, Daylight badge contrast, and exclusive turn signals with Z hazards |
-
-| 2026-10-06 | Bricolage Grotesque | Bundled official Regular/SemiBold/Bold and license; build and both tests passed; Street/Track, settings, Daylight, and help renders visually reviewed |
-
-| 2026-10-06 | Street speed prominence | Larger 128 px speed readout; 40 px extra central height; compressed lower strip; build and both tests passed; Street render reviewed |
-
-## Next update template
-
-Record the date, meaningful changes, verification performed and outcome, remaining issues, and next action. Do not mark planned features as completed or imply mocked behavior is a real integration.
-
+See [implementation plan](implementation-plan.md). No simulator or design result counts as bike verification.

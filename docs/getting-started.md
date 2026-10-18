@@ -1,138 +1,109 @@
-# Build and preview on your Mac
+# Preview and tune the UI on macOS
 
-## What you are running
+Updated: 2026-10-18. This is a native LVGL application with simulated observations, not a browser page or hardware firmware.
 
-This is a native desktop application. Qt creates the window; QML describes its appearance; C++ supplies simulated bike values. There is no browser server or localhost URL.
-
-The app opens at 800 × 480 logical pixels. On a Retina display, macOS uses extra physical pixels for sharp rendering. This is our first design canvas, not a confirmed final screen specification.
-
-The interface uses bundled **Bricolage Grotesque**. You do not need to install it on your Mac. Font files and license live under `assets/fonts/bricolage/`; registration happens in `app/Fonts.h`.
-
-## Requirements
-
-- Apple Command Line Tools (C++ compiler).
-- Homebrew packages: `qt`, `cmake`, and `ninja`.
-- Qt 6.5 or later; C++17.
-
-## Launch the preview
-
-Open Terminal and run:
+## 1. Open Terminal
 
 ```sh
 cd /Users/codewavesandy/Desktop/learning/projects/r15-smart-cluster
+```
+
+## 2. Check the prerequisites
+
+The current Mac already has the compiler, CMake, Ninja and SDL2. On another Mac, install Apple's Command Line Tools and the required Homebrew packages:
+
+```sh
+xcode-select --install
+brew install cmake ninja sdl2
+```
+
+Only run the installation commands for missing tools. The first configure downloads the official LVGL 9.2.2 archive and verifies its pinned SHA-256. Subsequent builds reuse it. Fonts are already included as generated C assets; Node/npm is not needed for ordinary preview builds.
+
+## 3. Build and launch
+
+```sh
 bash scripts/preview.sh
 ```
 
-The script configures the project, builds it, and opens the Mac app. The first build does more work; later builds reuse unchanged files. Keep the terminal output if an error occurs.
+The script configures a Debug build under build/lvgl, compiles and opens an 800 x 480 native window. Boot artwork runs for 1.25 seconds before the dashboard. Click the window if keys do not respond. Terminal stays attached for diagnostics; quit with Esc or close the window.
 
-Click the app window before trying these keys:
+## 4. Explore representative states
 
-| Key | Simulator action |
+| Key | Action |
 | --- | --- |
-| Left / Right arrow | Decrease / increase speed by 1 km/h |
-| Down / Up arrow | Decrease / increase RPM by 100 |
-| 1–6 | Select gear |
-| N or 0 | Select neutral |
-| L / R | Toggle left / right indicator; cancels the other direction and hazards |
-| Z | Toggle synchronized hazards; switching off clears both arrows |
-| H | Toggle high-beam state |
-| E | Toggle engine warning |
-| [ / ] | Decrease / increase fuel by 1 percentage points |
-| Tab | Switch Street / Track layout |
-| Enter / Page Down / Page Up | Cycle lower information pages |
-| S | Open settings |
-| F1 | Open / close all keyboard controls |
-| Q | Toggle QS enabled |
-| P | Toggle app connection and sample phone battery |
-| A / T / C | Toggle ABS / TCS / coolant warning |
-| M / I | Toggle message / incoming call (requires app connection) |
-| K / B | Start or record next lap / stop lap, in Track layout |
-| Space | Reset bike signals (trips and laps reset in settings) |
+| Left / Right | Speed -/+ 1 km/h |
+| Down / Up | RPM -/+ 100 |
+| [ / ] | Fuel -/+ 1 percentage point |
+| 0–6 | Neutral or gear |
+| Tab | Street / Track |
+| D | Midnight / Daylight |
+| U | Metric / imperial speed and distance |
+| Enter | ODO, battery or coolant information |
+| L / R | Exclusive left / right simulated indicator |
+| Z | Hazards |
+| H | High beam |
+| A / E / C | ABS / engine / coolant warning |
+| X | Toggle unavailable observations |
+| O | Simulated key-off / key-on |
+| Space | Reset demo values |
+| F1 | Print controls in Terminal |
+| Esc | Quit |
 
-Values are independent controls for exploring UI states; this is not a physics-based motorcycle simulation. Simulator limits (180 km/h, 13,000 rpm) are not claims about the R15's specifications. No key sends data to a real bike.
+Fuel: 10–20% yellow, below 10% red, blinking below 20%. RPM: steady shift alert from 10,500; flashing from 11,400. These are UI demonstration thresholds, not verified vehicle limits. Clock/date uses the Mac's local wall clock; deterministic renders use fixed time.
 
-## Shift warning
+O simulates ignition; the Mac window stays open after shutdown so O can restart it. It does not cut power. A valid engine/coolant warning exposes instrumentation during boot/shutdown artwork. Real ignition, retained power and final critical-warning classification require hardware design/testing.
 
-At **10,500 RPM** the background turns red. At **11,400 RPM** it alternates red/normal every **300 ms**. Dropping below those thresholds returns to steady red or the normal theme. This replaces the on-screen shift-light dots. Arrow keys change RPM by 100, so the simulator reaches the flashing range at 11,400 when stepping upward from zero; automated checks cover the exact 11,400 boundary.
+## 5. Change the design and rebuild
 
-The thicker RPM bar blends green/yellow at 3,500–4,500 and yellow/red at 7,500–8,500 RPM. VVA still uses its separate above-7,500 rule.
+1. Quit the preview with Esc.
+2. Edit the relevant source file and save.
+3. Run bash scripts/preview.sh again.
 
-## Settings and information
+There is no automatic hot reload yet. Ordinary source changes rebuild incrementally.
 
-Press **S**, use **Up/Down** to select a row, and **Enter** to activate it. **Esc** returns to the preceding screen. Menu arrows do not change simulated speed or RPM.
-
-Select **Time & date** to open the editor. **Left/Right** chooses a field, **Up/Down** adjusts it, and **Enter** advances to the next field or saves at the Save button. **Esc** cancels. This changes only the cluster clock. Mode, theme, units, and clock offset survive app restarts.
-
-Street and Track are different display layouts. In Track, **K** starts timing; each subsequent K records the completed lap and begins the next. **B** stops and retains the current elapsed value; it does not record it as a completed lap. The next K starts a new lap. Settings can clear the lap session.
-
-The reference details and remaining integration gaps are recorded in [OEM inventory](reference/oem-inventory.md). App connectivity, QS, warnings, battery, and coolant are simulated. Trips accumulate from simulated speed; no real odometer data is read or written. VVA appears above 7,500 RPM and disappears at or below it.
-
-## Change something and see it
-
-1. Quit the app with Command-Q.
-2. Edit `ui/theme/Theme.qml`, for example the `accent` color.
-3. Save and run `bash scripts/preview.sh` again.
-4. The updated application opens.
-
-This initial workflow rebuilds the app; it does not hot-reload. Closing only the window is not a reliable replacement for quitting the app before relaunching a changed build.
-
-## Where things live
-
-| File | Responsibility |
+| File | What to tune |
 | --- | --- |
-| `ui/Main.qml` | Window, navigation and injected dependencies |
-| `ui/screens/` and `ui/components/` | Focused screens and shared instrumentation |
-| `ui/theme/Theme.qml` | Palette and warning timing tokens |
-| `ui/input/DesktopInput.qml` | Keyboard adapter and simulator shortcuts |
-| `domain/BikeState.h` and `.cpp` | Validated normalized observations, availability and freshness |
-| `data/simulator/SimulatorBikeDataSource.*` | Simulated observations and mutation |
-| `app/main.cpp` | Starts Qt and supplies state, display preferences, and ride computer |
-| `settings/DisplaySettings.h` and `.cpp` | Persistent display choices and validated clock/date editing |
-| `domain/RideComputer.h` and `.cpp` | Simulated trip distance and monotonic lap timing |
-| `CMakeLists.txt` | Describes the executable and QML module to the build system |
-| `scripts/preview.sh` | Repeatable build-and-open command |
-| `build/` | Generated files and app; excluded from Git |
+| embedded/ui/Tokens.h | Theme palette, shared metrics and warning timing |
+| embedded/ui/Dashboard.cpp | Dashboard geometry, labels, instrument composition and initial animation artwork |
+| embedded/ui/InstrumentPresentation.h | Fuel/shift presentation rules, independent of LVGL |
+| embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 1250 |
+| simulator/lvgl/main.cpp | Demo starting values, host keyboard mapping, clock and render scenarios |
+| shared/model/ClusterState.h | Unit-qualified normalized observations and quality |
+| scripts/generate-fonts.sh | Reproducible font sizes/glyph subsets |
 
-Simulator controls now live in a dedicated source; frame loss and stale data are explicit. Full per-signal support/freshness and real hardware adapters remain pending. See the [engineering review](engineering-review.md).
+Keep vehicle calculations and simulated mutations out of Dashboard.cpp. Colors do not change vehicle behavior. Use tests when changing thresholds/timing.
 
-## Build without opening a window
+## Fonts
 
-```sh
-cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
-```
+Bricolage subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Large numeric fonts contain a limited glyph set; the 46 px animation/gear font also includes uppercase letters. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
 
-## Troubleshooting
-
-- **Qt cannot be found:** ensure Homebrew's Qt installation completed, then rerun the configure command above.
-- **Keys do nothing:** click inside the dashboard to make it the active window.
-- **Old design remains visible:** quit the running app before rebuilding and reopening it.
-
-## Checks run by the developer
+To regenerate after a font-size/glyph change (Node/npm required):
 
 ```sh
-ctest --test-dir build --output-on-failure
-QT_QPA_PLATFORM=offscreen build/r15-cluster.app/Contents/MacOS/r15-cluster --smoke-test
+bash scripts/generate-fonts.sh
+bash scripts/preview.sh
 ```
 
-CTest checks simulator boundaries, VVA/phone behavior, keyboard-driven screens, date validation/save/cancel, persistent preferences, trips, and laps. UI tests render sample screens into `build/previews/` using an offscreen backend and isolated settings. The smoke check verifies QML loads and then exits; it does not replace visual or keyboard interaction testing.
+The converter is installed using tools/fonts/package-lock.json when absent. Generated font C files are deliberate runtime assets; ship their OFL license.
 
-For background, Qt's official [QML module guide](https://doc.qt.io/qt-6/qt6-port-to-qt-add-qml-module.html) explains the module/build approach used here.
-
-### Fuel warning preview
-
-On the dashboard, `[` lowers fuel by 1% and `]` raises it. At 10–20% the gauge is yellow; below 10% it is red. Below 20% the pump icon and filled fuel segments flash every 500 ms; the percentage stays visible. Raising fuel to 20% stops flashing. `Space` resets simulated bike values. This works in Street/Track and Midnight/Daylight.
-
-## Diagnostics and failure previews
-
-The app prints timestamped/category-tagged diagnostics to stderr and writes rotating `cluster.log`, `cluster.log.1`, and `cluster.log.2` files under Qt's application-data directory. On macOS the default is normally `~/Library/Application Support/R15 Smart Cluster/logs/`; startup prints the exact path. Each file is bounded to 512 KiB. Disk failure keeps stderr available. Logs contain software state/errors, not phone message content.
-
-Use a project-local log location when investigating startup:
+## Tests and screenshots
 
 ```sh
-QT_QPA_PLATFORM=offscreen build/r15-cluster.app/Contents/MacOS/r15-cluster --smoke-test --log-directory build/testlogs/manual
+ctest --test-dir build/lvgl --output-on-failure
 ```
 
-To inject a startup failure, append `--test-startup-failure`. The independent error window opens and exit status is intentionally 1. CTest checks this path and also renders it without desktop interaction. Normal startup should exit 0.
+This runs portable model/lifecycle/presentation checks and renders 24 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview.
 
-A data failure shows dashes and a source-status footer. A preference-save failure leaves the current choices usable but reports that changes are temporary. A runtime UI diagnostic latches a footer error; check logs and restart after resolving the cause. These paths are software checks, not proof of a safe motorcycle installation.
+To build and render without opening a window:
+
+```sh
+SDL_VIDEODRIVER=dummy bash scripts/preview.sh --render build/lvgl/previews
+```
+
+Render coverage includes both layouts/themes, fuel blink phases, warnings, missing data, boot, shutdown, off and urgent-warning interruption. Review screenshots visually; tests alone do not establish design quality.
+
+## Current limits
+
+This first slice implements the dashboard foundation and simple progress-line boot/shutdown artwork. Several icons are simplified; final icon artwork, full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. Demo ODO is clearly labeled and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+
+If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.

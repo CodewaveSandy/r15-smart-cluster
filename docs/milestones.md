@@ -1,38 +1,17 @@
-# Development milestones
+# Milestones
 
-Last updated: 2026-10-07
+Baseline: 2026-10-18.
 
-Immediate implementation scope is M0–M3. Begin projection feasibility investigation early in parallel with desktop work; later roadmap phases are not evidence that integrations already work.
+| Stage | Goal | Status |
+| --- | --- | --- |
+| E0 | Review architecture, style, lifecycle and hardware unknowns | Documentation drafted |
+| E1 | Confirm board, reproduce vendor example and pin toolchain | Pending |
+| E2 | Portable normalized state and shared host LVGL foundation | First host slice implemented and tested |
+| E3 | Complete visual layouts, warnings, navigation and lifecycle animations | Dashboard and initial animations implemented; remaining screens/features pending |
+| E4 | Display firmware and measured panel/memory/power behavior | Pending |
+| E5 | Documented UART protocol and fault-tested synthetic bench link | Pending |
+| E6 | Vehicle acquisition/calculations and bounded radio services | Pending |
+| E7 | Passive bike observations with verified measurements | Pending |
+| E8 | Replacement, independent indicators and power/environment evaluation | Pending |
 
-| Phase | Deliverable | Acceptance criteria | Status |
-| --- | --- | --- | --- |
-| M0 | Project reference | Scope, architecture, decision log, roadmap, and status saved with unresolved questions identified | Complete |
-| M1 | Mac development setup | Installed tooling inspected; required setup completed; smallest QML app builds and opens at 800 × 480; commands documented | Complete |
-| M2 | State and simulator | Shared BikeState, simulated source, semantic inputs, and connection/freshness states drive a basic UI without hardware dependencies | In progress: normalized source boundary, isolated simulator/desktop input, frame freshness/availability and failure tests; full per-signal semantics and hardware input adapters pending |
-| M3 | First polished dashboard | One coherent theme shows core instrumentation; keyboard simulation works; normal, warning, and unavailable-data states visually checked | In progress: Street/Track and Daylight/Midnight rendered and interaction-tested; frame loss and battery/coolant availability checked; full per-signal behavior pending |
-| M4 | Screens and themes | Trips/info, settings, theme selection, and labeled navigation placeholder work through physical-style navigation; second theme shares the data layer | In progress: settings, info, time/date and themes implemented; Maps placeholder pending |
-| M5 | ESP32 bench integration | Verified board and firmware drive buttons/pots over a documented versioned serial protocol; disconnect, malformed data, and reconnect behavior checked | Not started |
-| M6 | Real Maps projection | Selected phone projects real Google Maps; essential bike information coexists; input, reconnect, and call/audio behavior assessed with limitations recorded | Not started |
-| M7 | Standalone prototype | Selected computer/display run without Mac; startup, performance, readability, power cycling, and reconnect behavior verified | Not started |
-| M8 | R15 integration and replacement engineering | Exact OEM function inventory, signals, controls, mounting, and connector validated; required behavior and failure handling demonstrated before replacement | Not started |
-
-## M1 — Next implementation step
-
-1. Inspect existing Qt, compiler, CMake, and build tooling.
-2. Select compatible versions based on the actual environment.
-3. Install only missing dependencies with any required environment approval.
-4. Create a minimal app and build configuration.
-5. Launch it and record reproducible build/run instructions and verification results.
-
-## Projection feasibility gate
-
-Investigate during early desktop development, before committing to an SBC or final display. Determine the phone platform, receiver path, rendering/composition constraints, physical inputs, and hardware requirements. M6 may change the layout or hardware plan. If no viable approach is demonstrated, record the blocker and revisit architecture rather than claiming a placeholder fulfills Maps.
-
-## Validation principles
-
-- Match verification to each change: builds and visual inspection for UI, focused behavioral tests for state/protocol logic, hardware checks for physical integrations.
-- Keep simulated, bench-verified, and bike-verified results distinguishable.
-- A feature is complete only when its stated behavior has been demonstrated, with material limitations recorded.
-- Avoid calendar promises until toolchain and hardware unknowns are resolved.
-
-Detailed progress and evidence belong in [status](status.md); changes to direction belong in [decisions](decisions.md).
+Detailed exit evidence is in the [implementation plan](implementation-plan.md). Full Maps/projection has a separate unresolved feasibility gate. No calendar promise substitutes for hardware evidence.

@@ -6,9 +6,9 @@ https://github.com/ateliertriay/bricolage
 Pinned upstream revision: `84745e5b96261ae5f8c6c856e262fe78d1d6efdd`.
 Downloaded: 2026-10-06. Source paths: `fonts/ttf/BricolageGrotesque-{Regular,SemiBold,Bold}.ttf` and `OFL.txt`.
 
-Copyright 2022 The Bricolage Grotesque Project Authors. Distributed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt). The license and font files are embedded in the application resources. No system font installation or runtime download is required.
+Copyright 2022 The Bricolage Grotesque Project Authors. Distributed under the SIL Open Font License 1.1; see [OFL.txt](OFL.txt). Ship the license with converted application font resources. No system font installation or runtime download is required.
 
-`app/Fonts.h` registers the three weights before loading QML. All shared QML labels use the registered application font family. UI tests load the same bundled resources, so rendered previews exercise the font used in the app.
+For LVGL, generate subset font assets from these sources with a pinned converter version and reproducible commands. Preserve the license with distributed assets. Font conversion and firmware integration are pending.
 
 ## SHA-256
 
