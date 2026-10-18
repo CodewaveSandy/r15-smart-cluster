@@ -1,0 +1,8 @@
+Material Design Icons
+Source: Pictogrammers and contributors, @mdi/font version 7.4.47.
+https://pictogrammers.com/library/mdi/
+
+The bundled source font is unmodified. Selected glyphs are converted to
+size-specific LVGL bitmap-font C assets by this project.
+The icon names/codepoints and source checksums are in manifest.json.
+See LICENSE.txt and Apache-2.0.txt for the upstream license and terms.

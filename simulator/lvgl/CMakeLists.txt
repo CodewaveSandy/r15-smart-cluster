@@ -16,6 +16,9 @@ FetchContent_MakeAvailable(lvgl)
 find_package(SDL2 REQUIRED CONFIG)
 add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/Dashboard.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/Icons.cpp"
+ "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_32.c"
+ "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_30.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_caption_12.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_label_14.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_value_16.c"

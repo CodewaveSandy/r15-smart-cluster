@@ -96,7 +96,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs portable model/lifecycle/presentation checks, typography bounds/glyph coverage checks, and renders 42 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview.
+This runs portable model/lifecycle/presentation checks, typography bounds/glyph coverage checks, and renders 44 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview.
 
 To build and render without opening a window:
 
@@ -108,7 +108,7 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
-This first slice implements the dashboard foundation and simple progress-line boot/shutdown artwork. Several icons are simplified; final icon artwork, full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+This first slice implements the dashboard foundation and simple progress-line boot/shutdown artwork. Icons use bundled automotive glyphs; full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
 
@@ -117,3 +117,7 @@ The dashboard has no bottom help/status bar. F1 prints keyboard help in Terminal
 Track mode prioritizes the large centered CURRENT LAP readout; speed moves to the smaller right-hand position. The preview supplies a fixed 01:24.38 lap sample for design review. Missing lap data shows dashes; lap start/stop/record functionality remains pending. Street mode retains centered speed.
 
 Track shows BEST LAP in the lower-left panel instead of ODO/trips, with no distance unit. The host sample is 01:18.42; real record calculation/persistence is pending. Enter leaves that panel fixed and preserves the Street trip selection. Both layouts use the same vertical section heights.
+
+## Icon assets
+
+Automotive/status symbols come from the pinned Pictogrammers MDI 7.4.47 source font. Only 12 glyphs are compiled into LVGL assets; original source/licenses and hashes are bundled under assets/icons/material-design. Typed roles and widget creation live in embedded/ui/Icons.h and Icons.cpp. Regenerate after changing the selection with bash scripts/generate-icons.sh. Press F2 to inspect all symbols in both themes/layouts. See [icon provenance](../assets/icons/material-design/README.md).

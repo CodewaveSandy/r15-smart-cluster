@@ -46,7 +46,7 @@ Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens
 - Shift background steady from 10,500 RPM; alternate red/normal every 300 ms from 11,400. Stop immediately below thresholds; unavailable RPM must not trigger it.
 - Eight slanted fuel segments; ceil(percent/12.5) for valid fuel. Yellow at 10–20% inclusive, red below 10%; blink pump and filled segments every 500 ms below 20%. Exactly 20% is steady yellow; percentage stays readable; zero still blinks the pump.
 - Tell-tales and phone pictogram: 12% inactive, 100% active, no fades. Specified simulated turn blink is 450 ms. A future already-flashing vehicle signal must not be blinked a second time: distinguish source phase from steady intent in the contract.
-- Preserve QS/VVA lettering and icon shapes. Simulator VVA is strictly above 7,500; real VVA support requires a verified observation/rule. No prototype RPM/fuel threshold is a verified Yamaha specification.
+- Preserve QS/VVA lettering and recognizable automotive symbol meanings. Simulator VVA is strictly above 7,500; real VVA support requires a verified observation/rule. No prototype RPM/fuel threshold is a verified Yamaha specification.
 - Fuel warning <20% and current reserve-trip calculation <=15% are distinct specified behaviors; do not accidentally merge them during implementation.
 
 ## Components and data flow
@@ -90,3 +90,9 @@ Street speed and its unit are centered on x=400 independently of digit count, in
 Current lap is an observation in milliseconds. Presentation formats mm:ss.hh with truncated hundredths; unknown/stale or durations beyond 99:59.99 show dashes rather than wrapping. The host provides a static 01:24.38 sample for layout review. This is not a functioning stopwatch.
 
 Both modes share the same 44 px RPM height, y=376 lower divider and bottom-panel baselines. Track current-lap title/value are positioned at y=235/y=259 to balance the taller main section. Best lap is a separate normalized millisecond observation; the UI never calculates a record from displayed current-lap samples.
+
+## Icon system
+
+Use the selected Pictogrammers MDI automotive/status glyphs through typed Icon roles in embedded/ui/Icons.h. The symbol set includes proper high-beam rays, coolant thermometer/waves, engine, ABS ring, traction-control, message bubble, call handset, hazard triangle, solid turn arrows, phone and fuel pump. Neutral remains N. Use the 32 px native bitmap subset, with ABS at 30 px to avoid clipping its ring. Keep baseline placement and 12% inactive / 100% active presentation consistent. No fades delay warning activation.
+
+Bundle source version, hashes, Apache 2.0 license and notices. Only selected glyphs are linked; do not add a runtime SVG renderer or full icon font. The artwork is generic and requires separate OEM/vehicle validation before claiming exact conformity. F2 inspection covers both layouts/themes.

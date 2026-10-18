@@ -39,3 +39,7 @@ User-selected: lap time is the large central Track readout; move speed to the pr
 ## Track best lap and common height — 2026-10-18
 
 User-selected: Track replaces ODO/trip pages with BEST LAP and uses Street’s vertical section geometry. This supersedes the mode-dependent RPM/lower-panel heights and Track trip cycling. Street retains its selection across mode changes; best lap comes from normalized state rather than UI calculation.
+
+## Automotive icon system — 2026-10-18
+
+Use selected Pictogrammers MDI 7.4.47 glyphs for automotive and communication status. Replace rough paths and text stand-ins with native-size antialiased assets; neutral stays N and QS/VVA stay badges. Compile only 12 symbols, preserve source/license/hash records, and reuse the locked converter. This supersedes the draft icon artwork. Generic symbols do not establish OEM or regulatory conformity.

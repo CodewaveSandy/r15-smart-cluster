@@ -1,4 +1,5 @@
 #include "embedded/ui/Typography.h"
+#include "embedded/ui/Icons.h"
 #include <cstdio>
 #include <initializer_list>
 int main() {
@@ -28,6 +29,12 @@ int main() {
         for(unsigned code:{176u,183u,215u,8212u}) {
             lv_font_glyph_dsc_t glyph{};
             if(!lv_font_get_glyph_dsc(font,&glyph,code,0)) { std::fprintf(stderr,"Missing text glyph U+%X\n",code); ++failed; }
+        }
+    }
+    for(const auto& icon:iconDefinitions) {
+        lv_font_glyph_dsc_t glyph{};
+        if(!lv_font_get_glyph_dsc(iconFont(icon.kind),&glyph,icon.codepoint,0)||glyph.box_w==0||glyph.box_h==0||glyph.box_w>32||glyph.box_h>32) {
+            std::fprintf(stderr,"Missing or out-of-bounds icon U+%X\n",unsigned(icon.codepoint)); ++failed;
         }
     }
     lv_deinit(); return failed?1:0;

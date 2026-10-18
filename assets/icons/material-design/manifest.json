@@ -1,0 +1,80 @@
+{
+  "package": "@mdi/font",
+  "version": "7.4.47",
+  "archiveSha256": "66131558352dc8df724feac30f3b7bf7ee7311a79e4f8436f3637c0993edb773",
+  "fontSha256": "61e8aba5a4e981fe22cf7c8e8bcdbea00476e75c62c37f01bf7ee33361d68428",
+  "glyphs": [
+    {
+      "role": "left",
+      "name": "arrow-left-bold",
+      "codepoint": "F0731",
+      "size": 32
+    },
+    {
+      "role": "right",
+      "name": "arrow-right-bold",
+      "codepoint": "F0734",
+      "size": 32
+    },
+    {
+      "role": "beam",
+      "name": "car-light-high",
+      "codepoint": "F0C4C",
+      "size": 32
+    },
+    {
+      "role": "tcs",
+      "name": "car-traction-control",
+      "codepoint": "F0D64",
+      "size": 32
+    },
+    {
+      "role": "abs",
+      "name": "car-brake-abs",
+      "codepoint": "F0C47",
+      "size": 30
+    },
+    {
+      "role": "engine",
+      "name": "engine",
+      "codepoint": "F01FA",
+      "size": 32
+    },
+    {
+      "role": "coolant",
+      "name": "coolant-temperature",
+      "codepoint": "F03C8",
+      "size": 32
+    },
+    {
+      "role": "message",
+      "name": "message-text",
+      "codepoint": "F0369",
+      "size": 32
+    },
+    {
+      "role": "call",
+      "name": "phone",
+      "codepoint": "F03F2",
+      "size": 32
+    },
+    {
+      "role": "hazard",
+      "name": "hazard-lights",
+      "codepoint": "F0C89",
+      "size": 32
+    },
+    {
+      "role": "phone",
+      "name": "cellphone",
+      "codepoint": "F011C",
+      "size": 32
+    },
+    {
+      "role": "fuel",
+      "name": "gas-station",
+      "codepoint": "F0298",
+      "size": 32
+    }
+  ]
+}

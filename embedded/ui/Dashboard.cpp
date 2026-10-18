@@ -1,6 +1,7 @@
 #include "Dashboard.h"
 #include "InstrumentPresentation.h"
 #include "Typography.h"
+#include "Icons.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -24,21 +25,6 @@ void paint(lv_obj_t* o,std::uint32_t c) { lv_obj_set_style_bg_color(o,color(c),0
 void ink(lv_obj_t* o,std::uint32_t c) { lv_obj_set_style_text_color(o,color(c),0); }
 void show(lv_obj_t* o,bool yes) { if(yes) lv_obj_remove_flag(o,LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN); }
 void alignRight(lv_obj_t* o) { lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_RIGHT,0); }
-// Compact static geometry; line points are owned by each icon and never allocated on updates.
-struct IconPath { lv_point_precise_t points[18]; std::uint32_t count; };
-const IconPath arrow{{{3,16},{14,5},{14,11},{29,11},{29,21},{14,21},{14,27},{3,16}},8};
-const IconPath rightArrow{{{29,16},{18,5},{18,11},{3,11},{3,21},{18,21},{18,27},{29,16}},8};
-const IconPath engine{{{3,13},{8,13},{8,9},{14,9},{14,6},{21,6},{21,9},{25,9},{25,13},{29,13},{29,24},{24,24},{21,27},{9,27},{6,23},{3,23},{3,13}},17};
-const IconPath beam{{{3,7},{10,7},{14,6},{22,6},{28,11},{28,21},{22,26},{14,26},{14,6}},9};
-const IconPath temp{{{15,4},{15,21},{19,24},{15,27},{11,24},{15,21}},6};
-const IconPath hazard{{{16,3},{30,28},{2,28},{16,3},{16,10},{16,20}},6};
-const IconPath phone{{{9,2},{23,2},{23,30},{9,30},{9,2},{13,5},{19,5}},7};
-const IconPath pump{{{5,28},{5,3},{19,3},{19,28},{3,28},{21,28},{19,15},{23,15},{23,25},{27,27},{29,25},{29,10},{25,6}},13};
-lv_obj_t* icon(lv_obj_t* parent,int x,int y,const IconPath& path) {
-    auto* o=lv_line_create(parent); lv_obj_set_pos(o,x,y); lv_obj_set_size(o,32,32);
-    lv_line_set_points(o,path.points,path.count); lv_obj_set_style_line_width(o,2,0);
-    lv_obj_set_style_line_rounded(o,true,0); return o;
-}
 void drawFuelSegment(lv_event_t* event) {
     auto* obj=static_cast<lv_obj_t*>(lv_event_get_target(event));
     lv_area_t a; lv_obj_get_coords(obj,&a);
@@ -53,7 +39,7 @@ void lamp(lv_obj_t* o,const Signal<bool>& signal,bool phase,std::uint32_t active
     const bool known=signal.available(), lit=known && signal.value && phase;
     const bool unsupported=signal.quality==Quality::Unsupported;
     const auto c=known ? (lit?active:p.muted):unsupported?p.muted:p.amber;
-    lv_obj_set_style_line_color(o,color(c),0); ink(o,c);
+    ink(o,c);
     lv_obj_set_style_opa(o,known?(lit?255:31):unsupported?31:150,0);
 }
 }
@@ -63,23 +49,24 @@ Dashboard::Dashboard(lv_obj_t* parent) {
     gear_=label(header_,28,26,65,"—",fonts::gear);
     mode_=label(header_,120,26,160,"STREET",fonts::heading);
     subtitle_=label(header_,121,56,200,"ROAD / EVERYDAY");
-    phone_=icon(header_,456,31,phone);
+    phone_=createIcon(header_,456,31,Icon::Phone);
     phoneBattery_=label(header_,508,36,100,"PHONE  —");
     qs_=label(header_,288,36,48,"QS"); vva_=label(header_,344,36,60,"VVA");
     clock_=label(header_,650,22,122,"—:—",fonts::clock); alignRight(clock_);
     date_=label(header_,630,57,142,"CLOCK UNAVAILABLE",fonts::caption); alignRight(date_);
     rules_[0]=box(root_,28,85,744,1); rules_[1]=box(root_,96,22,1,48);
-    lamps_[0]=icon(root_,32,98,arrow);
-    lamps_[1]=label(root_,104,101,40,"N",fonts::heading);
-    lamps_[2]=icon(root_,171,98,beam);
-    lamps_[3]=label(root_,240,108,45,"TCS");
-    lamps_[4]=label(root_,311,108,45,"ABS");
-    lamps_[5]=icon(root_,384,98,engine);
-    lamps_[6]=icon(root_,455,98,temp);
-    lamps_[7]=label(root_,526,108,45,"MSG");
-    lamps_[8]=label(root_,597,108,45,"CALL");
-    lamps_[9]=icon(root_,668,98,hazard);
-    lamps_[10]=icon(root_,736,98,rightArrow);
+    lamps_[0]=createIcon(root_,32,98,Icon::Left);
+    lamps_[1]=label(root_,100,101,32,"N",fonts::heading);
+    lv_obj_set_style_text_align(lamps_[1],LV_TEXT_ALIGN_CENTER,0);
+    lamps_[2]=createIcon(root_,171,98,Icon::HighBeam);
+    lamps_[3]=createIcon(root_,242,98,Icon::TractionControl);
+    lamps_[4]=createIcon(root_,313,98,Icon::Abs);
+    lamps_[5]=createIcon(root_,384,98,Icon::Engine);
+    lamps_[6]=createIcon(root_,455,98,Icon::Coolant);
+    lamps_[7]=createIcon(root_,526,98,Icon::Message);
+    lamps_[8]=createIcon(root_,597,98,Icon::Call);
+    lamps_[9]=createIcon(root_,668,98,Icon::Hazard);
+    lamps_[10]=createIcon(root_,736,98,Icon::Right);
     for(int i=0;i<14;++i) { char b[8]; std::snprintf(b,sizeof b,"%d",i); ticks_[i]=label(root_,28+i*744/13,144,30,b,fonts::caption); }
     rpmBed_=box(root_,28,164,744,44);
     rpmClip_=box(rpmBed_,0,0,1,44);
@@ -110,7 +97,7 @@ Dashboard::Dashboard(lv_obj_t* parent) {
     fuelDivider_=box(root_,537,387,1,40);
     fuelTitle_=label(root_,583,386,110,"F U E L");
     fuelValue_=label(root_,690,379,82,"—",fonts::heading); alignRight(fuelValue_);
-    pump_=icon(root_,550,401,pump);
+    pump_=createIcon(root_,550,401,Icon::Fuel);
     for(int i=0;i<Metrics::fuelSegmentCount;++i) {
         const int x=Metrics::fuelX+i*Metrics::fuelWidth/Metrics::fuelSegmentCount;
         const int nextX=Metrics::fuelX+(i+1)*Metrics::fuelWidth/Metrics::fuelSegmentCount;
@@ -218,7 +205,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
     if(s.fuelPercent.available()) std::snprintf(b,sizeof b,"%d%%",s.fuelPercent.value); else std::snprintf(b,sizeof b,"—"); text(fuelValue_,b); ink(fuelValue_,fuelColor);
     const int fy=Metrics::fuelY;
     lv_obj_set_y(fuelTitle_,titleY); lv_obj_set_y(fuelValue_,titleY-5);
-    lv_obj_set_y(pump_,fy-10); lv_obj_set_style_line_color(pump_,color(fuelColor),0); show(pump_,lit);
+    lv_obj_set_y(pump_,fy-10); ink(pump_,fuelColor); show(pump_,lit);
     const int segments=fuel.segments;
     for(int i=0;i<8;++i) { lv_obj_set_y(fuel_[i],fy); lv_obj_set_style_bg_color(fuel_[i],color(i<segments&&lit?fuelColor:p.panel),0); }
     lv_obj_set_y(fuelDivider_,titleY); lv_obj_set_height(fuelDivider_,55); paint(fuelDivider_,p.line);

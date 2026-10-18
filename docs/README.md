@@ -24,7 +24,8 @@ Record unknowns explicitly. Separate design, implementation, bench verification 
 ## Repository layout
 
 ```text
-assets/fonts/             Bundled font sources, licenses and LVGL subsets
+assets/fonts/             Bundled text-font sources, licenses and LVGL subsets
+assets/icons/             Selected automotive/status icon sources and LVGL subsets
 shared/model/             Portable normalized observations and validation
 embedded/application/     Ignition lifecycle
 embedded/ui/              Dashboard, themes and instrument presentation

@@ -101,9 +101,10 @@ int main(int argc,char** argv) {
                 auto urgentState=state; urgentState.engineWarning.value=true;
                 dashboard.update(urgentState,view,boot,1325); capture(output/"shutdown-warning.bmp");
                 Lifecycle off; dashboard.update(ClusterState{},view,off,0); capture(output/"off.bmp");
-                for(bool light:{false,true}) {
-                    view.light=light; view.iconTest=true;
-                    dashboard.update(state,view,life,1400); capture(output/(light?"icons-day.bmp":"icons-night.bmp"));
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view.track=track; view.light=light; view.iconTest=true;
+                    const auto name=std::string("icons-")+(track?"track":"street")+(light?"-day.bmp":"-night.bmp");
+                    dashboard.update(state,view,life,1400); capture(output/name);
                 }
                 view.iconTest=false;
                 for(bool track:{false,true}) for(bool light:{false,true}) {
@@ -154,7 +155,7 @@ int main(int argc,char** argv) {
                     }
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 42 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 44 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
