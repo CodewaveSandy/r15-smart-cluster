@@ -95,8 +95,12 @@ Dashboard::Dashboard(lv_obj_t* parent) {
     lv_obj_set_style_text_align(speed_,LV_TEXT_ALIGN_CENTER,0);
     unit_=label(root_,Metrics::speedX,338,Metrics::speedWidth,"km/h",fonts::unit);
     lv_obj_set_style_text_align(unit_,LV_TEXT_ALIGN_CENTER,0);
-    lap_=label(root_,560,269,212,"—:—.—",fonts::gear);
-    lapHint_=label(root_,560,247,212,"LAP / UNAVAILABLE");
+    lap_=label(root_,Metrics::speedX,Metrics::trackLapY,Metrics::speedWidth,"—:—.—",fonts::track);
+    lv_obj_set_style_text_align(lap_,LV_TEXT_ALIGN_CENTER,0);
+    lapHint_=label(root_,Metrics::speedX,Metrics::trackLapTitleY,Metrics::speedWidth,"CURRENT LAP");
+    lv_obj_set_style_text_align(lapHint_,LV_TEXT_ALIGN_CENTER,0);
+    speedTitle_=label(root_,560,247,212,"SPEED");
+    lv_obj_set_style_text_align(speedTitle_,LV_TEXT_ALIGN_CENTER,0);
     lowerRule_=box(root_,28,376,744,1);
     tripTitle_=label(root_,28,386,220,"ODO");
     tripValue_=label(root_,28,400,170,"—",fonts::heading);
@@ -110,7 +114,7 @@ Dashboard::Dashboard(lv_obj_t* parent) {
     for(int i=0;i<Metrics::fuelSegmentCount;++i) {
         const int x=Metrics::fuelX+i*Metrics::fuelWidth/Metrics::fuelSegmentCount;
         const int nextX=Metrics::fuelX+(i+1)*Metrics::fuelWidth/Metrics::fuelSegmentCount;
-        fuel_[i]=box(root_,x,Metrics::fuelY(false),nextX-x,12); lv_obj_add_event_cb(fuel_[i],drawFuelSegment,LV_EVENT_DRAW_MAIN,nullptr); }
+        fuel_[i]=box(root_,x,Metrics::fuelY,nextX-x,12); lv_obj_add_event_cb(fuel_[i],drawFuelSegment,LV_EVENT_DRAW_MAIN,nullptr); }
     overlay_=box(root_,0,0,800,480);
     animationTitle_=label(overlay_,100,160,600,"R15",fonts::gear);
     lv_obj_set_style_text_align(animationTitle_,LV_TEXT_ALIGN_CENTER,0);
@@ -158,25 +162,36 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
     showLamp(lamps_[5],s.engineWarning,true,p.amber,p); showLamp(lamps_[6],s.coolantWarning,true,p.red,p);
     for(int i:{3,7,8}) showLamp(lamps_[i],Signal<bool>{false,Quality::Unsupported},true,p.amber,p);
     showLamp(lamps_[9],Signal<bool>{s.left.value&&s.right.value,s.left.available()&&s.right.available()?Quality::Available:Quality::Unavailable},turn,p.red,p);
-    const int h=v.track?52:44;
+    const int h=Metrics::rpmHeight;
     lv_obj_set_height(rpmBed_,h); paint(rpmBed_,p.panel); lv_obj_set_height(rpmClip_,h); lv_obj_set_height(rpmRamp_,h);
     const int fill=s.engineRpm.available()?std::clamp(s.engineRpm.value,0,13000)*744/13000:0;
     show(rpmClip_,fill>0); lv_obj_set_width(rpmClip_,std::max(1,fill));
     if(s.engineRpm.available()) std::snprintf(b,sizeof b,"%d rpm",s.engineRpm.value); else std::snprintf(b,sizeof b,"— rpm"); text(rpmValue_,b);
     if(s.speedKph.available()) std::snprintf(b,sizeof b,"%d",int(std::lround(s.speedKph.value*(v.imperial?0.621371:1)))); else std::snprintf(b,sizeof b,"—"); text(speed_,b);
-    lv_obj_set_style_text_font(speed_,v.track?fonts::track:fonts::speed,0);
-    lv_obj_set_pos(speed_,Metrics::speedX,240);
-    lv_obj_set_pos(unit_,Metrics::speedX,v.track?305:338); text(unit_,v.imperial?"mph":"km/h");
-    show(lap_,v.track); show(lapHint_,v.track); ink(lapHint_,p.accent);
-    lv_obj_set_y(lowerRule_,v.track?336:376); paint(lowerRule_,p.line);
-    const int titleY=v.track?379:399;
+    lv_obj_set_style_text_font(speed_,v.track?fonts::gear:fonts::speed,0);
+    lv_obj_set_pos(speed_,v.track?560:Metrics::speedX,v.track?269:240);
+    lv_obj_set_width(speed_,v.track?212:Metrics::speedWidth);
+    lv_obj_set_pos(unit_,v.track?560:Metrics::speedX,v.track?310:338);
+    lv_obj_set_width(unit_,v.track?212:Metrics::speedWidth); text(unit_,v.imperial?"mph":"km/h");
+    show(lap_,v.track); show(lapHint_,v.track); show(speedTitle_,v.track);
+    ink(lapHint_,p.accent); ink(speedTitle_,p.muted);
+    text(lap_,lapText(s.currentLapMs).value);
+    lv_obj_set_y(lowerRule_,Metrics::lowerDividerY); paint(lowerRule_,p.line);
+    const int titleY=Metrics::lowerTitleY;
     const int valueY=titleY+22;
     lv_obj_set_y(tripTitle_,titleY); lv_obj_set_y(tripValue_,valueY);
-    text(tripTitle_,tripTitle(v.tripPage));
-    const auto distance=tripReading(s,v.tripPage);
-    if(distance.available()) std::snprintf(b,sizeof b,"%.1f",distance.value*(v.imperial?0.621371:1));
-    else std::snprintf(b,sizeof b,"—");
-    text(tripValue_,b); text(tripUnit_,v.imperial?"mi":"km"); lv_obj_set_y(tripUnit_,valueY+10);
+    show(tripUnit_,!v.track);
+    if(v.track) {
+        text(tripTitle_,"BEST LAP");
+        text(tripValue_,lapText(s.bestLapMs).value);
+    } else {
+        text(tripTitle_,tripTitle(v.tripPage));
+        const auto distance=tripReading(s,v.tripPage);
+        if(distance.available()) std::snprintf(b,sizeof b,"%.1f",distance.value*(v.imperial?0.621371:1));
+        else std::snprintf(b,sizeof b,"—");
+        text(tripValue_,b); text(tripUnit_,v.imperial?"mi":"km");
+    }
+    lv_obj_set_y(tripUnit_,valueY+10);
     lv_obj_set_y(infoTitle_,titleY); lv_obj_set_y(infoValue_,valueY);
     switch(v.infoPage) {
     case InfoPage::Coolant:
@@ -201,7 +216,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         s.fuelPercent.available()&&s.fuelPercent.value<=20?p.amber:p.accent;
     const bool lit=fuel.lit;
     if(s.fuelPercent.available()) std::snprintf(b,sizeof b,"%d%%",s.fuelPercent.value); else std::snprintf(b,sizeof b,"—"); text(fuelValue_,b); ink(fuelValue_,fuelColor);
-    const int fy=Metrics::fuelY(v.track);
+    const int fy=Metrics::fuelY;
     lv_obj_set_y(fuelTitle_,titleY); lv_obj_set_y(fuelValue_,titleY-5);
     lv_obj_set_y(pump_,fy-10); lv_obj_set_style_line_color(pump_,color(fuelColor),0); show(pump_,lit);
     const int segments=fuel.segments;

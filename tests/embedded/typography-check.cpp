@@ -16,7 +16,11 @@ int main() {
     fits(fonts::heading,"1000000000.0",170);
     fits(fonts::heading,"OFF",265);
     fits(fonts::clock,"23:59",122);
-    fits(fonts::speed,"180",375);
+    fits(fonts::speed,"180",320);
+    fits(fonts::track,"99:59.99",320);
+    fits(fonts::heading,"99:59.99",170);
+    fits(fonts::track,"—:—.—",320);
+    fits(fonts::gear,"400",212);
     fits(fonts::gear,"N",65);
     fits(fonts::caption,"CLOCK UNAVAILABLE",142);
     fits(fonts::label,"DATA UNAVAILABLE",200);

@@ -31,3 +31,11 @@ Accepted by the user: Inter for labels/supporting information and Barlow Semi Co
 ## Dashboard layout and information lists — 2026-10-18
 
 User-selected: remove the footer/help bar and GEAR caption; center speed horizontally; keep independent ODO/Trip A/Trip B/Trip F and coolant/battery/TCS/Track lists; minimize fuel-segment gaps. Host controls: Enter cycles trip, I cycles info, T toggles selected simulated TCS or display Track. No vehicle control is implemented. Simulation provenance remains in the window title/terminal; unavailable status moves into the header subtitle.
+
+## Track lap priority — 2026-10-18
+
+User-selected: lap time is the large central Track readout; move speed to the previous right-hand lap location. Use the existing 79 px instrument font for lap and 46 px for secondary speed. Street keeps its existing speed presentation. Lap time comes through normalized millisecond observations; the host currently supplies a fixed sample, not live timing.
+
+## Track best lap and common height — 2026-10-18
+
+User-selected: Track replaces ODO/trip pages with BEST LAP and uses Street’s vertical section geometry. This supersedes the mode-dependent RPM/lower-panel heights and Track trip cycling. Street retains its selection across mode changes; best lap comes from normalized state rather than UI calculation.

@@ -2,12 +2,14 @@
 #include "embedded/application/Lifecycle.h"
 #include "embedded/ui/InstrumentPresentation.h"
 #include <cstdio>
+#include <cstring>
 #include <initializer_list>
 #include <limits>
 int main() {
     using namespace cluster; int failures=0;
     auto check=[&](bool condition,const char* reason){if(!condition){std::fprintf(stderr,"FAIL: %s\n",reason);++failures;}};
     ClusterState s; check(!s.speedKph.available(),"Default speed unknown"); check(valid(s),"Unknown snapshot accepted");
+    check(!s.bestLapMs.available(),"Best lap starts unavailable, not zero");
     for(int v:{-1,0,60,400,401}) { s.speedKph={v,Quality::Available}; check(valid(s)==(v>=0&&v<=400),"Speed boundaries"); }
     s={}; for(int v:{-1,0,72,100,101}) { s.fuelPercent={v,Quality::Available}; check(valid(s)==(v>=0&&v<=100),"Fuel boundaries"); }
     s={}; s.batteryVoltageV={std::numeric_limits<double>::quiet_NaN(),Quality::Available}; check(!valid(s),"Reject available NaN");
@@ -47,5 +49,12 @@ int main() {
     check(!tripReading(s,TripPage::TripF).available(),"Unavailable Trip F is not zero");
     s.tripAKm={-1,Quality::Available}; check(!valid(s),"Negative trip rejected");
     s.tripAKm={std::numeric_limits<double>::infinity(),Quality::Available}; check(!valid(s),"Infinite trip rejected");
+    check(std::strcmp(lapText({0,Quality::Available}).value,"00:00.00")==0,"Zero lap is a valid duration");
+    check(std::strcmp(lapText({59999,Quality::Available}).value,"00:59.99")==0,"Lap hundredths truncate");
+    check(std::strcmp(lapText({60000,Quality::Available}).value,"01:00.00")==0,"Minute rollover");
+    check(std::strcmp(lapText({84380,Quality::Available}).value,"01:24.38")==0,"Lap formatting");
+    check(std::strcmp(lapText({5999999,Quality::Available}).value,"99:59.99")==0,"Maximum displayed lap");
+    check(std::strcmp(lapText({6000000,Quality::Available}).value,"—:—.—")==0,"Lap overflow does not wrap");
+    check(std::strcmp(lapText({84380,Quality::Stale}).value,"—:—.—")==0,"Stale lap is not live elapsed time");
     return failures?1:0;
 }

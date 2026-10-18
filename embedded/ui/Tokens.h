@@ -7,7 +7,8 @@ struct Metrics {
     static constexpr int headerRule=85, tellTaleY=98, rpmY=164;
     static constexpr int speedX=240, speedWidth=320, fuelX=583, fuelWidth=189;
     static constexpr int fuelSegmentCount=8, fuelSkew=1;
-    static constexpr int fuelY(bool track) { return track?420:440; }
+    static constexpr int rpmHeight=44, lowerDividerY=376, lowerTitleY=399, fuelY=440;
+    static constexpr int trackLapY=259, trackLapTitleY=235;
     static constexpr int shiftRpm=10500, shiftFlashRpm=11400;
     static constexpr unsigned shiftPeriod=300, fuelPeriod=500, turnPeriod=450;
 };

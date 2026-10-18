@@ -34,3 +34,11 @@ Inter 4.1 Medium/SemiBold and pinned Barlow Semi Condensed SemiBold are bundled 
 ## Dashboard presentation
 
 The dashboard omits the footer and GEAR caption. Speed is horizontally centered in Street/Track; rendered digit bounds are tested for unknown/one/two/three-digit values. Trip and info lists cycle independently, with simulated TCS and display-only Track toggles. Fuel segments use minimal separation. The render suite covers all four list pages in both modes/themes (42 saved scenarios); source status is visible in the header subtitle and simulation remains identified by the host window/terminal.
+
+## Track information hierarchy
+
+Track mode uses the large centered 79 px lap readout and a secondary 46 px speed readout on the right. Street remains unchanged. The host provides a fixed lap sample; portable tests cover mm:ss.hh formatting, minute boundaries, stale values and display overflow. Both themes, warnings and unavailable views are rendered and inspected.
+
+## Track best lap and shared spacing
+
+Track lower-left is a fixed BEST LAP observation (host sample 01:18.42); Enter only cycles trips in Street. Unknown best lap displays dashes. Both modes share RPM height, lower divider and lower-panel/fuel positions. Render checks enforce shared vertical geometry and verify that Track best lap does not change when Street trip selection changes. Functional lap recording remains pending.

@@ -17,7 +17,7 @@ public:
 private:
     lv_obj_t *root_, *header_, *gear_, *mode_, *subtitle_, *clock_, *date_, *phone_, *qs_, *vva_, *phoneBattery_;
     lv_obj_t *rpmBed_, *rpmClip_, *rpmRamp_, *rpmValue_, *speed_, *unit_;
-    lv_obj_t *lowerRule_, *tripTitle_, *tripValue_, *tripUnit_, *infoTitle_, *infoValue_, *lap_, *lapHint_;
+    lv_obj_t *lowerRule_, *tripTitle_, *tripValue_, *tripUnit_, *infoTitle_, *infoValue_, *lap_, *lapHint_, *speedTitle_;
     lv_obj_t *fuelTitle_, *fuelValue_, *pump_, *fuelDivider_;
     lv_obj_t *overlay_, *animationTitle_, *animationSubtitle_, *animationBed_, *animationFill_;
     std::array<lv_obj_t*,8> fuel_{};

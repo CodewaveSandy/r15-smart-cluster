@@ -38,7 +38,7 @@ The script configures a Debug build under build/lvgl, compiles and opens an 800 
 | Tab | Street / Track |
 | D | Midnight / Daylight |
 | U | Metric / imperial speed and distance |
-| Enter | Trip list: ODO / Trip A / Trip B / Trip F |
+| Enter | Street only: ODO / Trip A / Trip B / Trip F; Track keeps BEST LAP fixed |
 | I | Info list: coolant / battery voltage / TCS / Track mode |
 | T | Toggle selected TCS (simulator only) or Track mode |
 | L / R | Exclusive left / right simulated indicator |
@@ -113,3 +113,7 @@ This first slice implements the dashboard foundation and simple progress-line bo
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
 
 The dashboard has no bottom help/status bar. F1 prints keyboard help in Terminal. Missing data appears as dashes and a DATA UNAVAILABLE header subtitle; F2 shows ICON TEST there. Trip/info selections are independent. TCS toggling changes a host sample only and sends no vehicle command. Track toggling changes the display layout.
+
+Track mode prioritizes the large centered CURRENT LAP readout; speed moves to the smaller right-hand position. The preview supplies a fixed 01:24.38 lap sample for design review. Missing lap data shows dashes; lap start/stop/record functionality remains pending. Street mode retains centered speed.
+
+Track shows BEST LAP in the lower-left panel instead of ODO/trips, with no distance unit. The host sample is 01:18.42; real record calculation/persistence is pending. Enter leaves that panel fixed and preserves the Street trip selection. Both layouts use the same vertical section heights.

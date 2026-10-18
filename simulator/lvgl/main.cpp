@@ -26,6 +26,8 @@ void flush(lv_display_t* display,const lv_area_t* area,std::uint8_t* bytes) {
 }
 ClusterState demo() {
     ClusterState s;
+    s.bestLapMs={78420,Quality::Available}; // Static best lap sample: 01:18.42.
+    s.currentLapMs={84380,Quality::Available}; // Static lap sample: 01:24.38.
     s.speedKph={60,Quality::Available}; s.engineRpm={8500,Quality::Available};
     s.quickShifter={true,Quality::Available}; s.vva={true,Quality::Available};
     s.phoneConnected={true,Quality::Available}; s.phoneBatteryPercent={84,Quality::Available};
@@ -49,7 +51,7 @@ void help() {
     std::puts("R15 LVGL preview — simulated data only\n"
         "Left/Right: speed +/-1 | Up/Down: RPM +/-100 | [ / ]: fuel +/-1\n"
         "0..6: gear (0 neutral) | Tab: Street/Track | D: Midnight/Daylight\n"
-        "Enter: trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
+        "Enter: Street trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
         "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
         "O: key on/off (1250 ms animation) | Space: reset demo\n"
@@ -81,11 +83,15 @@ int main(int argc,char** argv) {
                     view.track=track; view.light=light;
                     const std::string suffix=std::string(track?"track":"street")+(light?"-day":"-night");
                     dashboard.update(state,view,life,1400); capture(output/(suffix+".bmp"));
+                    const auto palette=light?cluster::ui::daylight:cluster::ui::midnight;
+                    if(pixels[cluster::ui::Metrics::lowerDividerY*800+300]!=lv_color_to_u16(lv_color_hex(palette.line)) ||
+                        pixels[(cluster::ui::Metrics::rpmY+cluster::ui::Metrics::rpmHeight)*800+300]!=lv_color_to_u16(lv_color_hex(palette.background)))
+                        throw std::runtime_error("Layout vertical geometry differs from shared metrics");
                     auto low=state; low.fuelPercent.value=9;
                     dashboard.update(low,view,life,0); capture(output/(suffix+"-fuel-on.bmp"));
-                    const auto fuelOn=pixels[cluster::ui::Metrics::fuelY(track)*800+590];
+                    const auto fuelOn=pixels[cluster::ui::Metrics::fuelY*800+590];
                     dashboard.update(low,view,life,500); capture(output/(suffix+"-fuel-off.bmp"));
-                    if(fuelOn==pixels[cluster::ui::Metrics::fuelY(track)*800+590]) throw std::runtime_error("Fuel blink did not reach rendered pixels");
+                    if(fuelOn==pixels[cluster::ui::Metrics::fuelY*800+590]) throw std::runtime_error("Fuel blink did not reach rendered pixels");
                     ClusterState missing; dashboard.update(missing,view,life,1400); capture(output/(suffix+"-unavailable.bmp"));
                     auto warning=state; warning.engineRpm.value=11400; warning.engineWarning.value=true; warning.absWarning.value=true;
                     dashboard.update(warning,view,life,1200); capture(output/(suffix+"-warning.bmp"));
@@ -103,12 +109,20 @@ int main(int argc,char** argv) {
                 for(bool track:{false,true}) for(bool light:{false,true}) {
                     view.track=track; view.light=light;
                     view.tripPage=TripPage::Odometer; view.infoPage=InfoPage::Coolant;
+                    std::vector<std::uint16_t> bestPanel;
                     for(int page=0;page<4;++page) {
                         auto sample=state;
                         if(page==2) sample.tcsEnabled.value=false;
                         dashboard.update(sample,view,life,1400);
                         const auto name=std::string(track?"track":"street")+(light?"-day":"-night")+"-pages-"+std::to_string(page)+".bmp";
                         capture(output/name);
+                        if(track) {
+                            std::vector<std::uint16_t> panel;
+                            for(int y=399;y<460;++y)
+                                panel.insert(panel.end(),pixels.begin()+y*800+28,pixels.begin()+y*800+248);
+                            if(page==0) bestPanel=panel;
+                            else if(panel!=bestPanel) throw std::runtime_error("Track best-lap panel changed with Street trip selection");
+                        }
                         view.tripPage=next(view.tripPage); view.infoPage=next(view.infoPage);
                     }
                 }
@@ -121,13 +135,22 @@ int main(int argc,char** argv) {
                     for(int value:{-1,0,1,60,180}) {
                         auto sample=state;
                         sample.speedKph=value<0?Signal<int>{}:Signal<int>{value,Quality::Available};
+                        if(track) sample.currentLapMs=value<0?Signal<std::uint32_t>{}:Signal<std::uint32_t>{static_cast<std::uint32_t>(value)*1000,Quality::Available};
                         dashboard.update(sample,view,life,1400); lv_refr_now(nullptr);
                         int left=800,right=-1;
                         const auto* font=track?cluster::ui::fonts::track:cluster::ui::fonts::speed;
-                        for(int y=240;y<240+font->line_height;++y)
+                        const int primaryY=track?cluster::ui::Metrics::trackLapY:240;
+                        for(int y=primaryY;y<primaryY+font->line_height;++y)
                             for(int x=cluster::ui::Metrics::speedX;x<cluster::ui::Metrics::speedX+cluster::ui::Metrics::speedWidth;++x)
                                 if(pixels[y*800+x]==target) { left=std::min(left,x); right=std::max(right,x); }
-                        if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Speed glyphs are not centered on the viewport");
+                        if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Primary instrument glyphs are not centered on the viewport");
+                        if(track) {
+                            left=800; right=-1;
+                            for(int y=269;y<269+cluster::ui::fonts::gear->line_height;++y)
+                                for(int x=560;x<772;++x)
+                                    if(pixels[y*800+x]==target) { left=std::min(left,x); right=std::max(right,x); }
+                            if(right<left||std::abs(left+right-1331)>4) throw std::runtime_error("Track speed is not centered in its secondary position");
+                        }
                     }
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
@@ -167,7 +190,7 @@ int main(int argc,char** argv) {
                         case SDLK_TAB: view.track=!view.track; break;
                         case SDLK_d: view.light=!view.light; break;
                         case SDLK_u: view.imperial=!view.imperial; break;
-                        case SDLK_RETURN: view.tripPage=next(view.tripPage); break;
+                        case SDLK_RETURN: if(!view.track) view.tripPage=next(view.tripPage); break;
                         case SDLK_i: view.infoPage=next(view.infoPage); break;
                         case SDLK_t:
                             if(view.infoPage==InfoPage::Track) view.track=!view.track;

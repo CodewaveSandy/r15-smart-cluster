@@ -10,6 +10,7 @@ template<class T> struct Signal {
     bool available() const { return quality == Quality::Available; }
 };
 struct ClusterState {
+    Signal<std::uint32_t> currentLapMs, bestLapMs;
     Signal<int> speedKph, engineRpm, gear, fuelPercent, phoneBatteryPercent;
     Signal<bool> quickShifter, vva, phoneConnected, tcsEnabled;
     Signal<double> odometerKm, tripAKm, tripBKm, tripFKm, batteryVoltageV, coolantTemperatureC;
