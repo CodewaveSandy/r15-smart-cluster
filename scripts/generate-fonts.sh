@@ -8,11 +8,25 @@ if [[ ! -x "$converter" ]]; then
   converter="$root/tools/fonts/node_modules/.bin/lv_font_conv"
 fi
 mkdir -p assets/fonts/lvgl
-for spec in 'small 12 Regular' 'medium 23 SemiBold' 'large 46 Bold' 'speed 128 Bold' 'track 79 Bold' 'clock 30 SemiBold'; do
-  read -r name size weight <<< "$spec"
-  if [[ "$name" == small || "$name" == medium || "$name" == clock ]]; then
-    "$converter" --font "assets/fonts/bricolage/BricolageGrotesque-$weight.ttf" --range 32-126,176,183,215,8212 --size "$size" --bpp 4 --format lvgl --no-compress --lv-font-name "bricolage_$name" -o "assets/fonts/lvgl/bricolage_$name.c"
+# Each font is rasterized at its final logical size. No runtime font scaling.
+while read -r name size source subset; do
+  args=(--font "assets/fonts/$source" --size "$size" --bpp 4 --format lvgl --no-compress --lv-font-name "$name" -o "assets/fonts/lvgl/$name.c")
+  if [[ "$subset" == text ]]; then
+    args+=(--range 32-126,176,183,215,8212)
+  elif [[ "$subset" == headline ]]; then
+    args+=(--symbols '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ :.-' --range 8212)
   else
-    "$converter" --font "assets/fonts/bricolage/BricolageGrotesque-$weight.ttf" --symbols "$(if [[ "$name" == large ]]; then printf '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ :.-'; else printf '0123456789N:.-'; fi)" --range 8212 --size "$size" --bpp 4 --format lvgl --no-compress --lv-font-name "bricolage_$name" -o "assets/fonts/lvgl/bricolage_$name.c"
+    args+=(--symbols '0123456789N:.-' --range 8212)
   fi
-done
+  "$converter" "${args[@]}"
+done <<'FONTS'
+inter_caption_12 12 inter/Inter-Medium.ttf text
+inter_label_14 14 inter/Inter-Medium.ttf text
+inter_value_16 16 inter/Inter-Medium.ttf text
+inter_unit_18 18 inter/Inter-Medium.ttf text
+inter_heading_23 23 inter/Inter-SemiBold.ttf text
+barlow_gear_46 46 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf headline
+barlow_speed_128 128 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric
+barlow_track_79 79 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric
+barlow_clock_30 30 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric
+FONTS

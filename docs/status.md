@@ -13,9 +13,9 @@ Baseline: 2026-10-18. Current phase: first host implementation.
 
 ## Current deliverables
 
-Architecture, resource/concurrency proposals, style guide, power lifecycle, implementation stages and verification gates are documented. Active documentation describes the project baseline. The first LVGL host slice is implemented: portable observations/quality, model validation, monotonic ignition lifecycle, shared palettes, Bricolage subsets, dashboard layouts/themes and keyboard simulator. Default CMake and scripts/preview.sh build the native SDL2 preview. Host dependency: LVGL 9.2.2 pinned by archive hash; font converter 1.5.3 pinned by lockfile.
+Architecture, resource/concurrency proposals, style guide, power lifecycle, implementation stages and verification gates are documented. Active documentation describes the project baseline. The first LVGL host slice is implemented: portable observations/quality, model validation, monotonic ignition lifecycle, shared palettes, Inter/Barlow subsets, dashboard layouts/themes and keyboard simulator. Default CMake and scripts/preview.sh build the native SDL2 preview. Host dependency: LVGL 9.2.2 pinned by archive hash; font converter 1.5.3 pinned by lockfile.
 
-Verification: a fresh Debug configure/build completes without compiler warnings; portable model/lifecycle/fuel/shift tests and 24 deterministic render scenarios pass. Rendered outputs match the established first-draft checksums byte-for-byte. Render tests reject runtime warnings. Representative layouts/themes/fuel/unavailable/warning/lifecycle captures inspected; native Mac mode/theme/speed, key-off/on and unavailable controls exercised. Board flash, UART codec, vehicle adapter and hardware validation remain pending. Settings, persistence, functional trips/laps and final icons are not implemented in this slice.
+Verification: a fresh Debug configure/build completes without compiler warnings; portable model/lifecycle/fuel/shift tests and 42 deterministic render scenarios pass.  Typography bounds and required-glyph checks pass. Render tests reject runtime warnings. Representative layouts/themes/fuel/unavailable/warning/lifecycle captures inspected; native Mac mode/theme/speed, key-off/on and unavailable controls exercised. Board flash, UART codec, vehicle adapter and hardware validation remain pending. Settings, persistence, functional trips/laps and final icons are not implemented in this slice.
 
 ## Next actions
 
@@ -26,3 +26,11 @@ Verification: a fresh Debug configure/build completes without compiler warnings;
 5. Define/test UART, then integrate synthetic bench data before measured bike inputs.
 
 See [implementation plan](implementation-plan.md). No simulator or design result counts as bike verification.
+
+## Typography implementation
+
+Inter 4.1 Medium/SemiBold and pinned Barlow Semi Condensed SemiBold are bundled with their OFL licenses and hashes. Labels and large numerals use centralized role mappings; RPM text is 16 px. Font conversion is reproducible through the existing locked converter. Native Mac enlargement uses linear filtering. F2 provides a preview-only all-icons test; render verification includes both icon-test themes for 42 scenarios. Icon geometry remains a separate refinement task.
+
+## Dashboard presentation
+
+The dashboard omits the footer and GEAR caption. Speed is horizontally centered in Street/Track; rendered digit bounds are tested for unknown/one/two/three-digit values. Trip and info lists cycle independently, with simulated TCS and display-only Track toggles. Fuel segments use minimal separation. The render suite covers all four list pages in both modes/themes (42 saved scenarios); source status is visible in the header subtitle and simulation remains identified by the host window/terminal.

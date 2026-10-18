@@ -107,7 +107,7 @@ Start with RGB565 and software rendering. Compare partial rendering into the boa
 | 4 MB reported flash | Measure app/assets/NVS/boot overhead; do not promise dual-slot OTA until two real images fit |
 | 8 MB reported PSRAM | Measure framebuffers, caches, fonts and largest free block, leaving explicit headroom |
 | Internal SRAM | Budget task stacks, DMA/bounce buffers, queues and driver needs independently |
-| Fonts | Convert bundled Bricolage to deterministic subset assets; digits-only large fonts, required UI glyphs at small sizes |
+| Fonts | Convert bundled Inter/Barlow to deterministic subset assets; digits-only large fonts, required UI glyphs at small sizes |
 | Drawing | Persistent widgets, fixed numeric bounds, changed-field updates, clipped RPM gradient, no unnecessary full-screen invalidation |
 | Update cadence | Initial UI target 30 Hz, telemetry 20 Hz; measured goals, not panel refresh specifications or guarantees |
 | Latency | Initial target <=100 ms accepted UART state to visible update under load; establish separate source-to-display warning requirements before vehicle use |

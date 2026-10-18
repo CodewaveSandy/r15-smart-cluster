@@ -11,17 +11,17 @@ Implement the geometry and behavior specified here. Capture deterministic 800 x 
 | Element | Specified baseline |
 | --- | --- |
 | Canvas and content width | 800 x 480; left/right margin 28; usable width 744 |
-| Header | Gear first; mode, QS/VVA, phone/battery, clock/date; divider y=85 |
-| Gear / mode / clock | 46 px bold / 22 px bold / 30 px semibold |
+| Header | Gear number/N only (no GEAR caption); mode, QS/VVA, phone/battery, clock/date; divider y=85 |
+| Gear / mode / clock | Barlow 46 px SemiBold / Inter 23 px SemiBold / Barlow 30 px SemiBold |
 | Tell-tales | Row y=98; arrows at opposite edges |
 | Tachometer | x=28, y=144, width=744; fill begins 20 px below component top |
 | RPM fill height | Street 44 px, Track 52 px |
-| Speed | Street 128 px bold at x=210,y=220; Track 79 px bold at x=28,y=231 |
+| Speed | Horizontally centered at viewport x=400 in both modes; y=240; Barlow 128 px Street / 79 px Track |
 | Lower divider | Street y=376; Track y=336 |
-| Lower information | Primary page left, supporting bike/lap information middle, fuel right |
-| Footer divider | y=439; status/hints below |
+| Lower information | Independent trip list left, info list middle, fuel right; content uses the available bottom area |
+| Footer | No help/status bar or bottom divider; diagnostics use the header subtitle/window/terminal |
 
-Use bundled Bricolage Grotesque Regular/SemiBold/Bold under the specified OFL license. Choose font sizes from observed rendered metrics; validate nominal font sizes against actual rendered baselines. Centralize text styles, tracking, line heights and alignment. Reserve fixed bounds for changing digits and use bounded formatting. Small-font subsets need all actual menu/date/unit/error glyphs, degree sign and unavailable dash; large-font subsets need their actual digits/N/dash/punctuation. Keep font sources, converter version, command and output size reproducible.
+Use bundled Inter Medium/SemiBold and Barlow Semi Condensed SemiBold under the specified OFL license. Choose font sizes from observed rendered metrics; validate nominal font sizes against actual rendered baselines. Centralize text styles, tracking, line heights and alignment. Reserve fixed bounds for changing digits and use bounded formatting. Small-font subsets need all actual menu/date/unit/error glyphs, degree sign and unavailable dash; large-font subsets need their actual digits/N/dash/punctuation. Keep font sources, converter version, command and output size reproducible.
 
 ## Theme tokens
 
@@ -71,3 +71,17 @@ Required comparisons: both layouts x both themes; neutral and gears; 0/max/unkno
 ## Boot and shutdown artwork
 
 Each animation lasts 1–1.5 s; artwork is undecided. Reuse the theme/type system, use lightweight assets/primitives and support immediate urgent-warning interruption. See [power lifecycle](power-lifecycle.md) for state, power and test requirements.
+
+## Typography roles and preview quality
+
+Inter Medium is the primary label font: 14 px general text, 16 px RPM label/value, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. Barlow Semi Condensed SemiBold supplies speed (128 px Street, 79 px Track), gear/title (46 px) and clock (30 px). These choices favor restrained interface labels and distinctive instrument numerals.
+
+Use embedded/ui/Typography.h roles; generate bitmap assets at their actual logical size using scripts/generate-fonts.sh. Maintain 4-bit antialiased coverage and full required glyph subsets. Bitmap generation does not enable OpenType features automatically; tabular-number behavior must be explicitly implemented/verified if needed. Keep changing values in stable bounds.
+
+The SDL host preview uses linear texture filtering when enlarging the 800 x 480 framebuffer for Retina. This softens magnified pixel edges; it does not imply higher panel resolution or hardware text quality. Inspect native 800 x 480 captures and the actual panel separately. The icon artwork is a separate presentation responsibility.
+
+## Independent lower lists
+
+Trip list: ODO -> Trip A -> Trip B -> Trip F -> ODO. Info list: coolant -> battery voltage -> TCS -> Track mode -> coolant. Each list keeps its own selection. Distance uses normalized km and display-unit conversion; unknown values remain dashes. TCS ON/OFF is an observation; the host preview may toggle a sample but real control requires a verified command contract. Track ON/OFF changes the UI layout only. All demo distances are fixed host samples, not functioning trip calculations or persistent odometer data.
+
+Center speed and its unit on x=400 independently of digit count, including unknown data. Track lap information sits to the right without displacing speed. Fuel uses adjacent slanted segments over the existing width with a one-pixel skew, leaving approximately one logical pixel of separation through the main segment body.

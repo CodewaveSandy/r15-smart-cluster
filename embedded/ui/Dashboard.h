@@ -17,13 +17,13 @@ public:
 private:
     lv_obj_t *root_, *header_, *gear_, *mode_, *subtitle_, *clock_, *date_, *phone_, *qs_, *vva_, *phoneBattery_;
     lv_obj_t *rpmBed_, *rpmClip_, *rpmRamp_, *rpmValue_, *speed_, *unit_;
-    lv_obj_t *lowerRule_, *infoTitle_, *infoValue_, *infoUnit_, *auxTitle_, *auxValue_, *lap_, *lapHint_;
-    lv_obj_t *fuelTitle_, *fuelValue_, *pump_, *status_, *hint_, *fuelDivider_;
+    lv_obj_t *lowerRule_, *tripTitle_, *tripValue_, *tripUnit_, *infoTitle_, *infoValue_, *lap_, *lapHint_;
+    lv_obj_t *fuelTitle_, *fuelValue_, *pump_, *fuelDivider_;
     lv_obj_t *overlay_, *animationTitle_, *animationSubtitle_, *animationBed_, *animationFill_;
     std::array<lv_obj_t*,8> fuel_{};
     std::array<lv_obj_t*,11> lamps_{};
     std::array<lv_obj_t*,14> ticks_{};
-    std::array<lv_obj_t*,3> rules_{};
+    std::array<lv_obj_t*,2> rules_{};
     lv_grad_dsc_t rampGradient_{};
     lv_grad_dsc_t shiftGradient_{};
 };

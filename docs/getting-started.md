@@ -38,7 +38,9 @@ The script configures a Debug build under build/lvgl, compiles and opens an 800 
 | Tab | Street / Track |
 | D | Midnight / Daylight |
 | U | Metric / imperial speed and distance |
-| Enter | ODO, battery or coolant information |
+| Enter | Trip list: ODO / Trip A / Trip B / Trip F |
+| I | Info list: coolant / battery voltage / TCS / Track mode |
+| T | Toggle selected TCS (simulator only) or Track mode |
 | L / R | Exclusive left / right simulated indicator |
 | Z | Hazards |
 | H | High beam |
@@ -47,6 +49,7 @@ The script configures a Debug build under build/lvgl, compiles and opens an 800 
 | O | Simulated key-off / key-on |
 | Space | Reset demo values |
 | F1 | Print controls in Terminal |
+| F2 | Illuminate all icons steadily; press again to restore normal status |
 | Esc | Quit |
 
 Fuel: 10–20% yellow, below 10% red, blinking below 20%. RPM: steady shift alert from 10,500; flashing from 11,400. These are UI demonstration thresholds, not verified vehicle limits. Clock/date uses the Mac's local wall clock; deterministic renders use fixed time.
@@ -64,6 +67,7 @@ There is no automatic hot reload yet. Ordinary source changes rebuild incrementa
 | File | What to tune |
 | --- | --- |
 | embedded/ui/Tokens.h | Theme palette, shared metrics and warning timing |
+| embedded/ui/Typography.h | Central font roles for labels, values and instruments |
 | embedded/ui/Dashboard.cpp | Dashboard geometry, labels, instrument composition and initial animation artwork |
 | embedded/ui/InstrumentPresentation.h | Fuel/shift presentation rules, independent of LVGL |
 | embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 1250 |
@@ -75,7 +79,7 @@ Keep vehicle calculations and simulated mutations out of Dashboard.cpp. Colors d
 
 ## Fonts
 
-Bricolage subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Large numeric fonts contain a limited glyph set; the 46 px animation/gear font also includes uppercase letters. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
+Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px animation/gear font also includes uppercase letters. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
 
 To regenerate after a font-size/glyph change (Node/npm required):
 
@@ -92,7 +96,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs portable model/lifecycle/presentation checks and renders 24 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview.
+This runs portable model/lifecycle/presentation checks, typography bounds/glyph coverage checks, and renders 42 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview.
 
 To build and render without opening a window:
 
@@ -104,6 +108,8 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
-This first slice implements the dashboard foundation and simple progress-line boot/shutdown artwork. Several icons are simplified; final icon artwork, full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. Demo ODO is clearly labeled and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+This first slice implements the dashboard foundation and simple progress-line boot/shutdown artwork. Several icons are simplified; final icon artwork, full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
+
+The dashboard has no bottom help/status bar. F1 prints keyboard help in Terminal. Missing data appears as dashes and a DATA UNAVAILABLE header subtitle; F2 shows ICON TEST there. Trip/info selections are independent. TCS toggling changes a host sample only and sends no vehicle command. Track toggling changes the display layout.

@@ -7,7 +7,7 @@ Create a premium personal replacement instrument cluster for the Yamaha R15 V4. 
 | Requirement | Scope and qualification |
 | --- | --- |
 | Instrumentation | Speed, RPM, gear/neutral, fuel, warnings and verified OEM functions; unknown data remains visibly unknown |
-| Presentation | Street/Track layouts, Midnight/Daylight themes, Bricolage typography, continuous RPM bar and segmented fuel |
+| Presentation | Street/Track layouts, Midnight/Daylight themes, Inter/Barlow typography, continuous RPM bar and segmented fuel |
 | Controls | Physical navigation; touch may be optional but never required |
 | Ride information | Trips and lap information; real odometer provenance/persistence must be established |
 | Preferences | Display mode, theme, units and clock settings, with validation and visible save failures |

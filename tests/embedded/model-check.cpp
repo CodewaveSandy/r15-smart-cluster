@@ -35,5 +35,17 @@ int main() {
         check(shiftLit({rpm,Quality::Available},300)==(rpm>=10500&&rpm<11400),"Shift flash boundary");
     }
     check(!shiftLit({13000,Quality::Stale},0),"Stale RPM cannot activate shift");
+    TripPage trip=TripPage::Odometer; InfoPage info=InfoPage::Coolant;
+    for(int i=0;i<4;++i) trip=next(trip);
+    check(trip==TripPage::Odometer&&info==InfoPage::Coolant,"Trip cycles independently and wraps");
+    for(int i=0;i<4;++i) info=next(info);
+    check(info==InfoPage::Coolant,"Info cycles and wraps");
+    s={}; s.odometerKm={100,Quality::Available}; s.tripAKm={10,Quality::Available}; s.tripBKm={20,Quality::Available};
+    check(tripReading(s,TripPage::Odometer).value==100,"ODO reading");
+    check(tripReading(s,TripPage::TripA).value==10,"Trip A reading");
+    check(tripReading(s,TripPage::TripB).value==20,"Trip B reading");
+    check(!tripReading(s,TripPage::TripF).available(),"Unavailable Trip F is not zero");
+    s.tripAKm={-1,Quality::Available}; check(!valid(s),"Negative trip rejected");
+    s.tripAKm={std::numeric_limits<double>::infinity(),Quality::Available}; check(!valid(s),"Infinite trip rejected");
     return failures?1:0;
 }

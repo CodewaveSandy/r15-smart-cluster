@@ -8,7 +8,7 @@ Baseline: 2026-10-18. Accepted direction is distinguished from implementation pr
 | D02 | Accepted | Two ESP32 MCUs: vehicle acquisition/calculations/Wi-Fi/BLE and separate display rendering |
 | D03 | Accepted | UART exchanges normalized observations; presentation remains independent of vehicle protocols |
 | D04 | Accepted | LVGL on the selected Elecrow 7-inch 800 x 480 display family; exact PCB revision pending |
-| D05 | Accepted | Preserve the specified Street/Track UI, Bricolage font, themes, RPM gradient, icons and fuel behavior |
+| D05 | Accepted | Preserve the specified Street/Track UI, Inter/Barlow typography, themes, RPM gradient, icons and fuel behavior |
 | D06 | Accepted | Non-touch navigation through semantic physical actions |
 | D07 | Accepted | Full Maps/Android Auto/CarPlay remains an unresolved requirement to investigate |
 | D08 | Accepted | Key-on boot animation and key-off shutdown animation each last 1–1.5 s; shutdown depends on retained hardware power |
@@ -22,4 +22,12 @@ Changes to consequential decisions must record date, rationale, implications and
 
 ## Implementation selections — 2026-10-18
 
-The host preview uses LVGL 9.2.2, SDL2, C++17 and CMake. LVGL source is hash-pinned and Bricolage conversion uses locked lv_font_conv 1.5.3. Firmware framework compatibility remains pending. Lifecycle animation duration is 1250 ms; artwork is a lightweight initial progress-line design, with urgent-warning exposure during animations.
+The host preview uses LVGL 9.2.2, SDL2, C++17 and CMake. LVGL source is hash-pinned and Inter/Barlow conversion uses locked lv_font_conv 1.5.3. Firmware framework compatibility remains pending. Lifecycle animation duration is 1250 ms; artwork is a lightweight initial progress-line design, with urgent-warning exposure during animations.
+
+## Typography selection — 2026-10-18
+
+Accepted by the user: Inter for labels/supporting information and Barlow Semi Condensed for instrument numerals. Use Medium/SemiBold weights, larger 16 px RPM labels, reusable typography roles and locally bundled OFL assets. Pin Inter release 4.1 and Barlow's google/fonts source revision as recorded with the assets. Keep only the required source weights/subsets. Preserve layout and instrument behavior; font/icon redesign are independent work. The host uses linear Retina interpolation while LVGL's logical framebuffer remains 800 x 480.
+
+## Dashboard layout and information lists — 2026-10-18
+
+User-selected: remove the footer/help bar and GEAR caption; center speed horizontally; keep independent ODO/Trip A/Trip B/Trip F and coolant/battery/TCS/Track lists; minimize fuel-segment gaps. Host controls: Enter cycles trip, I cycles info, T toggles selected simulated TCS or display Track. No vehicle control is implemented. Simulation provenance remains in the window title/terminal; unavailable status moves into the header subtitle.

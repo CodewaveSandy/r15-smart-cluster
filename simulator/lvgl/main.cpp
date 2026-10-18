@@ -1,4 +1,5 @@
 #include "embedded/ui/Dashboard.h"
+#include "embedded/ui/Typography.h"
 #include <SDL.h>
 #include <algorithm>
 #include <array>
@@ -29,7 +30,10 @@ ClusterState demo() {
     s.quickShifter={true,Quality::Available}; s.vva={true,Quality::Available};
     s.phoneConnected={true,Quality::Available}; s.phoneBatteryPercent={84,Quality::Available};
     s.gear={4,Quality::Available}; s.fuelPercent={72,Quality::Available};
-    s.odometerKm={12480,Quality::Available}; s.batteryVoltageV={12.8,Quality::Available};
+    s.odometerKm={12480,Quality::Available};
+    // Static host preview samples, not computed or persisted vehicle distances.
+    s.tripAKm={128.4,Quality::Available}; s.tripBKm={46.8,Quality::Available}; s.tripFKm={0,Quality::Available};
+    s.tcsEnabled={true,Quality::Available}; s.batteryVoltageV={12.8,Quality::Available};
     s.coolantTemperatureC={84,Quality::Available};
     s.left=s.right=s.highBeam=s.absWarning=s.engineWarning=s.coolantWarning={false,Quality::Available};
     return s;
@@ -45,10 +49,11 @@ void help() {
     std::puts("R15 LVGL preview — simulated data only\n"
         "Left/Right: speed +/-1 | Up/Down: RPM +/-100 | [ / ]: fuel +/-1\n"
         "0..6: gear (0 neutral) | Tab: Street/Track | D: Midnight/Daylight\n"
-        "Enter: info page | U: metric/imperial | X: unavailable/restore\n"
+        "Enter: trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
+        "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
         "O: key on/off (1250 ms animation) | Space: reset demo\n"
-        "F1: print controls | Esc: quit | No real bike connected.");
+        "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
 }
 int main(int argc,char** argv) {
@@ -78,9 +83,9 @@ int main(int argc,char** argv) {
                     dashboard.update(state,view,life,1400); capture(output/(suffix+".bmp"));
                     auto low=state; low.fuelPercent.value=9;
                     dashboard.update(low,view,life,0); capture(output/(suffix+"-fuel-on.bmp"));
-                    const auto fuelOn=pixels[(track?375:410)*800+590];
+                    const auto fuelOn=pixels[cluster::ui::Metrics::fuelY(track)*800+590];
                     dashboard.update(low,view,life,500); capture(output/(suffix+"-fuel-off.bmp"));
-                    if(fuelOn==pixels[(track?375:410)*800+590]) throw std::runtime_error("Fuel blink did not reach rendered pixels");
+                    if(fuelOn==pixels[cluster::ui::Metrics::fuelY(track)*800+590]) throw std::runtime_error("Fuel blink did not reach rendered pixels");
                     ClusterState missing; dashboard.update(missing,view,life,1400); capture(output/(suffix+"-unavailable.bmp"));
                     auto warning=state; warning.engineRpm.value=11400; warning.engineWarning.value=true; warning.absWarning.value=true;
                     dashboard.update(warning,view,life,1200); capture(output/(suffix+"-warning.bmp"));
@@ -90,8 +95,43 @@ int main(int argc,char** argv) {
                 auto urgentState=state; urgentState.engineWarning.value=true;
                 dashboard.update(urgentState,view,boot,1325); capture(output/"shutdown-warning.bmp");
                 Lifecycle off; dashboard.update(ClusterState{},view,off,0); capture(output/"off.bmp");
+                for(bool light:{false,true}) {
+                    view.light=light; view.iconTest=true;
+                    dashboard.update(state,view,life,1400); capture(output/(light?"icons-day.bmp":"icons-night.bmp"));
+                }
+                view.iconTest=false;
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view.track=track; view.light=light;
+                    view.tripPage=TripPage::Odometer; view.infoPage=InfoPage::Coolant;
+                    for(int page=0;page<4;++page) {
+                        auto sample=state;
+                        if(page==2) sample.tcsEnabled.value=false;
+                        dashboard.update(sample,view,life,1400);
+                        const auto name=std::string(track?"track":"street")+(light?"-day":"-night")+"-pages-"+std::to_string(page)+".bmp";
+                        capture(output/name);
+                        view.tripPage=next(view.tripPage); view.infoPage=next(view.infoPage);
+                    }
+                }
+                // Check the actual rendered digit bounds, not just the label's position.
+                view.iconTest=false;
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view.track=track; view.light=light;
+                    const auto palette=light?cluster::ui::daylight:cluster::ui::midnight;
+                    const auto target=lv_color_to_u16(lv_color_hex(palette.ink));
+                    for(int value:{-1,0,1,60,180}) {
+                        auto sample=state;
+                        sample.speedKph=value<0?Signal<int>{}:Signal<int>{value,Quality::Available};
+                        dashboard.update(sample,view,life,1400); lv_refr_now(nullptr);
+                        int left=800,right=-1;
+                        const auto* font=track?cluster::ui::fonts::track:cluster::ui::fonts::speed;
+                        for(int y=240;y<240+font->line_height;++y)
+                            for(int x=cluster::ui::Metrics::speedX;x<cluster::ui::Metrics::speedX+cluster::ui::Metrics::speedWidth;++x)
+                                if(pixels[y*800+x]==target) { left=std::min(left,x); right=std::max(right,x); }
+                        if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Speed glyphs are not centered on the viewport");
+                    }
+                }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 24 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 42 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
@@ -102,6 +142,8 @@ int main(int argc,char** argv) {
                 if(!renderer) renderer.reset(SDL_CreateRenderer(window.get(),-1,SDL_RENDERER_SOFTWARE));
                 if(!renderer) throw std::runtime_error(SDL_GetError());
                 SDL_RenderSetLogicalSize(renderer.get(),800,480);
+                // Host-only interpolation for Retina enlargement; LVGL still renders 800x480.
+                SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"linear");
                 Texture texture(SDL_CreateTexture(renderer.get(),SDL_PIXELFORMAT_RGB565,SDL_TEXTUREACCESS_STREAMING,800,480),SDL_DestroyTexture);
                 if(!texture) throw std::runtime_error(SDL_GetError());
                 const auto start=std::chrono::steady_clock::now();
@@ -125,7 +167,12 @@ int main(int argc,char** argv) {
                         case SDLK_TAB: view.track=!view.track; break;
                         case SDLK_d: view.light=!view.light; break;
                         case SDLK_u: view.imperial=!view.imperial; break;
-                        case SDLK_RETURN: view.infoPage=(view.infoPage+1)%3; break;
+                        case SDLK_RETURN: view.tripPage=next(view.tripPage); break;
+                        case SDLK_i: view.infoPage=next(view.infoPage); break;
+                        case SDLK_t:
+                            if(view.infoPage==InfoPage::Track) view.track=!view.track;
+                            else if(view.infoPage==InfoPage::Tcs&&!missing&&state.tcsEnabled.available()) state.tcsEnabled.value=!state.tcsEnabled.value;
+                            break;
                         case SDLK_x: missing=!missing; break;
                         case SDLK_o: life.key(!life.ignition(),now); break;
                         case SDLK_l: state.left.value=!state.left.value; state.right.value=false; break;
@@ -137,6 +184,7 @@ int main(int argc,char** argv) {
                         case SDLK_c: state.coolantWarning.value=!state.coolantWarning.value; break;
                         case SDLK_SPACE: state=demo(); missing=false; break;
                         case SDLK_F1: help(); break;
+                        case SDLK_F2: view.iconTest=!view.iconTest; break;
                         default: if(key>=SDLK_0&&key<=SDLK_6) state.gear.value=key-SDLK_0; break;
                         }
                     }

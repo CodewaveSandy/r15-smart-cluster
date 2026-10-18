@@ -22,4 +22,4 @@ See the [step-by-step preview guide](docs/getting-started.md), [project document
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-Tests check portable state/lifecycle/presentation behavior and render 24 deterministic scenarios. Simulated output is not bike verification.
+Tests check portable state/lifecycle/presentation behavior and render 42 deterministic scenarios. Simulated output is not bike verification.

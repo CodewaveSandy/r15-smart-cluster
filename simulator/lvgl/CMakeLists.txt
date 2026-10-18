@@ -16,12 +16,16 @@ FetchContent_MakeAvailable(lvgl)
 find_package(SDL2 REQUIRED CONFIG)
 add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/Dashboard.cpp"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/bricolage_small.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/bricolage_medium.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/bricolage_large.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/bricolage_speed.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/bricolage_track.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/bricolage_clock.c")
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_caption_12.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_label_14.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_value_16.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_unit_18.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_heading_23.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_gear_46.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_speed_128.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_track_79.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_clock_30.c"
+)
 target_include_directories(cluster_ui PUBLIC "${CLUSTER_ROOT}")
 target_link_libraries(cluster_ui PUBLIC lvgl::lvgl)
 target_compile_options(cluster_ui PRIVATE -Wall -Wextra -Wpedantic)
@@ -36,6 +40,9 @@ if(BUILD_TESTING)
  add_executable(model-check "${CLUSTER_ROOT}/tests/embedded/model-check.cpp")
  target_include_directories(model-check PRIVATE "${CLUSTER_ROOT}")
  add_test(NAME model-lifecycle COMMAND model-check)
+ add_executable(typography-check "${CLUSTER_ROOT}/tests/embedded/typography-check.cpp")
+ target_link_libraries(typography-check PRIVATE cluster_ui)
+ add_test(NAME typography-bounds COMMAND typography-check)
  add_test(NAME lvgl-render COMMAND r15-preview --render "${CMAKE_BINARY_DIR}/previews")
  set_tests_properties(lvgl-render PROPERTIES ENVIRONMENT "SDL_VIDEODRIVER=dummy" TIMEOUT 30)
 endif()
