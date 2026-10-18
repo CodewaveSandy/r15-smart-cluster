@@ -21,8 +21,9 @@ int main() {
     fits(fonts::track,"99:59.99",320);
     fits(fonts::heading,"99:59.99",170);
     fits(fonts::track,"—:—.—",320);
-    fits(fonts::gear,"400",212);
-    fits(fonts::gear,"N",65);
+    fits(fonts::secondary,"400",212);
+    for(const auto* gear:{"N","1","2","3","4","5","6","—"}) fits(fonts::gear,gear,65);
+    if(fonts::gear->line_height>60) { std::fprintf(stderr,"Gear exceeds header height\n"); ++failed; }
     fits(fonts::caption,"CLOCK UNAVAILABLE",142);
     fits(fonts::label,"DATA UNAVAILABLE",200);
     for(const auto* font:{fonts::caption,fonts::label,fonts::value,fonts::unit,fonts::heading}) {

@@ -46,7 +46,7 @@ void lamp(lv_obj_t* o,const Signal<bool>& signal,bool phase,std::uint32_t active
 Dashboard::Dashboard(lv_obj_t* parent) {
     root_=box(parent,0,0,800,480);
     header_=box(root_,0,0,800,85);
-    gear_=label(header_,28,26,65,"—",fonts::gear);
+    gear_=label(header_,28,16,65,"—",fonts::gear);
     mode_=label(header_,120,26,160,"STREET",fonts::heading);
     subtitle_=label(header_,121,56,200,"ROAD / EVERYDAY");
     phone_=createIcon(header_,456,31,Icon::Phone);
@@ -103,7 +103,7 @@ Dashboard::Dashboard(lv_obj_t* parent) {
         const int nextX=Metrics::fuelX+(i+1)*Metrics::fuelWidth/Metrics::fuelSegmentCount;
         fuel_[i]=box(root_,x,Metrics::fuelY,nextX-x,12); lv_obj_add_event_cb(fuel_[i],drawFuelSegment,LV_EVENT_DRAW_MAIN,nullptr); }
     overlay_=box(root_,0,0,800,480);
-    animationTitle_=label(overlay_,100,160,600,"R15",fonts::gear);
+    animationTitle_=label(overlay_,100,160,600,"R15",fonts::secondary);
     lv_obj_set_style_text_align(animationTitle_,LV_TEXT_ALIGN_CENTER,0);
     animationSubtitle_=label(overlay_,100,230,600,"SMART CLUSTER");
     lv_obj_set_style_text_align(animationSubtitle_,LV_TEXT_ALIGN_CENTER,0);
@@ -155,7 +155,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
     show(rpmClip_,fill>0); lv_obj_set_width(rpmClip_,std::max(1,fill));
     if(s.engineRpm.available()) std::snprintf(b,sizeof b,"%d rpm",s.engineRpm.value); else std::snprintf(b,sizeof b,"— rpm"); text(rpmValue_,b);
     if(s.speedKph.available()) std::snprintf(b,sizeof b,"%d",int(std::lround(s.speedKph.value*(v.imperial?0.621371:1)))); else std::snprintf(b,sizeof b,"—"); text(speed_,b);
-    lv_obj_set_style_text_font(speed_,v.track?fonts::gear:fonts::speed,0);
+    lv_obj_set_style_text_font(speed_,v.track?fonts::secondary:fonts::speed,0);
     lv_obj_set_pos(speed_,v.track?560:Metrics::speedX,v.track?269:240);
     lv_obj_set_width(speed_,v.track?212:Metrics::speedWidth);
     lv_obj_set_pos(unit_,v.track?560:Metrics::speedX,v.track?310:338);

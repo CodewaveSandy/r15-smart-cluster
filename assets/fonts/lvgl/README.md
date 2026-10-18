@@ -11,11 +11,12 @@ Reproduce with scripts/generate-fonts.sh. Converter: lv_font_conv 1.5.3, pinned 
 | inter_value_16 | RPM title and value | 16 px Medium |
 | inter_unit_18 | Speed unit | 18 px Medium |
 | inter_heading_23 | Mode and supporting values | 23 px SemiBold |
-| barlow_gear_46 | Gear, Track speed, animation title | 46 px SemiBold |
+| barlow_gear_72 | Gear | 72 px SemiBold |
+| barlow_secondary_46 | Track speed, animation title | 46 px SemiBold |
 | barlow_speed_128 | Street speed | 128 px SemiBold |
 | barlow_track_79 | Track lap timer | 79 px SemiBold |
 | barlow_clock_30 | Clock | 30 px SemiBold |
 
-Text fonts include ASCII, degree, middle dot, multiplication sign and em dash. Numeric fonts include digits, N, colon, full stop, hyphen and em dash. The gear/title font additionally includes uppercase letters and space. Generate required glyphs when adding text; missing-glyph warnings fail render tests.
+Text fonts include ASCII, degree, middle dot, multiplication sign and em dash. Numeric fonts include digits, N, colon, full stop, hyphen and em dash. The secondary/title font additionally includes uppercase letters and space. Generate required glyphs when adding text; missing-glyph warnings fail render tests.
 
 Typography roles are centralized in embedded/ui/Typography.h. These C files are intentional runtime assets; do not edit glyph data manually. Flash fit must be measured in the eventual firmware build. Mac Retina interpolation improves enlarged preview presentation but does not increase the physical panel's resolution or font coverage.

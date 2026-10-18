@@ -147,7 +147,7 @@ int main(int argc,char** argv) {
                         if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Primary instrument glyphs are not centered on the viewport");
                         if(track) {
                             left=800; right=-1;
-                            for(int y=269;y<269+cluster::ui::fonts::gear->line_height;++y)
+                            for(int y=269;y<269+cluster::ui::fonts::secondary->line_height;++y)
                                 for(int x=560;x<772;++x)
                                     if(pixels[y*800+x]==target) { left=std::min(left,x); right=std::max(right,x); }
                             if(right<left||std::abs(left+right-1331)>4) throw std::runtime_error("Track speed is not centered in its secondary position");

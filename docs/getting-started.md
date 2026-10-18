@@ -79,7 +79,7 @@ Keep vehicle calculations and simulated mutations out of Dashboard.cpp. Colors d
 
 ## Fonts
 
-Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px animation/gear font also includes uppercase letters. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
+Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px animation/secondary-speed font also includes uppercase letters. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
 
 To regenerate after a font-size/glyph change (Node/npm required):
 

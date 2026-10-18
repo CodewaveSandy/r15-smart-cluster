@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 46 px
  * Bpp: 4
- * Opts: --font assets/fonts/barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf --size 46 --bpp 4 --format lvgl --no-compress --lv-font-name barlow_gear_46 -o assets/fonts/lvgl/barlow_gear_46.c --symbols 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ :.- --range 8212
+ * Opts: --font assets/fonts/barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf --size 46 --bpp 4 --format lvgl --no-compress --lv-font-name barlow_secondary_46 -o assets/fonts/lvgl/barlow_secondary_46.c --symbols 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ :.- --range 8212
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE
@@ -10,11 +10,11 @@
 #include "lvgl/lvgl.h"
 #endif
 
-#ifndef BARLOW_GEAR_46
-#define BARLOW_GEAR_46 1
+#ifndef BARLOW_SECONDARY_46
+#define BARLOW_SECONDARY_46 1
 #endif
 
-#if BARLOW_GEAR_46
+#if BARLOW_SECONDARY_46
 
 /*-----------------
  *    BITMAPS
@@ -1883,9 +1883,9 @@ static lv_font_fmt_txt_dsc_t font_dsc = {
 
 /*Initialize a public general font descriptor*/
 #if LVGL_VERSION_MAJOR >= 8
-const lv_font_t barlow_gear_46 = {
+const lv_font_t barlow_secondary_46 = {
 #else
-lv_font_t barlow_gear_46 = {
+lv_font_t barlow_secondary_46 = {
 #endif
     .get_glyph_dsc = lv_font_get_glyph_dsc_fmt_txt,    /*Function pointer to get glyph's data*/
     .get_glyph_bitmap = lv_font_get_bitmap_fmt_txt,    /*Function pointer to get glyph's bitmap*/
@@ -1907,5 +1907,5 @@ lv_font_t barlow_gear_46 = {
 
 
 
-#endif /*#if BARLOW_GEAR_46*/
+#endif /*#if BARLOW_SECONDARY_46*/
 

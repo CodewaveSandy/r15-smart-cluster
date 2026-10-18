@@ -25,7 +25,8 @@ inter_label_14 14 inter/Inter-Medium.ttf text
 inter_value_16 16 inter/Inter-Medium.ttf text
 inter_unit_18 18 inter/Inter-Medium.ttf text
 inter_heading_23 23 inter/Inter-SemiBold.ttf text
-barlow_gear_46 46 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf headline
+barlow_secondary_46 46 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf headline
+barlow_gear_72 72 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric
 barlow_speed_128 128 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric
 barlow_track_79 79 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric
 barlow_clock_30 30 barlow-semi-condensed/BarlowSemiCondensed-SemiBold.ttf numeric

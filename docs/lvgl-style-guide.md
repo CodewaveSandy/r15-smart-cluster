@@ -12,7 +12,7 @@ Implement the geometry and behavior specified here. Capture deterministic 800 x 
 | --- | --- |
 | Canvas and content width | 800 x 480; left/right margin 28; usable width 744 |
 | Header | Gear number/N only (no GEAR caption); mode, QS/VVA, phone/battery, clock/date; divider y=85 |
-| Gear / mode / clock | Barlow 46 px SemiBold / Inter 23 px SemiBold / Barlow 30 px SemiBold |
+| Gear / mode / clock | Barlow 72 px SemiBold / Inter 23 px SemiBold / Barlow 30 px SemiBold |
 | Tell-tales | Row y=98; arrows at opposite edges |
 | Tachometer | x=28, y=144, width=744; fill begins 20 px below component top |
 | RPM fill height | 44 px in both modes |
@@ -75,7 +75,7 @@ Each animation lasts 1–1.5 s; artwork is undecided. Reuse the theme/type syste
 
 ## Typography roles and preview quality
 
-Inter Medium is the primary label font: 14 px general text, 16 px RPM label/value, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. Barlow Semi Condensed SemiBold supplies Street speed (128 px), Track lap (79 px), gear/title/Track speed (46 px) and clock (30 px). These choices favor restrained interface labels and distinctive instrument numerals.
+Inter Medium is the primary label font: 14 px general text, 16 px RPM label/value, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. Barlow Semi Condensed SemiBold supplies Street speed (128 px), Track lap (79 px), gear (72 px), animation titles/Track speed (46 px) and clock (30 px). These choices favor restrained interface labels and distinctive instrument numerals.
 
 Use embedded/ui/Typography.h roles; generate bitmap assets at their actual logical size using scripts/generate-fonts.sh. Maintain 4-bit antialiased coverage and full required glyph subsets. Bitmap generation does not enable OpenType features automatically; tabular-number behavior must be explicitly implemented/verified if needed. Keep changing values in stable bounds.
 
