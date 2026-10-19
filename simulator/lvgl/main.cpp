@@ -12,13 +12,18 @@
 #include <thread>
 #include <ctime>
 #include <vector>
+#include <fstream>
 
 namespace {
 using namespace cluster;
 std::array<std::uint16_t,800*480> pixels{};
 int warnings=0;
+struct FlushMetrics { std::uint64_t calls=0, pixels=0; };
+FlushMetrics flushMetrics;
 void logMessage(lv_log_level_t, const char* message) { ++warnings; std::fprintf(stderr,"%s",message); }
 void flush(lv_display_t* display,const lv_area_t* area,std::uint8_t* bytes) {
+    ++flushMetrics.calls;
+    flushMetrics.pixels+=std::uint64_t(area->x2-area->x1+1)*(area->y2-area->y1+1);
     const auto* source=reinterpret_cast<std::uint16_t*>(bytes);
     for(int y=area->y1;y<=area->y2;++y)
         std::copy_n(source+(y-area->y1)*(area->x2-area->x1+1),area->x2-area->x1+1,pixels.data()+y*800+area->x1);
@@ -153,6 +158,76 @@ int main(int argc,char** argv) {
                             if(right<left||std::abs(left+right-1331)>4) throw std::runtime_error("Track speed is not centered in its secondary position");
                         }
                     }
+                }
+                // Host work counters, not ESP32 timing or memory measurements.
+                view.track=false; view.light=false;
+                dashboard.update(state,view,life,1400); lv_refr_now(nullptr);
+                const auto stablePixels=pixels;
+                flushMetrics={};
+                const auto measuredStart=std::chrono::steady_clock::now();
+                for(int i=0;i<100;++i) {
+                    dashboard.update(state,view,life,1400);
+                    lv_refr_now(nullptr);
+                }
+                if(flushMetrics.calls!=0) throw std::runtime_error("Identical dashboard updates caused redundant flushes");
+                const auto idleMetrics=flushMetrics;
+                const auto elapsedUs=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-measuredStart).count();
+                if(pixels!=stablePixels) throw std::runtime_error("Repeated identical presentation changed pixels");
+                const auto countObjects=[](auto&& self,lv_obj_t* obj)->std::uint32_t {
+                    std::uint32_t count=1;
+                    for(std::uint32_t i=0;i<lv_obj_get_child_count(obj);++i) count+=self(self,lv_obj_get_child(obj,i));
+                    return count;
+                };
+                std::ofstream report(output/"host-metrics.json");
+                report << "{\n  \"scope\": \"host only; not firmware resource or timing evidence\",\n"
+                    << "  \"scenario\": \"100 identical Street/Midnight updates at fixed monotonic time\",\n"
+                    << "  \"iterations\": 100,\n  \"flush_calls\": " << idleMetrics.calls
+                    << ",\n  \"flushed_pixels\": " << idleMetrics.pixels
+                    << ",\n  \"elapsed_us\": " << elapsedUs
+                    << ",\n  \"lvgl_object_count_including_screen\": " << countObjects(countObjects,lv_screen_active())
+                    << ",\n  \"dashboard_wrapper_bytes_on_host\": " << sizeof(cluster::ui::Dashboard)
+                    << ",\n  \"host_framebuffer_bytes\": " << pixels.size()*sizeof(pixels[0])
+                    << ",\n  \"host_draw_buffer_bytes\": " << drawBuffer.size()*sizeof(drawBuffer[0]) << "\n}\n";
+                if(!report) throw std::runtime_error("Cannot write host metrics report");
+                // Include shift palettes, unknown observations, icon tests, and covered artwork.
+                // Blink tests elsewhere require changes to reach pixels; these checks fix time.
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view.track=track; view.light=light;
+                    for(int scenario=0;scenario<6;++scenario) {
+                        auto sample=state; Lifecycle sceneLife=life;
+                        view.iconTest=scenario==3;
+                        if(scenario==1) sample.engineRpm.value=11400;
+                        if(scenario==2) sample={};
+                        if(scenario==4) { sample.fuelPercent.value=9; sample.left.value=true; }
+                        if(scenario==5) { sceneLife=Lifecycle{}; sceneLife.key(true,0); }
+                        dashboard.update(sample,view,sceneLife,600); lv_refr_now(nullptr);
+                        const auto expected=pixels;
+                        flushMetrics={};
+                        for(int i=0;i<3;++i) { dashboard.update(sample,view,sceneLife,600); lv_refr_now(nullptr); }
+                        if(flushMetrics.calls || pixels!=expected) {
+                            std::fprintf(stderr,"Stable scenario: track=%d light=%d scenario=%d flushes=%llu\n",track,light,scenario,static_cast<unsigned long long>(flushMetrics.calls));
+                            throw std::runtime_error("Stable layout/theme/warning/lifecycle scenario redrew or changed pixels");
+                        }
+                    }
+                }
+                // Parent-owned LVGL objects must disappear when their Dashboard owner dies.
+                const auto retainedObjects=countObjects(countObjects,lv_screen_active());
+                const auto retainedPixels=pixels;
+                for(int cycle=0;cycle<8;++cycle) {
+                    {
+                        cluster::ui::Dashboard temporary(lv_screen_active());
+                        if(countObjects(countObjects,lv_screen_active())!=retainedObjects*2-1)
+                            throw std::runtime_error("Dashboard component construction changed object budget");
+                        cluster::ui::ViewOptions temporaryView;
+                        temporaryView.track=cycle%2; temporaryView.light=(cycle/2)%2;
+                        temporary.update(state,temporaryView,life,1400);
+                        lv_refr_now(nullptr);
+                    }
+                    if(countObjects(countObjects,lv_screen_active())!=retainedObjects)
+                        throw std::runtime_error("Dashboard destruction leaked LVGL objects");
+                    lv_refr_now(nullptr);
+                    if(pixels!=retainedPixels)
+                        throw std::runtime_error("Dashboard destruction did not restore underlying screen");
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
                 std::printf("Rendered 44 scenarios to %s\n",output.string().c_str());

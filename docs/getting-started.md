@@ -68,14 +68,16 @@ There is no automatic hot reload yet. Ordinary source changes rebuild incrementa
 | --- | --- |
 | embedded/ui/Tokens.h | Theme palette, shared metrics and warning timing |
 | embedded/ui/Typography.h | Central font roles for labels, values and instruments |
-| embedded/ui/Dashboard.cpp | Dashboard geometry, labels, instrument composition and initial animation artwork |
+| embedded/ui/Dashboard.cpp | Component composition and shift-background theme application |
+| embedded/ui/Geometry.h | Named component positions and bounds, based on shared Metrics |
+| embedded/ui/components/ | Header, tell-tales, tachometer, readouts, info, fuel and lifecycle artwork |
 | embedded/ui/InstrumentPresentation.h | Fuel/shift presentation rules, independent of LVGL |
 | embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 1250 |
 | simulator/lvgl/main.cpp | Demo starting values, host keyboard mapping, clock and render scenarios |
 | shared/model/ClusterState.h | Unit-qualified normalized observations and quality |
 | scripts/generate-fonts.sh | Reproducible font sizes/glyph subsets |
 
-Keep vehicle calculations and simulated mutations out of Dashboard.cpp. Colors do not change vehicle behavior. Use tests when changing thresholds/timing.
+Keep vehicle calculations and simulated mutations out of Dashboard.cpp and the UI components. Colors do not change vehicle behavior. Use tests when changing thresholds/timing.
 
 ## Fonts
 
@@ -96,7 +98,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs portable model/lifecycle/presentation checks, typography bounds/glyph coverage checks, and renders 44 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview.
+This runs portable model/lifecycle/presentation checks, typography bounds/glyph coverage checks, and renders 44 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
 
 To build and render without opening a window:
 

@@ -23,3 +23,7 @@ Vehicle protocols, calibration and calculations belong to the vehicle MCU. Displ
 Proposed implementation: ESP-IDF, FreeRTOS, C++17, LVGL and an SDL host preview using the same UI source. Versions will be pinned after board-example validation. Wi-Fi/BLE is not evidence of phone projection capability. Full Maps/Android Auto/CarPlay remains unresolved and requires a separate feasibility investigation.
 
 See [embedded design](embedded-architecture.md), [style guide](lvgl-style-guide.md) and [power lifecycle](power-lifecycle.md). Power architecture must support ignition sensing, startup stability and retained shutdown power; no circuit or timing guarantee is currently verified.
+
+## Current UI composition
+
+The shared LVGL `Dashboard` is a composition shell for seven focused components under `embedded/ui/components/`: header, tell-tales, tachometer, primary readout, ride information, fuel and lifecycle artwork. Both modes reuse the same persistent objects. Geometry lives in `embedded/ui/Geometry.h`; theme/behavior tokens and font roles remain in `Tokens.h` and `Typography.h`. Components own their top-level LVGL objects; LVGL owns descendants. RAII destroys components before the dashboard root, under the single LVGL owner. No additional container objects or per-component tasks are introduced. Formatting extraction and semantic input remain pending; see the [optimization sequence](optimization-plan.md).

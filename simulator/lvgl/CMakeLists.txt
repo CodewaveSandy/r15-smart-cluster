@@ -16,6 +16,13 @@ FetchContent_MakeAvailable(lvgl)
 find_package(SDL2 REQUIRED CONFIG)
 add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/Dashboard.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/Header.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/TellTaleRow.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/Tachometer.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/PrimaryReadout.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/RideInfoPanel.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/FuelGauge.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/LifecycleOverlay.cpp"
  "${CLUSTER_ROOT}/embedded/ui/Icons.cpp"
  "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_32.c"
  "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_30.c"

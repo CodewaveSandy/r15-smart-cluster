@@ -46,3 +46,11 @@ Track lower-left is a fixed BEST LAP observation (host sample 01:18.42); Enter o
 ## Automotive icon assets
 
 The 12 selected MDI 7.4.47 glyphs replace rough line paths and MSG/CALL/TCS/ABS text stand-ins. Typed icon widgets use local antialiased subsets; neutral and QS/VVA retain text. Source/license/hash records and regeneration script are included. All-icon checks now cover both themes/layouts, for 44 saved render scenarios overall; glyph coverage/bounds checks include every selected icon. OEM conformity is unverified.
+
+## Optimization first pass — 2026-10-19
+
+Host render metrics now report work for 100 identical settled updates. Redundant flushes fell from 1,200 callbacks / 38,400,000 pixels to zero, with the same 72 LVGL objects and unchanged host buffer sizes. All 44 baseline renders remain byte-identical. Stable-state regression checks include both layouts/themes, unknown values, warnings, blink phase and boot artwork. Firmware measurements remain pending. See [optimization sequence](optimization-plan.md) for remaining stages and boundaries.
+
+## Reusable dashboard components — 2026-10-19
+
+Dashboard composition now delegates to seven focused components with RAII object ownership, named tell-tales and centralized geometry. The LVGL object count remains 72; all 44 baseline renders are byte-identical and idle updates still flush zero pixels. Repeated creation/destruction tests check object-count restoration and underlying pixels. Font bounds checks use the layout definitions. Build and host tests pass; no hardware claims are added. Next: portable presentation decisions and semantic input.

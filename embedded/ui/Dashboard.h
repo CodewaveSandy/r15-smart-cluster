@@ -3,28 +3,37 @@
 #include "shared/model/ClusterState.h"
 #include "embedded/application/Lifecycle.h"
 #include "Tokens.h"
-#include <array>
-#include <cstdint>
+#include "components/Header.h"
+#include "components/TellTaleRow.h"
+#include "components/Tachometer.h"
+#include "components/PrimaryReadout.h"
+#include "components/RideInfoPanel.h"
+#include "components/FuelGauge.h"
+#include "components/LifecycleOverlay.h"
+
 namespace cluster::ui {
-// Owns one LVGL subtree. Construct/update/destroy only on the LVGL owner thread.
+// Owns the root and fixed-size component members. Components are destroyed
+// before their parent root; each owns its top-level nodes and LVGL owns their
+// descendants. No extra grouping objects, wrapper allocations or tasks.
+// The caller's parent must outlive Dashboard.
+// Construct/update/destroy only on the LVGL owner thread.
 class Dashboard {
 public:
     explicit Dashboard(lv_obj_t* parent);
     ~Dashboard();
     Dashboard(const Dashboard&)=delete;
     Dashboard& operator=(const Dashboard&)=delete;
-    void update(const ClusterState&, const ViewOptions&, const Lifecycle&, std::uint64_t now);
+    void update(const ClusterState&,const ViewOptions&,const Lifecycle&,std::uint64_t now);
 private:
-    lv_obj_t *root_, *header_, *gear_, *mode_, *subtitle_, *clock_, *date_, *phone_, *qs_, *vva_, *phoneBattery_;
-    lv_obj_t *rpmBed_, *rpmClip_, *rpmRamp_, *rpmValue_, *speed_, *unit_;
-    lv_obj_t *lowerRule_, *tripTitle_, *tripValue_, *tripUnit_, *infoTitle_, *infoValue_, *lap_, *lapHint_, *speedTitle_;
-    lv_obj_t *fuelTitle_, *fuelValue_, *pump_, *fuelDivider_;
-    lv_obj_t *overlay_, *animationTitle_, *animationSubtitle_, *animationBed_, *animationFill_;
-    std::array<lv_obj_t*,8> fuel_{};
-    std::array<lv_obj_t*,11> lamps_{};
-    std::array<lv_obj_t*,14> ticks_{};
-    std::array<lv_obj_t*,2> rules_{};
-    lv_grad_dsc_t rampGradient_{};
     lv_grad_dsc_t shiftGradient_{};
+    ObjectOwner root_;
+    Header header_;
+    TellTaleRow tellTales_;
+    Tachometer tachometer_;
+    PrimaryReadout primary_;
+    RideInfoPanel rideInfo_;
+    FuelGauge fuel_;
+    LifecycleOverlay overlay_;
+    bool initialized_=false, previousLight_=false, previousShift_=false;
 };
-}
+} // namespace cluster::ui

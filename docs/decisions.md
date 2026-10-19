@@ -43,3 +43,7 @@ User-selected: Track replaces ODO/trip pages with BEST LAP and uses Street’s v
 ## Automotive icon system — 2026-10-18
 
 Use selected Pictogrammers MDI 7.4.47 glyphs for automotive and communication status. Replace rough paths and text stand-ins with native-size antialiased assets; neutral stays N and QS/VVA stay badges. Compile only 12 symbols, preserve source/license/hash records, and reuse the locked converter. This supersedes the draft icon artwork. Generic symbols do not establish OEM or regulatory conformity.
+
+## Dashboard component ownership — 2026-10-19
+
+Use fixed-size value components for the seven dashboard responsibilities. Own top-level LVGL objects with a standard unique pointer/deleter, retain private borrowed descendant handles and let LVGL delete descendants recursively. Destroy components before their dashboard parent; keep stored gradient descriptors alive until their objects are deleted. This gives independently reusable components without extra grouping objects, wrapper allocations, virtual interfaces or component tasks. Consolidate layout bounds in Geometry.h and preserve the approved render baseline. Portable presentation extraction follows separately.
