@@ -27,12 +27,12 @@ struct TachometerLayout {
     static constexpr Rect bed{Metrics::margin,Metrics::rpmY,Metrics::content,Metrics::rpmHeight};
     static constexpr Rect clip{0,0,1,Metrics::rpmHeight};
     static constexpr Rect ramp{0,0,Metrics::content,Metrics::rpmHeight};
-    static constexpr TextArea caption{28,220,160}, value{610,220,162};
+    static constexpr TextArea caption{28,220,160}, value{610,220,114}, unit{730,220,42};
 };
 struct ReadoutLayout {
     static constexpr TextArea streetSpeed{Metrics::speedX,240,Metrics::speedWidth};
-    static constexpr TextArea streetUnit{Metrics::speedX,338,Metrics::speedWidth};
-    static constexpr TextArea trackSpeed{560,269,212}, trackUnit{560,310,212};
+    static constexpr TextArea streetUnit{560,310,90};
+    static constexpr TextArea trackSpeed{560,269,212}, trackUnit{715,295,57};
     static constexpr TextArea lap{Metrics::speedX,Metrics::trackLapY,Metrics::speedWidth};
     static constexpr TextArea lapCaption{Metrics::speedX,Metrics::trackLapTitleY,Metrics::speedWidth};
     static constexpr TextArea speedCaption{560,247,212};

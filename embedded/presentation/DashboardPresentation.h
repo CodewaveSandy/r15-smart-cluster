@@ -16,8 +16,9 @@ template<class... Args> inline ValueText formatted(const char* format,Args... ar
         std::snprintf(result.value,sizeof result.value,"—");
     return result;
 }
-inline ValueText rpmText(const Signal<int>& rpm) {
-    return rpm.available()?formatted("%d rpm",rpm.value):formatted("— rpm");
+inline ValueText rpmNumberText(const Signal<int>& rpm) {
+    if(!rpm.available()) return formatted("—");
+    return rpm.value>=1000?formatted("%d,%03d",rpm.value/1000,rpm.value%1000):formatted("%d",rpm.value);
 }
 inline ValueText fuelText(const Signal<int>& fuel) {
     return fuel.available()?formatted("%d%%",fuel.value):ValueText{};

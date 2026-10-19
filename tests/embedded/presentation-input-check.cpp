@@ -52,7 +52,12 @@ int main() {
     state.phoneConnected.value=true;
     check(is(phoneBatteryText(state.phoneConnected,state.phoneBatteryPercent).value,"PHONE 84%"),"Connected phone battery");
     check(is(formatted("%040d",1).value,"—"),"Formatting overflow has explicit unavailable output");
-    check(is(rpmText({8500,Quality::Available}).value,"8500 rpm")&&is(rpmText({}).value,"— rpm"),"RPM formatting");
+    check(is(rpmNumberText({8500,Quality::Available}).value,"8,500")&&is(rpmNumberText({}).value,"—"),"RPM formatting");
+    check(is(rpmNumberText({0,Quality::Available}).value,"0") &&
+          is(rpmNumberText({999,Quality::Available}).value,"999") &&
+          is(rpmNumberText({1000,Quality::Available}).value,"1,000") &&
+          is(rpmNumberText({13000,Quality::Available}).value,"13,000") &&
+          is(rpmNumberText({8500,Quality::Stale}).value,"—"),"RPM grouping boundaries and stale data");
     check(is(fuelText({0,Quality::Available}).value,"0%")&&is(fuelText({}).value,"—"),"Unknown fuel differs from zero");
     check(lampPresentation({true,Quality::Stale},true,false).tone==LampTone::Unknown,"Stale lamp is unknown");
     check(lampPresentation({false,Quality::Available},true,false).opacity==31,"Known inactive lamp");

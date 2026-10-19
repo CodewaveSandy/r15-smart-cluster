@@ -12,13 +12,16 @@ int main() {
         if(bounds.x>width) { std::fprintf(stderr,"Text exceeds %d px: %s (%d px)\n",width,value,int(bounds.x)); ++failed; }
     };
     fits(fonts::value,"RPM × 1,000",geometry::TachometerLayout::caption.width);
-    fits(fonts::value,"30000 rpm",geometry::TachometerLayout::value.width);
+    fits(fonts::rpm,"30,000",geometry::TachometerLayout::value.width);
+    fits(fonts::value,"RPM",geometry::TachometerLayout::unit.width);
     fits(fonts::heading,"STREET",geometry::HeaderLayout::mode.width);
     fits(fonts::label,"BATTERY VOLTAGE",geometry::RideInfoLayout::infoTitle.width);
     fits(fonts::heading,"1000000000.0",geometry::RideInfoLayout::tripValue.width);
     fits(fonts::heading,"OFF",geometry::RideInfoLayout::infoValue.width);
     fits(fonts::clock,"23:59",geometry::HeaderLayout::clock.width);
-    fits(fonts::speed,"180",geometry::ReadoutLayout::streetSpeed.width);
+    fits(fonts::speed,"400",geometry::ReadoutLayout::streetSpeed.width);
+    fits(fonts::unit,"km/h",geometry::ReadoutLayout::trackUnit.width);
+    fits(fonts::unit,"mph",geometry::ReadoutLayout::trackUnit.width);
     fits(fonts::track,"99:59.99",geometry::ReadoutLayout::lap.width);
     fits(fonts::heading,"99:59.99",geometry::RideInfoLayout::tripValue.width);
     fits(fonts::track,"—:—.—",geometry::ReadoutLayout::lap.width);
@@ -41,6 +44,7 @@ int main() {
         lv_font_glyph_dsc_t dash{};
         if(!lv_font_get_glyph_dsc(font,&dash,8212,0)) { std::fprintf(stderr,"Missing instrument unavailable dash\n"); ++failed; }
     };
+    requiresGlyphs(fonts::rpm,"0123456789,");
     requiresGlyphs(fonts::gear,"123456N");
     requiresGlyphs(fonts::speed,"0123456789");
     requiresGlyphs(fonts::track,"0123456789:.");

@@ -14,9 +14,9 @@ python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/pr
 
 `resource-audit.json` reports each generated asset's exact bitmap payload and allocated host object sections (code/constants/data/BSS as recognized by the platform size tool), excluding debug sections. Host metadata and alignment differ from ESP32. Host executable allocated sections include the simulated framebuffer in BSS and must never be labeled firmware flash usage. The report requires compiled asset objects; raw C file length is not used as a flash estimate. Source TTFs are converter inputs and are not included in the CMake runtime asset list.
 
-Current font/icon bitmap payload is 72,633 bytes after removing obsolete animation-title glyphs. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **84,921 payload bytes** and **94,715 compiled host asset section bytes** in total. The removed neon textures previously used 344,064 payload bytes. The source PNG is not linked into firmware.
+Current font/icon bitmap payload is 88,972 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **101,260 payload bytes** and **111,324 compiled host asset section bytes** in total. The removed neon textures previously used 344,064 payload bytes. The source PNG is not linked into firmware.
 
-The object tree now contains 69 objects, down from 72 after removal of the unused emblem/sweep image objects. The Dashboard wrapper is 840 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
+The object tree now contains 70 objects, down from 72 after removal of the unused emblem/sweep image objects. The Dashboard wrapper is 848 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
 
 ## Buffer arithmetic, not an allocation prescription
 

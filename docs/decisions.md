@@ -65,3 +65,9 @@ The earlier draft used two RGB565+A8 neon textures (336 KiB), radial streaks, fl
 ## R15 Light Signature — concept 02
 
 The user selected the headlight-inspired concept board. Retain the two-second timing and urgent-warning/cancellation behavior, replace the neon emblem/rays/flashes/zoom with procedural mirrored blades and one small A8 white wordmark. Remove the superseded image sources, compiled textures, timeline and tests after verified backup. Keep the approved dashboard unchanged. Record the chosen concept under docs/reference. The animation payload falls from 336 KiB to 12 KiB; target performance and shutdown power remain unverified.
+
+## D16 — Angular instrument numerals (2026-10-19)
+
+User selected the R1M-inspired angular speed/gear concept, retained the existing continuous 44 px RPM bar, requested speed units beside the digits, a bold RPM value and red scale labels 11–13. Implemented with bundled OFL Chakra Petch Bold Italic subsets; this is an approximation of the AI artwork, not Yamaha’s factory font. Current lap also uses Chakra Petch Bold Italic at 74 px so the maximum `99:59.99` fits the 320 px field; clock retains Barlow and labels retain Inter. Visible glyph bounds keep speed and lap centered despite italic side bearings. The final RPM readout restores the original small 16 px size: only the grouped number `8,500` uses Inter SemiBold, while the `RPM` suffix retains Inter Medium to match the caption; red labels do not change shift logic or assert a measured engine limit. Previous sources/docs were archived in `build/backups/before-racing-typography.tar.gz` before replacement.
+
+User subsequently requested heavier Chakra numerals. The generator now applies a half-pixel coverage expansion inside the existing glyph bounds, with no runtime effects or new font dependency. Current lap is 74 px to preserve the gap next to speed for the widest timer strings.

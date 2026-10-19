@@ -18,13 +18,16 @@ Tachometer::Tachometer(lv_obj_t* parent) {
     for(int i=0;i<6;++i) { rampGradient_.stops[i].color=color(colors[i]); rampGradient_.stops[i].opa=255; rampGradient_.stops[i].frac=stops[i]*255/TachometerLayout::scaleMaxRpm; }
     paint(rpmRamp_,colors[0]); lv_obj_set_style_bg_grad(rpmRamp_,&rampGradient_,0);
     caption_.reset(label(parent,TachometerLayout::caption,"RPM × 1,000",fonts::value));
-    rpmValue_.reset(label(parent,TachometerLayout::value,"— rpm",fonts::value)); alignRight(rpmValue_.get());
+    rpmValue_.reset(label(parent,TachometerLayout::value,"—",fonts::rpm)); alignRight(rpmValue_.get());
+    rpmUnit_.reset(label(parent,TachometerLayout::unit,"RPM",fonts::value)); alignRight(rpmUnit_.get());
+    const int baseline=fonts::value->line_height-fonts::value->base_line;
+    lv_obj_set_y(rpmValue_.get(),TachometerLayout::value.y+baseline-(fonts::rpm->line_height-fonts::rpm->base_line));
 }
 void Tachometer::update(const Signal<int>& rpm,const Palette& p) {
-    for(const auto& t:ticks_) ink(t.get(),p.muted);
+    for(std::size_t i=0;i<ticks_.size();++i) ink(ticks_[i].get(),i>=11?p.red:p.muted);
     paint(rpmBed_.get(),p.panel);
     const int fill=rpm.available()?std::clamp(rpm.value,0,TachometerLayout::scaleMaxRpm)*Metrics::content/TachometerLayout::scaleMaxRpm:0;
     show(rpmClip_,fill>0); lv_obj_set_width(rpmClip_,std::max(1,fill));
-    if(lastRpm_.update(rpm)) text(rpmValue_.get(),presentation::rpmText(rpm).value);
+    if(lastRpm_.update(rpm)) text(rpmValue_.get(),presentation::rpmNumberText(rpm).value);
 }
 } // namespace cluster::ui

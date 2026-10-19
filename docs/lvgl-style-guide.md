@@ -12,17 +12,17 @@ Implement the geometry and behavior specified here. Capture deterministic 800 x 
 | --- | --- |
 | Canvas and content width | 800 x 480; left/right margin 28; usable width 744 |
 | Header | Gear number/N only (no GEAR caption); mode, QS/VVA, phone/battery, clock/date; divider y=85 |
-| Gear / mode / clock | Barlow 72 px SemiBold / Inter 23 px SemiBold / Barlow 30 px SemiBold |
+| Gear / mode / clock | Chakra Petch 72 px Bold Italic / Inter 23 px SemiBold / Barlow 30 px SemiBold |
 | Tell-tales | Row y=98; arrows at opposite edges |
 | Tachometer | x=28, y=144, width=744; fill begins 20 px below component top |
 | RPM fill height | 44 px in both modes |
-| Primary readout | Street: centered speed, 128 px; Track: centered current lap mm:ss.hh, 79 px |
-| Track speed | Secondary readout on the right at x=560,y=269; 46 px with unit below |
+| Primary readout | Street: centered speed, 128 px; Track: centered current lap mm:ss.hh, 74 px |
+| Track speed | Secondary readout on the right at x=560,y=269; 46 px with unit beside the digits |
 | Lower divider | y=376 in both modes |
 | Lower information | Street trip list / Track best lap left; info list middle; fuel right. Shared title y=399, value y=421, fuel segments y=440 |
 | Footer | No help/status bar or bottom divider; diagnostics use the header subtitle/window/terminal |
 
-Use bundled Inter Medium/SemiBold and Barlow Semi Condensed SemiBold under the specified OFL license. Choose font sizes from observed rendered metrics; validate nominal font sizes against actual rendered baselines. Centralize text styles, tracking, line heights and alignment. Reserve fixed bounds for changing digits and use bounded formatting. Small-font subsets need all actual menu/date/unit/error glyphs, degree sign and unavailable dash; large-font subsets need their actual digits/N/dash/punctuation. Keep font sources, converter version, command and output size reproducible.
+Use bundled Inter Medium/SemiBold, Barlow Semi Condensed SemiBold and Chakra Petch Bold Italic under the specified OFL license. Choose font sizes from observed rendered metrics; validate nominal font sizes against actual rendered baselines. Centralize text styles, tracking, line heights and alignment. Reserve fixed bounds for changing digits and use bounded formatting. Small-font subsets need all actual menu/date/unit/error glyphs, degree sign and unavailable dash; large-font subsets need their actual digits/N/dash/punctuation. Keep font sources, converter version, command and output size reproducible.
 
 ## Theme tokens
 
@@ -42,6 +42,7 @@ Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens
 
 ## Instrument behavior
 
+- Scale labels 11, 12 and 13 use the theme red as a user-selected redline cue. This does not change fill colors, shift thresholds or establish a verified vehicle limit.
 - Continuous RPM gradient anchored to the entire 0–13,000 scale; clip fill, do not stretch colors with the current RPM. Green #4cdb88 through 3,500; blend to #f5d45b at 4,500; hold through 7,500; blend to #f06464 at 8,500, then hold.
 - Shift background steady from 10,500 RPM; alternate red/normal every 300 ms from 11,400. Stop immediately below thresholds; unavailable RPM must not trigger it.
 - Eight slanted fuel segments; ceil(percent/12.5) for valid fuel. Yellow at 10–20% inclusive, red below 10%; blink pump and filled segments every 500 ms below 20%. Exactly 20% is steady yellow; percentage stays readable; zero still blinks the pump.
@@ -75,7 +76,7 @@ Each animation lasts exactly 2.00 s using the selected R15 Light Signature. Draw
 
 ## Typography roles and preview quality
 
-Inter Medium is the primary label font: 14 px general text, 16 px RPM label/value, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. Barlow Semi Condensed SemiBold supplies Street speed (128 px), Track lap (79 px), gear (72 px), Track speed (46 px) and clock (30 px). These choices favor restrained interface labels and distinctive instrument numerals.
+Inter Medium is the primary label font: 14 px general text, 16 px RPM label, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. The compact RPM readout uses 16 px Inter SemiBold digits with comma grouping (`8,500`) and a separate 16 px Inter Medium `RPM` suffix matching the `RPM × 1,000` caption. Both share a baseline at the original small-readout position; numerals use theme foreground (white in Midnight, dark in Daylight). Chakra Petch Bold Italic supplies Street speed (128 px), gear (72 px), Track speed (46 px) and current lap (74 px); Barlow Semi Condensed SemiBold retains clock (30 px). Chakra bitmaps receive a subtle half-pixel coverage expansion during generation, preserving advances/kerning; the 74 px timer fits the maximum value with separation from speed. The angular numeral treatment is R1M-inspired, not a factory-font claim. These choices favor restrained interface labels and distinctive instrument numerals.
 
 Use embedded/ui/Typography.h roles; generate bitmap assets at their actual logical size using scripts/generate-fonts.sh. Maintain 4-bit antialiased coverage and full required glyph subsets. Bitmap generation does not enable OpenType features automatically; tabular-number behavior must be explicitly implemented/verified if needed. Keep changing values in stable bounds.
 
@@ -85,7 +86,7 @@ The SDL host preview uses linear texture filtering when enlarging the 800 x 480 
 
 Street trip list: ODO -> Trip A -> Trip B -> Trip F -> ODO. Track replaces this entire panel with fixed BEST LAP, hides distance units, and does not cycle trip pages. Returning to Street restores its selected trip page. Info list: coolant -> battery voltage -> TCS -> Track mode -> coolant. Each list keeps its own selection. Distance uses normalized km and display-unit conversion; unknown values remain dashes. TCS ON/OFF is an observation; the host preview may toggle a sample but real control requires a verified command contract. Track ON/OFF changes the UI layout only. All demo distances are fixed host samples, not functioning trip calculations or persistent odometer data.
 
-Street speed and its unit are centered on x=400 independently of digit count, including unknown data. Track puts current lap at x=400 in the 79 px font and moves speed to the right-hand secondary position. The lap caption is above its large readout; the speed unit stays below the side speed. Fuel uses adjacent slanted segments over the existing width with a one-pixel skew, leaving approximately one logical pixel of separation through the main segment body.
+Street speed remains visually centered on x=400 independently of digit count, including unknown data. Position its `km/h` or `mph` unit 10 px beside the visible right glyph edge, near the baseline; compensate italic side bearings when centering. Track puts current lap at x=400 in the 74 px Bold Italic font and moves speed to the right-hand secondary position. The lap caption is above its large readout; the speed unit sits beside the side speed. Fuel uses adjacent slanted segments over the existing width with a one-pixel skew, leaving approximately one logical pixel of separation through the main segment body.
 
 Current lap is an observation in milliseconds. Presentation formats mm:ss.hh with truncated hundredths; unknown/stale or durations beyond 99:59.99 show dashes rather than wrapping. The host provides a static 01:24.38 sample for layout review. This is not a functioning stopwatch.
 

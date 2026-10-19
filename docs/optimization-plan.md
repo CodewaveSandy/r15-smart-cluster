@@ -21,8 +21,8 @@ Six test suites pass. Running/warning/unavailable/icon/page captures preserve th
 | Pixels submitted in those updates | 38,400,000 | 0 |
 | LVGL objects including screen | 72 | 69 |
 | Animation bitmap payload | 344,064 bytes (superseded neon art) | 12,288 bytes (A8 wordmark) |
-| Current combined font/icon/animation bitmap payload | — | 84,921 bytes |
-| Current host asset sections excluding debug | — | 94,715 bytes |
+| Current combined font/icon/animation bitmap payload | — | 101,260 bytes |
+| Current host asset sections excluding debug | — | 111,324 bytes |
 
 The superseded neon textures, emblem/ray/flash/zoom renderer, old timeline/test and unused animation-title glyphs were removed after backup when the user selected concept 02. The current small white wordmark and procedural slashes are the only active animation assets/path. [Design decisions](decisions.md) preserve the superseded architectural choices explicitly.
 

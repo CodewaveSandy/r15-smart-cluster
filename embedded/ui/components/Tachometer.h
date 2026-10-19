@@ -18,7 +18,7 @@ public:
 private:
     presentation::SignalChange<int> lastRpm_;
     lv_grad_dsc_t rampGradient_{};
-    ObjectOwner rpmBed_, rpmValue_, caption_;
+    ObjectOwner rpmBed_, rpmValue_, rpmUnit_, caption_;
     lv_obj_t *rpmClip_, *rpmRamp_;
     std::array<ObjectOwner,14> ticks_{};
 };

@@ -30,12 +30,13 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_caption_12.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_label_14.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_value_16.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_rpm_16.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_unit_18.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_heading_23.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_secondary_46.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_gear_72.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_speed_128.c"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_track_79.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_secondary_46.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_gear_72.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_speed_128.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_track_74.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/barlow_clock_30.c"
 )
 target_include_directories(cluster_ui PUBLIC "${CLUSTER_ROOT}")
