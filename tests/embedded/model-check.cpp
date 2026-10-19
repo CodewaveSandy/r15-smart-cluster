@@ -14,16 +14,23 @@ int main() {
     for(int v:{-1,0,60,400,401}) { s.speedKph={v,Quality::Available}; check(valid(s)==(v>=0&&v<=400),"Speed boundaries"); }
     s={}; for(int v:{-1,0,72,100,101}) { s.fuelPercent={v,Quality::Available}; check(valid(s)==(v>=0&&v<=100),"Fuel boundaries"); }
     s={}; s.batteryVoltageV={std::numeric_limits<double>::quiet_NaN(),Quality::Available}; check(!valid(s),"Reject available NaN");
+    for(auto member:{&ClusterState::realtimeFuelLPer100Km,&ClusterState::averageFuelLPer100Km,&ClusterState::averageSpeedKph}) {
+        for(double value:{-1.0,0.0,1.0,400.0,1001.0,std::numeric_limits<double>::quiet_NaN(),std::numeric_limits<double>::infinity()}) {
+            s={}; s.*member={value,Quality::Available};
+            const double maximum=member==&ClusterState::averageSpeedKph?400.0:1000.0;
+            check(valid(s)==(std::isfinite(value)&&value>=0&&value<=maximum),"OEM ride observation bounds");
+        }
+    }
     Lifecycle l; check(l.phase()==Phase::Off,"Initial off"); l.key(true,100);
-    l.advance(2099); check(l.phase()==Phase::Boot,"Boot cannot finish early");
-    l.key(true,2080); l.advance(2100); check(l.phase()==Phase::Running,"Repeated on does not restart boot");
-    l.key(false,3000); l.advance(4999); check(l.phase()==Phase::Shutdown,"Shutdown cannot finish early");
-    l.key(true,5000); check(l.phase()==Phase::Running,"Key-on cancels shutdown");
-    l.key(false,6000); l.advance(8000); check(l.phase()==Phase::ReadyForPowerOff,"Shutdown completes");
-    l.key(true,9000); check(l.phase()==Phase::Boot,"New power cycle boots");
+    l.advance(3099); check(l.phase()==Phase::Boot,"Boot cannot finish early");
+    l.key(true,3080); l.advance(3100); check(l.phase()==Phase::Running,"Repeated on does not restart boot");
+    l.key(false,4000); l.advance(5999); check(l.phase()==Phase::Shutdown,"Shutdown cannot finish early");
+    l.key(true,6000); check(l.phase()==Phase::Running,"Key-on cancels shutdown");
+    l.key(false,7000); l.advance(9000); check(l.phase()==Phase::ReadyForPowerOff,"Shutdown completes");
+    l.key(true,10000); check(l.phase()==Phase::Boot,"New power cycle boots");
     s={}; s.engineWarning={true,Quality::Available}; check(urgent(s),"Valid urgent warning");
     s.engineWarning.quality=Quality::Stale; check(!urgent(s),"Stale flag not treated as current warning");
-    check(Lifecycle::animationMs==2000,"Animation duration requirement");
+    check(Lifecycle::bootMs==3000&&Lifecycle::shutdownMs==2000,"Animation duration requirement");
     using namespace cluster::presentation;
     for(int value:{0,1,6,9,10,12,13,15,16,17,19,20,21,50,72,99,100}) {
         auto on=fuelPresentation({value,Quality::Available},0);
@@ -47,17 +54,16 @@ int main() {
     }
     check(!shiftLit({13000,Quality::Stale},0),"Stale RPM cannot activate shift");
     TripPage trip=TripPage::Odometer; InfoPage info=InfoPage::Coolant;
-    for(int i=0;i<4;++i) trip=next(trip);
+    for(int i=0;i<3;++i) trip=next(trip);
     check(trip==TripPage::Odometer&&info==InfoPage::Coolant,"Trip cycles independently and wraps");
-    for(int i=0;i<4;++i) info=next(info);
+    for(int i=0;i<7;++i) info=next(info);
     check(info==InfoPage::Coolant,"Info cycles and wraps");
-    s={}; s.odometerKm={100,Quality::Available}; s.tripAKm={10,Quality::Available}; s.tripBKm={20,Quality::Available};
+    s={}; s.odometerKm={100,Quality::Available}; s.trip1Km={10,Quality::Available}; s.trip2Km={20,Quality::Available};
     check(tripReading(s,TripPage::Odometer).value==100,"ODO reading");
-    check(tripReading(s,TripPage::TripA).value==10,"Trip A reading");
-    check(tripReading(s,TripPage::TripB).value==20,"Trip B reading");
-    check(!tripReading(s,TripPage::TripF).available(),"Unavailable Trip F is not zero");
-    s.tripAKm={-1,Quality::Available}; check(!valid(s),"Negative trip rejected");
-    s.tripAKm={std::numeric_limits<double>::infinity(),Quality::Available}; check(!valid(s),"Infinite trip rejected");
+    check(tripReading(s,TripPage::Trip1).value==10,"Trip A reading");
+    check(tripReading(s,TripPage::Trip2).value==20,"Trip B reading");
+    s.trip1Km={-1,Quality::Available}; check(!valid(s),"Negative trip rejected");
+    s.trip1Km={std::numeric_limits<double>::infinity(),Quality::Available}; check(!valid(s),"Infinite trip rejected");
     check(std::strcmp(lapText({0,Quality::Available}).value,"00:00.00")==0,"Zero lap is a valid duration");
     check(std::strcmp(lapText({59999,Quality::Available}).value,"00:59.99")==0,"Lap hundredths truncate");
     check(std::strcmp(lapText({60000,Quality::Available}).value,"01:00.00")==0,"Minute rollover");

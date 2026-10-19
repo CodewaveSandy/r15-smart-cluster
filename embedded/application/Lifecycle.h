@@ -4,7 +4,7 @@ namespace cluster {
 enum class Phase { Off, Boot, Running, Shutdown, ReadyForPowerOff };
 class Lifecycle {
 public:
-    static constexpr std::uint64_t animationMs = 2000;
+    static constexpr std::uint64_t bootMs = 3000, shutdownMs = 2000;
     void key(bool on, std::uint64_t now) {
         if (on == ignition_) return;
         ignition_ = on;
@@ -13,7 +13,7 @@ public:
         entered_ = now;
     }
     void advance(std::uint64_t now) {
-        if (elapsed(now) < animationMs) return;
+        if (elapsed(now) < (phase_==Phase::Boot?bootMs:shutdownMs)) return;
         if (phase_ == Phase::Boot) phase_ = Phase::Running;
         else if (phase_ == Phase::Shutdown) phase_ = Phase::ReadyForPowerOff;
     }

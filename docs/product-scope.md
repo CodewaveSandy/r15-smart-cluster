@@ -11,7 +11,7 @@ Create a premium personal replacement instrument cluster for the Yamaha R15 V4. 
 | Controls | Physical navigation; touch may be optional but never required |
 | Ride information | Trips and lap information; real odometer provenance/persistence must be established |
 | Preferences | Display mode, theme, units and clock settings, with validation and visible save failures |
-| Ignition journey | Key-on -> 2.00 s boot animation -> instrumentation; key-off -> 2.00 s shutdown animation -> power-off, subject to retained power |
+| Ignition journey | Key-on -> 3.00 s boot animation -> instrumentation; key-off -> 2.00 s shutdown animation -> power-off, subject to retained power |
 | Phone connectivity | Vehicle MCU owns Wi-Fi/BLE; actual services, calls and audio path require feasibility work |
 | Full Google Maps / Android Auto / CarPlay | Retained as an unresolved requirement to investigate; no receiver path is established |
 | OEM fit and reliability | Mounting, viewing angle, connectors, power and environmental exposure require measurement |

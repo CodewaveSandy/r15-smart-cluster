@@ -69,10 +69,20 @@ inline RideInfoPresentation rideInfoPresentation(const ClusterState& state,const
         result.infoTitle="COOLANT";
         result.infoValue=state.coolantTemperatureC.available()?formatted("%.0f°C",state.coolantTemperatureC.value):formatted("—°C");
         break;
-    case InfoPage::Battery:
-        result.infoTitle="BATTERY VOLTAGE";
-        result.infoValue=state.batteryVoltageV.available()?formatted("%.1f V",state.batteryVoltageV.value):formatted("— V");
+    case InfoPage::RealtimeFuel:
+        result.infoTitle="REAL-TIME FUEL";
+        result.infoValue=state.realtimeFuelLPer100Km.available()?formatted("%.1f L/100km",state.realtimeFuelLPer100Km.value):formatted("— L/100km");
         break;
+    case InfoPage::AverageFuel:
+        result.infoTitle="AVG FUEL";
+        result.infoValue=state.averageFuelLPer100Km.available()?formatted("%.1f L/100km",state.averageFuelLPer100Km.value):formatted("— L/100km");
+        break;
+    case InfoPage::AverageSpeed:
+        result.infoTitle="AVG SPEED";
+        result.infoValue=state.averageSpeedKph.available()?formatted("%.1f %s",state.averageSpeedKph.value*(options.imperial?0.621371:1),options.imperial?"mph":"km/h"):formatted("— %s",options.imperial?"mph":"km/h");
+        break;
+    case InfoPage::Unidentified:
+        result.infoTitle="UNIDENTIFIED"; break;
     case InfoPage::Tcs:
         result.infoTitle="TCS";
         result.infoValue=formatted("%s",state.tcsEnabled.available()?(state.tcsEnabled.value?"ON":"OFF"):"—");

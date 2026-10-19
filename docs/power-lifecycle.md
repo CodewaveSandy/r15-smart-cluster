@@ -5,21 +5,21 @@ Updated: 2026-10-19. User-selected journey; hardware implementation unverified.
 ## Intended journey
 
 ```text
-Key ON -> boot animation (2.00 s) -> live instrumentation
+Key ON -> boot animation (3.00 s) -> live instrumentation
 Key OFF -> shutdown animation (2.00 s) -> controlled power-off
 ```
 
-Both animations last exactly 2,000 ms under the monotonic lifecycle controller. The user selected [R15 Light Signature, concept 02](reference/r15-light-signature-concept.png), superseding the neon emblem/zoom artwork. The phase allocation below implements that direction. The running dashboard remains the existing Street/Track UI. Actual panel startup and retained shutdown power still require hardware measurements.
+Boot lasts exactly 3,000 ms and shutdown lasts exactly 2,000 ms under the monotonic lifecycle controller. The user selected [R15 Light Signature, concept 02](reference/r15-light-signature-concept.png), superseding the neon emblem/zoom artwork. The phase allocation below implements that direction. The running dashboard remains the existing Street/Track UI. Actual panel startup and retained shutdown power still require hardware measurements.
 
 ## Implemented host sequence
 
 | Boot interval | Behavior |
 | --- | --- |
-| 0–350 ms | Two slender blue light slashes ignite from black |
-| 350–850 ms | Blades brighten and broaden; the white R15 wordmark appears |
-| 850–1,200 ms | Full signature, with a short controlled highlight beneath the wordmark |
-| 1,200–1,700 ms | Blades move outward into slim accents; wordmark fades |
-| 1,700–2,000 ms | Current dashboard reveals beneath the fading accents |
+| 0–525 ms | Two slender blue light slashes ignite from black |
+| 525–1,275 ms | Blades brighten and broaden; the white R15 wordmark appears |
+| 1,275–1,800 ms | Full signature, with a short controlled highlight beneath the wordmark |
+| 1,800–2,550 ms | Blades move outward into slim accents; wordmark fades |
+| 2,550–3,000 ms | Current dashboard reveals beneath the fading accents |
 
 | Shutdown interval | Behavior |
 | --- | --- |
@@ -39,7 +39,7 @@ During dashboard reveal and initial shutdown fade, current instrumentation conti
 | --- | --- | --- |
 | Off | No display execution assumed | Stable power and key-on |
 | Starting | Minimal board initialization; start acquisition/UART concurrently; unknown values remain unknown | Display can render boot animation |
-| BootAnimation | Play 2.00 s using monotonic timing while state acquisition continues | Animation completes -> Running; valid urgent warnings can interrupt/overlay immediately |
+| BootAnimation | Play 3.00 s using monotonic timing while state acquisition continues | Animation completes -> Running; valid urgent warnings can interrupt/overlay immediately |
 | Running | Actual speed/ODO/gear and other supported observations; dashes/status for missing data | Confirmed key-off -> ShutdownAnimation; independent faults remain explicit |
 | ShutdownAnimation | Play 2.00 s; stop optional work, request bounded persistence and retain essential indication | Animation complete and required bounded shutdown work finishes -> ReadyForPowerOff |
 | ReadyForPowerOff | Report readiness to the power owner if supported; no unverified power-control GPIO | Hardware safely removes retained supply |

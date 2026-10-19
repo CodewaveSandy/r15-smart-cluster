@@ -41,9 +41,12 @@ ClusterState demo() {
     s.gear={4,Quality::Available}; s.fuelPercent={72,Quality::Available};
     s.odometerKm={12480,Quality::Available};
     // Static host preview samples, not computed or persisted vehicle distances.
-    s.tripAKm={128.4,Quality::Available}; s.tripBKm={46.8,Quality::Available}; s.tripFKm={0,Quality::Available};
+    s.trip1Km={128.4,Quality::Available}; s.trip2Km={46.8,Quality::Available};
     s.tcsEnabled={true,Quality::Available}; s.batteryVoltageV={12.8,Quality::Available};
     s.coolantTemperatureC={84,Quality::Available};
+    // Explicit host samples; vehicle MCU will own measurement/averaging windows.
+    s.realtimeFuelLPer100Km={3.4,Quality::Available}; s.averageFuelLPer100Km={2.8,Quality::Available};
+    s.averageSpeedKph={47.2,Quality::Available};
     s.left=s.right=s.highBeam=s.absWarning=s.engineWarning=s.coolantWarning={false,Quality::Available};
     return s;
 }
@@ -61,7 +64,7 @@ void help() {
         "Enter: Street trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
         "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
-        "O: key on/off (2000 ms animation) | Space: reset demo\n"
+        "O: key on/off (3000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
 }
@@ -85,7 +88,7 @@ int main(int argc,char** argv) {
             if(render) {
                 std::filesystem::create_directories(output);
                 view.time="20:55"; view.date="18 Oct 2026";
-                life.key(true,0); life.advance(2000);
+                life.key(true,0); life.advance(Lifecycle::bootMs);
                 for(bool track:{false,true}) for(bool light:{false,true}) {
                     view.track=track; view.light=light;
                     const std::string suffix=std::string(track?"track":"street")+(light?"-day":"-night");
@@ -133,9 +136,9 @@ int main(int argc,char** argv) {
                     view.track=track; view.light=light;
                     view.tripPage=TripPage::Odometer; view.infoPage=InfoPage::Coolant;
                     std::vector<std::uint16_t> bestPanel;
-                    for(int page=0;page<4;++page) {
+                    for(int page=0;page<int(InfoPage::Count);++page) {
                         auto sample=state;
-                        if(page==2) sample.tcsEnabled.value=false;
+                        if(page==5) sample.tcsEnabled.value=false;
                         dashboard.update(sample,view,life,1400);
                         const auto name=std::string(track?"track":"street")+(light?"-day":"-night")+"-pages-"+std::to_string(page)+".bmp";
                         capture(output/name);
@@ -268,40 +271,43 @@ int main(int argc,char** argv) {
                 matchesFresh(latest,covered,625);
                 latest.engineWarning.value=false;
                 dashboard.update(latest,view,covered,625); lv_refr_now(nullptr);
-                covered.advance(2000);
-                matchesFresh(latest,covered,2000);
+                covered.advance(Lifecycle::bootMs);
+                matchesFresh(latest,covered,Lifecycle::bootMs);
                 // Exercise cache invalidation with units/pages/layouts and every
                 // quality, comparing an updated component tree against a fresh one.
                 for(auto quality:{Quality::Available,Quality::Unavailable,Quality::Unsupported,Quality::Invalid,Quality::Stale,Quality::Available}) {
                     latest.speedKph.quality=quality; latest.gear.quality=quality;
-                    latest.phoneBatteryPercent.quality=quality; latest.batteryVoltageV.quality=quality;
-                    latest.tripAKm.quality=quality; latest.bestLapMs.quality=quality;
+                    latest.phoneBatteryPercent.quality=quality; latest.averageFuelLPer100Km.quality=quality;
+                    latest.realtimeFuelLPer100Km.quality=quality; latest.averageSpeedKph.quality=quality;
+                    latest.trip1Km.quality=quality; latest.bestLapMs.quality=quality;
                     latest.currentLapMs.quality=quality; latest.fuelPercent.quality=quality;
                     view.track=!view.track; view.imperial=!view.imperial;
-                    view.infoPage=InfoPage::Battery; view.tripPage=TripPage::TripA;
-                    matchesFresh(latest,life,1400);
+                    view.tripPage=TripPage::Trip1;
+                    for(auto page:{InfoPage::RealtimeFuel,InfoPage::AverageFuel,InfoPage::AverageSpeed,InfoPage::Unidentified}) {
+                        view.infoPage=page; matchesFresh(latest,life,1400);
+                    }
                 }
                 // Partial dashboard fades must work in both layouts/themes.
                 for(bool track:{false,true}) for(bool light:{false,true}) {
                     view.track=track; view.light=light; view.imperial=false; view.iconTest=false;
                     const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
                     Lifecycle reveal; reveal.key(true,0);
-                    dashboard.update(state,view,reveal,1850); capture(output/("signature-reveal-"+suffix+".bmp"));
-                    Lifecycle ending; ending.key(true,0); ending.advance(2000); ending.key(false,3000);
+                    dashboard.update(state,view,reveal,2775); capture(output/("signature-reveal-"+suffix+".bmp"));
+                    Lifecycle ending; ending.key(true,0); ending.advance(Lifecycle::bootMs); ending.key(false,3000);
                     dashboard.update(state,view,ending,3100); capture(output/("signature-fade-"+suffix+".bmp"));
                 }
-                // Stage boundaries for the selected two-second R15 light signature.
+                // Stage boundaries for the R15 light signature with three-second boot and two-second shutdown.
                 view={}; view.time="20:55"; view.date="18 Oct 2026";
                 const auto renderAnimation=[&](bool bootAnimation,unsigned elapsed,const char* prefix) {
                     Lifecycle animation;
                     animation.key(true,0);
                     std::uint64_t origin=0;
-                    if(!bootAnimation) { animation.advance(Lifecycle::animationMs); origin=2500; animation.key(false,origin); }
+                    if(!bootAnimation) { animation.advance(Lifecycle::bootMs); origin=3500; animation.key(false,origin); }
                     animation.advance(origin+elapsed);
                     dashboard.update(state,view,animation,origin+elapsed);
                     char filename[64]; std::snprintf(filename,sizeof filename,"%s-%04u.bmp",prefix,elapsed);
                     capture(output/filename);
-                    if(bootAnimation&&elapsed==1000) {
+                    if(bootAnimation&&elapsed==1500) {
                         // The wordmark must render, and tapered slashes must not
                         // expand into filled wedges above the intended blades.
                         int white=0;
@@ -318,17 +324,15 @@ int main(int argc,char** argv) {
                     }
                 };
                 for(unsigned elapsed:{0u,100u,250u,349u,350u,500u,700u,850u,1000u,1199u,1200u,1450u,1699u,1700u,1850u,1999u,2000u})
-                    renderAnimation(true,elapsed,"boot-stage");
+                    renderAnimation(true,elapsed*3/2,"boot-stage");
                 for(unsigned elapsed:{0u,100u,199u,200u,300u,399u,400u,800u,1000u,1249u,1250u,1500u,1750u,1899u,1900u,1999u,2000u})
                     renderAnimation(false,elapsed,"shutdown-stage");
                 if(animationSequence) {
-                    for(unsigned elapsed=0;elapsed<=2000;elapsed+=40) {
-                        renderAnimation(true,elapsed,"boot-motion");
-                        renderAnimation(false,elapsed,"shutdown-motion");
-                    }
+                    for(unsigned elapsed=0;elapsed<=Lifecycle::bootMs;elapsed+=40) renderAnimation(true,elapsed,"boot-motion");
+                    for(unsigned elapsed=0;elapsed<=Lifecycle::shutdownMs;elapsed+=40) renderAnimation(false,elapsed,"shutdown-motion");
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 110 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 122 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;

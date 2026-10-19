@@ -144,4 +144,4 @@ Official sources checked 2026-10-18; mutable documentation is background until v
 
 ## Ignition lifecycle
 
-Implement the state and timing contract in [power lifecycle](power-lifecycle.md): key-on -> 2.00 s boot animation -> instrumentation; key-off -> 2.00 s shutdown animation -> controlled power removal. Acquisition runs during artwork. Retained power, readiness coordination and fault behavior must be bench verified.
+Implement the state and timing contract in [power lifecycle](power-lifecycle.md): key-on -> 3.00 s boot animation -> instrumentation; key-off -> 2.00 s shutdown animation -> controlled power removal. Acquisition runs during artwork. Retained power, readiness coordination and fault behavior must be bench verified.

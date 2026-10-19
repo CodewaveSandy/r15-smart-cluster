@@ -17,7 +17,7 @@ Baseline: 2026-10-18. Accepted direction is distinguished from implementation pr
 | D11 | Proposed | Framed binary UART with integrity checks; finalize wire specification and golden vectors before coding |
 | D12 | Accepted | No unverified Yamaha facts; initial real-bike work passive/read-only; critical failure behavior needs separate review |
 | D13 | Accepted | Git operations stay under user control; generated builds/captures are not source |
-| D14 | Timing retained; artwork superseded by D15 | Boot/shutdown each last exactly 2.00 s; preserve the existing dashboard and immediate urgent warnings |
+| D14 | Artwork superseded by D15; boot duration superseded by D18 | Boot/shutdown each last exactly 2.00 s; preserve the existing dashboard and immediate urgent warnings |
 | D15 | Accepted | R15 Light Signature, concept 02: mirrored blue slashes, small white R15, controlled reveal/retract, black shutdown endpoint |
 
 Changes to consequential decisions must record date, rationale, implications and unresolved questions. Supersede decisions explicitly when direction changes.
@@ -60,7 +60,7 @@ Preserve 4 bpp font quality and subset the large fonts by their actual roles. Re
 
 ## Neon lifecycle storyboard — superseded by D15
 
-The earlier draft used two RGB565+A8 neon textures (336 KiB), radial streaks, flashes and a forward zoom. D15 replaces that artwork and renderer. Its source assets, prompts and implementation were preserved in a verified external backup before removal; they are no longer active repository resources. The two-second duration, retained-power requirement and immediate urgent-warning behavior remain in force.
+The earlier draft used two RGB565+A8 neon textures (336 KiB), radial streaks, flashes and a forward zoom. D15 replaces that artwork and renderer. Its source assets, prompts and implementation were preserved in a verified external backup before removal; they are no longer active repository resources. D18 changes boot to three seconds; shutdown remains two seconds. Retained-power and immediate urgent-warning requirements remain in force.
 
 ## R15 Light Signature — concept 02
 
@@ -75,3 +75,9 @@ User subsequently requested heavier Chakra numerals. The generator now applies a
 ## D17 — Fractional fuel gauge and reserve cue (2026-10-19)
 
 User requested a slight italic fuel gauge and depletion within each piece. Keep eight pieces with a 4 px skew and partial coverage at the normalized signal’s 1% resolution. Supplied capacities are 11 L total and approximately 1.76 L reserve, so the display marks 16% and shows steady `RESERVE` at/below that threshold. This is a nominal percentage cue, not a verified volume calculation or sensor calibration. Unknown/stale fuel does not assert reserve. Existing warning colors/blinking and demo Trip F behavior remain separate. Callback state is bounded and retained; changed coverage/colors invalidate only affected segment objects.
+
+## D18 — Observed OEM page order and three-second boot (2026-10-19)
+
+User observed the OEM cluster and requested a 3 s boot, ODO/Trip 1/Trip 2, and the info order coolant, Track toggle, real-time fuel consumption, average fuel consumption, average speed, TCS toggle, unidentified item. Boot phase proportions are stretched to 3,000 ms; shutdown remains 2,000 ms. Track retains its approved current/best lap layout. Remove Trip F and the battery-voltage info page. Keep the last page visibly unidentified with a dash and no activation effect.
+
+Consumption remains L/100km; average speed uses km/h (mph if the existing imperial preference is selected). New readings are normalized, quality-bearing observations owned by the vehicle MCU; host values are explicit static samples. No fuel-flow formula, averaging window, reset semantics or unidentified function is invented. Real TCS control still requires the reviewed vehicle command contract.

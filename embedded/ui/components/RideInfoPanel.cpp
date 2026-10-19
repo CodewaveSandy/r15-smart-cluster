@@ -12,7 +12,7 @@ RideInfoPanel::RideInfoPanel(lv_obj_t* parent) {
     tripValue_.reset(label(parent,RideInfoLayout::tripValue,"—",fonts::heading));
     tripUnit_.reset(label(parent,RideInfoLayout::tripUnit,"km"));
     infoTitle_.reset(label(parent,RideInfoLayout::infoTitle,"COOLANT"));
-    infoValue_.reset(label(parent,RideInfoLayout::infoValue,"— V / —°C",fonts::heading));
+    infoValue_.reset(label(parent,RideInfoLayout::infoValue,"—°C",fonts::heading));
 }
 void RideInfoPanel::update(const ClusterState& s,const ViewOptions& v,const Palette& p) {
     ink(tripUnit_.get(),p.muted); ink(infoTitle_.get(),p.muted); ink(tripTitle_.get(),p.accent);
@@ -20,7 +20,9 @@ void RideInfoPanel::update(const ClusterState& s,const ViewOptions& v,const Pale
     bool changed=lastDistance_.update(v.track?Signal<double>{}:tripReading(s,v.tripPage));
     changed=lastBestLap_.update(v.track?s.bestLapMs:Signal<std::uint32_t>{})||changed;
     const auto info=v.infoPage==InfoPage::Coolant?s.coolantTemperatureC:
-        v.infoPage==InfoPage::Battery?s.batteryVoltageV:Signal<double>{};
+        v.infoPage==InfoPage::RealtimeFuel?s.realtimeFuelLPer100Km:
+        v.infoPage==InfoPage::AverageFuel?s.averageFuelLPer100Km:
+        v.infoPage==InfoPage::AverageSpeed?s.averageSpeedKph:Signal<double>{};
     changed=lastInfoValue_.update(info)||changed;
     changed=lastTcs_.update(v.infoPage==InfoPage::Tcs?s.tcsEnabled:Signal<bool>{})||changed;
     changed=changed||!initialized_||previousTrack_!=v.track||previousImperial_!=v.imperial||previousTrip_!=v.tripPage||previousInfo_!=v.infoPage;

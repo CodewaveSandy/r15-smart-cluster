@@ -19,8 +19,16 @@ int main() {
         state.speedKph={60,quality}; state.gear={0,quality};
         check(is(primaryPresentation(state,options).speed.value,"—"),"Non-current speed hidden");
         check(!headerStatus(state,options,false).neutral,"Non-current neutral is not active");
-        state.batteryVoltageV={12.8,quality}; options.infoPage=InfoPage::Battery;
-        check(is(rideInfoPresentation(state,options).infoValue.value,"— V"),"Non-current voltage hidden");
+        state.averageFuelLPer100Km={2.8,quality}; options.infoPage=InfoPage::AverageFuel;
+        check(is(rideInfoPresentation(state,options).infoValue.value,"— L/100km"),"Non-current consumption hidden");
+    }
+    for(auto quality:{Quality::Unavailable,Quality::Unsupported,Quality::Invalid,Quality::Stale}) {
+        state.realtimeFuelLPer100Km={3.4,quality}; state.averageFuelLPer100Km={2.8,quality}; state.averageSpeedKph={47.2,quality};
+        for(auto page:{InfoPage::RealtimeFuel,InfoPage::AverageFuel,InfoPage::AverageSpeed}) {
+            options.infoPage=page;
+            const auto value=rideInfoPresentation(state,options).infoValue;
+            check(is(value.value,page==InfoPage::AverageSpeed?"— km/h":"— L/100km"),"Non-current OEM info hidden");
+        }
     }
     state={}; state.speedKph={60,Quality::Available}; state.engineRpm={8500,Quality::Available}; state.gear={0,Quality::Available};
     check(is(gearText(state.gear).value,"N"),"Neutral formatting");
@@ -35,14 +43,20 @@ int main() {
     state.speedKph.value=60; options.imperial=true;
     auto primary=primaryPresentation(state,options);
     check(is(primary.speed.value,"37")&&is(primary.unit,"mph"),"Imperial speed rounding and unit");
-    state.tripAKm={100,Quality::Available}; options.tripPage=TripPage::TripA;
+    state.trip1Km={100,Quality::Available}; options.tripPage=TripPage::Trip1;
     auto ride=rideInfoPresentation(state,options);
-    check(is(ride.tripValue.value,"62.1")&&is(ride.tripUnit,"mi")&&is(ride.tripTitle,"TRIP A"),"Imperial trip formatting");
+    check(is(ride.tripValue.value,"62.1")&&is(ride.tripUnit,"mi")&&is(ride.tripTitle,"TRIP 1"),"Imperial trip formatting");
     state.bestLapMs={78420,Quality::Available}; options.track=true;
     ride=rideInfoPresentation(state,options);
     check(is(ride.tripValue.value,"01:18.42")&&is(ride.tripTitle,"BEST LAP")&&!ride.showDistance,"Track best lap replaces distance");
-    state.batteryVoltageV={12.8,Quality::Available}; options.infoPage=InfoPage::Battery;
-    check(is(rideInfoPresentation(state,options).infoValue.value,"12.8 V"),"Voltage formatting");
+    state.averageFuelLPer100Km={2.8,Quality::Available}; options.infoPage=InfoPage::AverageFuel;
+    check(is(rideInfoPresentation(state,options).infoValue.value,"2.8 L/100km"),"Consumption formatting");
+    options.infoPage=InfoPage::RealtimeFuel; state.realtimeFuelLPer100Km={3.4,Quality::Available};
+    check(is(rideInfoPresentation(state,options).infoValue.value,"3.4 L/100km"),"Real-time consumption formatting");
+    options.infoPage=InfoPage::AverageSpeed; state.averageSpeedKph={47.2,Quality::Available}; options.imperial=false;
+    check(is(rideInfoPresentation(state,options).infoValue.value,"47.2 km/h"),"Average speed formatting");
+    options.infoPage=InfoPage::Unidentified;
+    check(is(rideInfoPresentation(state,options).infoValue.value,"—"),"Unidentified page never invents a reading");
     options.infoPage=InfoPage::Coolant; state.coolantTemperatureC={84,Quality::Available};
     check(is(rideInfoPresentation(state,options).infoValue.value,"84°C"),"Coolant formatting");
     options.infoPage=InfoPage::Tcs; state.tcsEnabled={false,Quality::Available};
@@ -75,15 +89,20 @@ int main() {
     check(changes.update({1,Quality::Available}),"Recovered value refreshes even with same payload");
 
     options={};
-    for(int i=0;i<4;++i) applyAction(options,DashboardAction::NextTrip);
+    for(auto page:{InfoPage::Coolant,InfoPage::Track,InfoPage::RealtimeFuel,InfoPage::AverageFuel,InfoPage::AverageSpeed,InfoPage::Tcs,InfoPage::Unidentified}) {
+        check(options.infoPage==page,"OEM info order");
+        applyAction(options,DashboardAction::NextInfo);
+    }
+    check(options.infoPage==InfoPage::Coolant,"OEM info returns to coolant");
+    for(int i=0;i<3;++i) applyAction(options,DashboardAction::NextTrip);
     check(options.tripPage==TripPage::Odometer&&options.infoPage==InfoPage::Coolant,"Trip wraps independently");
     applyAction(options,DashboardAction::NextTrip);
     applyAction(options,DashboardAction::ToggleLayout);
     applyAction(options,DashboardAction::NextTrip);
-    check(options.tripPage==TripPage::TripA,"Track suppresses trip cycling");
+    check(options.tripPage==TripPage::Trip1,"Track suppresses trip cycling");
     applyAction(options,DashboardAction::ToggleLayout);
-    check(options.tripPage==TripPage::TripA,"Street trip retained after Track");
-    for(int i=0;i<4;++i) applyAction(options,DashboardAction::NextInfo);
+    check(options.tripPage==TripPage::Trip1,"Street trip retained after Track");
+    for(int i=0;i<7;++i) applyAction(options,DashboardAction::NextInfo);
     check(options.infoPage==InfoPage::Coolant,"Info wraps independently");
     check(applyAction(options,DashboardAction::ActivateInfo)==InputEffect::None,"Read-only info has no action");
     options.infoPage=InfoPage::Tcs;

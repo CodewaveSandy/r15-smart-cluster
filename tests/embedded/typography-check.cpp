@@ -30,6 +30,9 @@ int main() {
     if(fonts::gear->line_height>60) { std::fprintf(stderr,"Gear exceeds header height\n"); ++failed; }
     fits(fonts::caption,"CLOCK UNAVAILABLE",geometry::HeaderLayout::date.width);
     fits(fonts::label,"DATA UNAVAILABLE",geometry::HeaderLayout::subtitle.width);
+    fits(fonts::label,"REAL-TIME FUEL",geometry::RideInfoLayout::infoTitle.width);
+    fits(fonts::heading,"1000.0 L/100km",geometry::RideInfoLayout::infoValue.width);
+    fits(fonts::heading,"400.0 km/h",geometry::RideInfoLayout::infoValue.width);
     fits(fonts::label,"RESERVE",geometry::FuelLayout::title.width);
     for(const auto* font:{fonts::caption,fonts::label,fonts::value,fonts::unit,fonts::heading}) {
         for(unsigned code:{176u,183u,215u,8212u}) {

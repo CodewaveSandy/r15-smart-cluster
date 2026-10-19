@@ -7,11 +7,12 @@ from PIL import Image, ImageDraw
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("directory", type=Path)
 args = parser.parse_args()
-for kind, times in [("boot", [250, 500, 1000, 1450, 1850, 2000]),
+for kind, times in [("boot", [375, 750, 1500, 2175, 2775, 3000]),
                     ("shutdown", [100, 300, 800, 1250, 1750, 2000])]:
     paths = sorted(args.directory.glob(kind + "-motion-*.bmp"))
-    if len(paths) != 51:
-        parser.error(f"Expected 51 {kind} motion captures; run the preview with --animate first")
+    expected=76 if kind=="boot" else 51
+    if len(paths) != expected:
+        parser.error(f"Expected {expected} {kind} motion captures; use a fresh --animate output directory")
     frames = []
     for path in paths:
         with Image.open(path) as image:

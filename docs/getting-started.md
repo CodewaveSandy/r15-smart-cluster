@@ -25,7 +25,7 @@ Only run the installation commands for missing tools. The first configure downlo
 bash scripts/preview.sh
 ```
 
-The script configures a Debug build under build/lvgl, compiles and opens an 800 x 480 native window. The two-second R15 Light Signature reveals the dashboard during its last 300 ms. Click the window if keys do not respond. Terminal stays attached for diagnostics; quit with Esc or close the window.
+The script configures a Debug build under build/lvgl, compiles and opens an 800 x 480 native window. The R15 Light Signature (3 s boot / 2 s shutdown) reveals the dashboard during its last 450 ms. Click the window if keys do not respond. Terminal stays attached for diagnostics; quit with Esc or close the window.
 
 ## 4. Explore representative states
 
@@ -38,8 +38,8 @@ The script configures a Debug build under build/lvgl, compiles and opens an 800 
 | Tab | Street / Track |
 | D | Midnight / Daylight |
 | U | Metric / imperial speed and distance |
-| Enter | Street only: ODO / Trip A / Trip B / Trip F; Track keeps BEST LAP fixed |
-| I | Info list: coolant / battery voltage / TCS / Track mode |
+| Enter | Street only: ODO / Trip 1 / Trip 2; Track keeps BEST LAP fixed |
+| I | Info list: coolant / Track mode / real-time fuel / average fuel / average speed / TCS / unidentified |
 | T | Toggle selected TCS (simulator only) or Track mode |
 | L / R | Exclusive left / right simulated indicator |
 | Z | Hazards |
@@ -100,7 +100,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs six suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 110 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
+This runs six suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 122 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
 
 To build and render without opening a window:
 
@@ -112,7 +112,7 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
-This host slice implements the dashboard foundation and two-second R15 Light Signature. Icons use bundled automotive glyphs; full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+This host slice implements the dashboard foundation and R15 Light Signature (3 s boot / 2 s shutdown). Icons use bundled automotive glyphs; full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
 
@@ -132,7 +132,7 @@ Run `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lv
 
 ## R15 Light Signature preview
 
-Restart with `bash scripts/preview.sh` to see the two-second boot. Press O for the two-second shutdown; press O again to boot. A valid engine/coolant warning bypasses artwork immediately; press E/C to clear a simulated warning before reviewing the complete sequence. Key-on during shutdown cancels it. The last shutdown interval and off state are completely black; F1 prints controls in Terminal.
+Restart with `bash scripts/preview.sh` to see the three-second boot. Press O for the two-second shutdown; press O again to boot. A valid engine/coolant warning bypasses artwork immediately; press E/C to clear a simulated warning before reviewing the complete sequence. Key-on during shutdown cancels it. The last shutdown interval and off state are completely black; F1 prints controls in Terminal.
 
 For deterministic animation captures without a window:
 
@@ -140,6 +140,6 @@ For deterministic animation captures without a window:
 SDL_VIDEODRIVER=dummy bash scripts/preview.sh --animate build/lvgl/animation-preview
 ```
 
-This saves the 86 standard scenarios plus 51 motion frames per animation at 40 ms intervals. Source/generated assets and prompts are in assets/animations; Pillow 12.3.0 is needed only for regeneration, not normal builds. See [lifecycle timeline](power-lifecycle.md). The artwork uses one 12 KiB A8 wordmark and procedural blue light slashes. Actual panel performance remains unverified. To export GIF/contact-sheet previews after --animate, run `python3 scripts/export-animation-previews.py build/lvgl/animation-preview` with Pillow installed.
+This saves the 122 standard scenarios plus 76 boot and 51 shutdown motion frames at 40 ms intervals. Source/generated assets and prompts are in assets/animations; Pillow 12.3.0 is needed only for regeneration, not normal builds. See [lifecycle timeline](power-lifecycle.md). The artwork uses one 12 KiB A8 wordmark and procedural blue light slashes. Actual panel performance remains unverified. To export GIF/contact-sheet previews after --animate, run `python3 scripts/export-animation-previews.py build/lvgl/animation-preview` with Pillow installed.
 
 Fuel preview: `[` / `]` change the simulated reading by 1%. At 56% the fifth piece is partly filled; at 6% the first piece is roughly half filled. `RESERVE` appears at/below 16% for a valid reading, matching the user-supplied approximate reserve ratio. These are host samples, not calibrated fuel-volume measurements.

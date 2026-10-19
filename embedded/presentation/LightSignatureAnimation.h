@@ -20,7 +20,9 @@ inline std::uint8_t opacity(float x) { return static_cast<std::uint8_t>(std::cla
 inline AnimationFrame animationFrame(const Lifecycle& life,bool urgentWarning,std::uint64_t now) {
     AnimationFrame f;
     const auto phase=life.phase();
-    const auto t=std::min(life.elapsed(now),Lifecycle::animationMs);
+    // Keep the approved phase proportions with independent lifecycle durations.
+    const auto duration=phase==Phase::Boot?Lifecycle::bootMs:Lifecycle::shutdownMs;
+    const auto t=std::min(life.elapsed(now),duration)*2000/duration;
     if(phase==Phase::Running || ((phase==Phase::Boot||phase==Phase::Shutdown)&&urgentWarning)) {
         f.stage=AnimationStage::Running; f.overlay=false; f.dashboardVisible=true; f.cover=0;
         return f;
