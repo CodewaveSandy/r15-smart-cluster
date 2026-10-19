@@ -8,6 +8,7 @@ inline std::optional<SettingsAction> settingsAction(SDL_Keycode key,bool open) {
     if(key==SDLK_s) return SettingsAction::Open;
     if(!open) return std::nullopt;
     switch(key) {
+    case SDLK_RETURN:return SettingsAction::Select;
     case SDLK_ESCAPE:case SDLK_BACKSPACE:return SettingsAction::Back;
     case SDLK_DOWN:return SettingsAction::Down;
     case SDLK_i:return SettingsAction::Next;

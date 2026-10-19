@@ -13,6 +13,7 @@ Reproduce with scripts/generate-fonts.sh. Converter: lv_font_conv 1.5.3, pinned 
 | inter_unit_18 | Speed unit | 18 px Medium |
 | inter_heading_23 | Mode and supporting values | 23 px SemiBold |
 | racing_gear_72 | Gear | 72 px Bold Italic |
+| racing_preview_28 | Appearance thumbnail digits (6/0/dash) | 28 px Bold Italic |
 | racing_secondary_46 | Track speed | 46 px Bold Italic |
 | racing_speed_128 | Street speed | 128 px Bold Italic |
 | racing_track_74 | Track current lap timer | 74 px Bold Italic |

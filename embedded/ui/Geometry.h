@@ -64,6 +64,14 @@ struct SettingsLayout {
     static constexpr Rect tile(int i) { return {28+(i%2)*382,76+(i/2)*120,362,106}; }
     static constexpr int speedCenter=200,speedY=22,unitY=43;
 };
+struct AppearanceLayout {
+    static constexpr Rect bounds=SettingsLayout::bounds;
+    static constexpr TextArea title{28,5,500}, themeTitle{28,42,500}, back{690,12,82};
+    static constexpr Rect theme(int i) { return {28+i*382,64,362,82}; }
+    static constexpr Rect design{28,164,744,90};
+    static constexpr Rect cancel{484,278,136,44},apply{636,278,136,44};
+    static constexpr TextArea status{28,292,440};
+};
 struct LifecycleLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::height};
     static constexpr Point center{Metrics::width/2,220};

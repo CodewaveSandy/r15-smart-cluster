@@ -85,3 +85,7 @@ Consumption remains L/100km; average speed uses km/h (mph if the existing imperi
 ## D19 — Settings home and persistent instruments (2026-10-19)
 
 User selected the category-grid concept and requested speed to animate into the top strip and return on exit. First slice implements Settings home, four-category focus navigation, a reversible 280 ms transition and live gear/tell-tales. Entry requires a valid speed below 20 km/h; urgent warnings, stale speed or speed at/above 20 km/h and power transitions restore instruments immediately. Appearance preview/Apply/Cancel, versioned saved preferences and radio/navigation screens remain subsequent slices. See [Settings](settings.md); no hardware pairing, Google Maps or persistence is claimed.
+
+## D20 — Appearance and confirmed host preferences (2026-10-19)
+
+After committing Settings home as 5e0d2c1, implement Appearance with native theme/design thumbnails and explicit preview/Apply/Cancel. Only Instrument is offered. Confirmed theme/design are encoded in a versioned validated eight-byte record and restored at host startup. The host adapter performs file replacement outside rendering; failures keep the preview open, while cancellation or access interruption restores the original theme. Do not persist navigation, unconfirmed previews or vehicle data. Render tests isolate storage. ESP32 NVS remains a board-firmware task; radio and navigation screens remain subsequent slices.

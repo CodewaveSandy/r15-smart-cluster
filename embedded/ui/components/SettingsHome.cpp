@@ -22,7 +22,7 @@ SettingsHome::SettingsHome(lv_obj_t* parent):root_(box(parent,SettingsLayout::bo
     show(root_.get(),false);
 }
 void SettingsHome::update(const ViewOptions& options,const Palette& p,int progress) {
-    show(root_.get(),progress>0);
+    show(root_.get(),progress>0&&!options.appearance);
     if(progress==0) return;
     const lv_opa_t alpha=progress*255/1000;
     for(auto* label:{title_,subtitle_,back_}) fade(label,alpha);

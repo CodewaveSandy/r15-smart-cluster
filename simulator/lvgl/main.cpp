@@ -3,6 +3,7 @@
 #include "embedded/ui/Typography.h"
 #include <SDL.h>
 #include "DesktopInput.h"
+#include "PreferenceFile.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -64,7 +65,7 @@ void help() {
         "Enter: Street trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
         "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
-        "P: stationary demo | S: settings | Arrows: focus | Backspace/Esc: back\n"
+        "P: stationary demo | S: settings | Arrows: focus | Enter: select | Backspace/Esc: back\n"
         "O: key on/off (3000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
@@ -74,6 +75,9 @@ int main(int argc,char** argv) {
         bool render=false,animationSequence=false; std::filesystem::path output;
         if(argc==3&&(std::string(argv[1])=="--render"||std::string(argv[1])=="--animate")) { render=true; animationSequence=std::string(argv[1])=="--animate"; output=argv[2]; }
         else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--render directory | --animate directory]\n"); return 2; }
+        cluster::host::PreferenceFile preferenceFile(render?std::filesystem::path{}:cluster::host::preferencePath());
+        Preferences confirmedPreferences;
+        if(!render) preferenceFile.load(confirmedPreferences);
         if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER)) throw std::runtime_error(SDL_GetError());
         struct SdlExit { ~SdlExit(){SDL_Quit();} } sdlExit;
         lv_init();
@@ -86,6 +90,7 @@ int main(int argc,char** argv) {
         {
             cluster::ui::Dashboard dashboard(lv_screen_active());
             ClusterState state=demo(); cluster::ui::ViewOptions view; Lifecycle life;
+            view.light=confirmedPreferences.light;
             if(render) {
                 std::filesystem::create_directories(output);
                 view.time="20:55"; view.date="18 Oct 2026";
@@ -347,6 +352,24 @@ int main(int argc,char** argv) {
                         view.settingsFocus=focus; dashboard.update(parked,view,life,offset+6400+focus);
                         capture(output/("settings-focus-"+std::to_string(focus)+"-"+suffix+".bmp"));
                     }
+                    view.settingsFocus=0;
+                    settingsAction(view,SettingsAction::Select,parked,life);
+                    dashboard.update(parked,view,life,offset+6450); capture(output/("appearance-home-"+suffix+".bmp"));
+                    flushMetrics={};
+                    for(int idle=0;idle<100;++idle) { dashboard.update(parked,view,life,offset+6450); lv_refr_now(nullptr); }
+                    if(flushMetrics.calls) throw std::runtime_error("Settled Appearance redraw without changes");
+                    view.appearanceFocus=light?0:1; settingsAction(view,SettingsAction::Select,parked,life);
+                    dashboard.update(parked,view,life,offset+6460); capture(output/("appearance-preview-"+suffix+".bmp"));
+                    view.appearanceFocus=2; dashboard.update(parked,view,life,offset+6461); capture(output/("appearance-design-"+suffix+".bmp"));
+                    view.appearanceFocus=4;
+                    if(settingsAction(view,SettingsAction::Select,parked,life)!=SettingsEffect::SavePreferences) throw std::runtime_error("Appearance Apply did not request save");
+                    appearanceSaveResult(view,false);
+                    dashboard.update(parked,view,life,offset+6462); capture(output/("appearance-save-error-"+suffix+".bmp"));
+                    settingsAction(view,SettingsAction::Back,parked,life);
+                    if(view.light!=light||view.appearance) throw std::runtime_error("Appearance Cancel did not restore theme");
+                    settingsAction(view,SettingsAction::Select,parked,life);
+                    view.appearanceFocus=4; appearanceSaveResult(view,true);
+                    dashboard.update(parked,view,life,offset+6470); capture(output/("appearance-applied-"+suffix+".bmp"));
                     flushMetrics={};
                     for(int i=0;i<100;++i) { dashboard.update(parked,view,life,offset+6500); lv_refr_now(nullptr); }
                     if(flushMetrics.calls) throw std::runtime_error("Settled settings redraw without changes");
@@ -364,7 +387,7 @@ int main(int argc,char** argv) {
                     if(before!=pixels) { throw std::runtime_error("Settings exit failed to restore dashboard exactly: "+suffix); }
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 154 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 174 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
@@ -392,7 +415,14 @@ int main(int argc,char** argv) {
                         const auto key=event.key.keysym.sym;
                         if(event.key.repeat && key!=SDLK_LEFT&&key!=SDLK_RIGHT&&key!=SDLK_UP&&key!=SDLK_DOWN&&key!=SDLK_LEFTBRACKET&&key!=SDLK_RIGHTBRACKET) continue;
                         if(const auto action=cluster::host::settingsAction(key,view.settings)) {
-                            settingsAction(view,*action,missing?ClusterState{}:state,life);
+                            const auto effect=settingsAction(view,*action,missing?ClusterState{}:state,life);
+                            if(effect==SettingsEffect::SavePreferences) {
+                                const Preferences requested{view.light,DashboardDesign::Instrument};
+                                const bool unchanged=requested.light==confirmedPreferences.light&&requested.design==confirmedPreferences.design;
+                                const bool saved=unchanged||preferenceFile.save(requested);
+                                if(saved) confirmedPreferences=requested;
+                                appearanceSaveResult(view,saved);
+                            }
                             continue;
                         }
                         if(view.settings&&(key==SDLK_RETURN||key==SDLK_t||key==SDLK_TAB)) continue;

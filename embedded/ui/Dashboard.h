@@ -5,6 +5,7 @@
 #include "Tokens.h"
 #include "components/Header.h"
 #include "components/SettingsHome.h"
+#include "components/AppearancePanel.h"
 #include "embedded/presentation/SettingsTransition.h"
 #include "components/TellTaleRow.h"
 #include "components/Tachometer.h"
@@ -36,6 +37,7 @@ private:
     TellTaleRow tellTales_;
     Tachometer tachometer_;
     SettingsHome settings_;
+    AppearancePanel appearance_;
     PrimaryReadout primary_;
     RideInfoPanel rideInfo_;
     FuelGauge fuel_;

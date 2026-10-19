@@ -18,6 +18,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/Dashboard.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Header.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/SettingsHome.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/AppearancePanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/TellTaleRow.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Tachometer.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/PrimaryReadout.cpp"
@@ -34,6 +35,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_rpm_16.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_unit_18.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_heading_23.c"
+ "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_preview_28.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_secondary_46.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_gear_72.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/racing_speed_128.c"
@@ -67,6 +69,10 @@ if(BUILD_TESTING)
  target_link_libraries(desktop-input-check PRIVATE SDL2::SDL2)
  target_compile_options(desktop-input-check PRIVATE -Wall -Wextra -Wpedantic)
  add_test(NAME desktop-input COMMAND desktop-input-check)
+ add_executable(preferences-check "${CLUSTER_ROOT}/tests/embedded/preferences-check.cpp")
+ target_include_directories(preferences-check PRIVATE "${CLUSTER_ROOT}")
+ target_compile_options(preferences-check PRIVATE -Wall -Wextra -Wpedantic)
+ add_test(NAME preferences COMMAND preferences-check "${CMAKE_BINARY_DIR}")
  add_executable(typography-check "${CLUSTER_ROOT}/tests/embedded/typography-check.cpp")
  target_link_libraries(typography-check PRIVATE cluster_ui)
  add_test(NAME typography-bounds COMMAND typography-check)

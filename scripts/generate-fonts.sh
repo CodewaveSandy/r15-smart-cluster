@@ -16,6 +16,7 @@ while read -r name size source subset; do
   else
     case "$subset" in
       secondary) symbols='0123456789' ;;
+      preview) symbols='60' ;;
       rpm) symbols='0123456789,' ;;
       gear) symbols='123456N' ;;
       speed) symbols='0123456789' ;;
@@ -29,6 +30,9 @@ while read -r name size source subset; do
   if [[ "$source" == chakra-petch/* ]]; then
     python3 scripts/embolden-font.py "assets/fonts/lvgl/$name.c"
   fi
+  if [[ "$subset" == preview ]]; then
+    python3 -c 'from pathlib import Path; import sys; p=Path(sys.argv[1]); p.write_text(p.read_text().rstrip()+"\n")' "assets/fonts/lvgl/$name.c"
+  fi
 done <<'FONTS'
 inter_caption_12 12 inter/Inter-Medium.ttf text
 inter_label_14 14 inter/Inter-Medium.ttf text
@@ -36,6 +40,7 @@ inter_value_16 16 inter/Inter-Medium.ttf text
 inter_rpm_16 16 inter/Inter-SemiBold.ttf rpm
 inter_unit_18 18 inter/Inter-Medium.ttf text
 inter_heading_23 23 inter/Inter-SemiBold.ttf text
+racing_preview_28 28 chakra-petch/ChakraPetch-BoldItalic.ttf preview
 racing_secondary_46 46 chakra-petch/ChakraPetch-BoldItalic.ttf secondary
 racing_gear_72 72 chakra-petch/ChakraPetch-BoldItalic.ttf gear
 racing_speed_128 128 chakra-petch/ChakraPetch-BoldItalic.ttf speed
