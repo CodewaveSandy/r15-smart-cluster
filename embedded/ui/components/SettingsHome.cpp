@@ -2,6 +2,7 @@
 #include "../WidgetPrimitives.h"
 #include "../Icons.h"
 #include "embedded/presentation/BluetoothPresentation.h"
+#include "embedded/application/WifiMenu.h"
 namespace cluster::ui {
 using namespace widget;
 using namespace geometry;
@@ -22,11 +23,12 @@ SettingsHome::SettingsHome(lv_obj_t* parent):root_(box(parent,SettingsLayout::bo
     }
     show(root_.get(),false);
 }
-void SettingsHome::update(const ViewOptions& options,const BluetoothState& radio,const Palette& p,int progress) {
-    show(root_.get(),progress>0&&!options.appearance&&!options.bluetooth);
+void SettingsHome::update(const ViewOptions& options,const BluetoothState& radio,const WifiState& wifi,const Palette& p,int progress) {
+    show(root_.get(),progress>0&&!options.appearance&&!options.bluetooth&&!options.wifi);
     if(progress==0) return;
     const auto bluetooth=presentation::bluetoothPresentation(radio,false);
     text(details_[1],bluetooth.status);
+    text(details_[2],wifi.available()?(wifi.connected?"Connected":"Disconnected"):"Status unavailable");
     const lv_opa_t alpha=progress*255/1000;
     for(auto* label:{title_,subtitle_,back_}) fade(label,alpha);
     ink(title_,p.ink); ink(subtitle_,p.muted); ink(back_,p.muted);

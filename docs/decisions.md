@@ -93,3 +93,7 @@ After committing Settings home as 5e0d2c1, implement Appearance with native them
 ## D21 — Bluetooth UI and observed-state requests (2026-10-19)
 
 After committing Appearance as d04d05c, add Bluetooth status/actions, cancellable pairing/connection, Disconnect, confirmed Forget and explicit error/unavailable states. Use portable normalized radio observations and typed request effects; widgets never optimistically mutate connection/bond state. A host-only timed single-phone fixture exercises the UI and is marked simulated. Back/access interruption cancels pending pair/connect without dropping an established link; accepted Forget is not undone. Real profiles, authentication, identity/session-bound commands, bond storage and UART/radio adapters require review before hardware integration. See [Bluetooth](bluetooth.md).
+
+## D22 — Wi-Fi settings host slice (2026-10-19)
+
+After Bluetooth commit 664f66b, implement the Wi-Fi UI using normalized observations and semantic effects with a timed host fixture. Keep credential provisioning explicitly pending; use a labelled simulation action for protected unsaved networks. No secrets in display preferences. Actual radio roles, stable network identities and UART command contract require review before hardware binding.

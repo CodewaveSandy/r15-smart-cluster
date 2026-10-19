@@ -64,5 +64,9 @@ int main() {
             std::fprintf(stderr,"Missing or out-of-bounds icon U+%X\n",unsigned(icon.codepoint)); ++failed;
         }
     }
+    fits(fonts::value,"WWWWWWWWWWWWWWWWWWWWWWWW",520);
+    fits(fonts::label,"Credentials pending - Enter simulates connection",650);
+    fits(fonts::heading,"Forget connected network?",650);
+    fits(fonts::value,"Protected",160);
     lv_deinit(); return failed?1:0;
 }

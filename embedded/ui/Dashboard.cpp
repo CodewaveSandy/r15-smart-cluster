@@ -10,7 +10,7 @@ using namespace widget;
 Dashboard::Dashboard(lv_obj_t* parent)
     : root_(box(parent,0,0,Metrics::width,Metrics::height)),
       instruments_(box(root_.get(),0,0,Metrics::width,Metrics::height)),
-      header_(root_.get()), tellTales_(root_.get()), tachometer_(instruments_.get()), settings_(root_.get()), appearance_(root_.get()), bluetooth_(root_.get()), primary_(root_.get()),
+      header_(root_.get()), tellTales_(root_.get()), tachometer_(instruments_.get()), settings_(root_.get()), appearance_(root_.get()), bluetooth_(root_.get()), wifi_(root_.get()), primary_(root_.get()),
       rideInfo_(instruments_.get()), fuel_(instruments_.get()), overlay_(root_.get()) {
     shiftGradient_.dir=LV_GRAD_DIR_VER; shiftGradient_.stops_count=3;
     const std::uint32_t shiftColors[]={0x492731,0xb34c48,0x64303b};
@@ -37,9 +37,10 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         // Hide the instrument group without a full-screen alpha layer. Only
         // the persistent speed label moves/scales between the two layouts.
         show(instruments_.get(),settingsProgress==0);
-        settings_.update(v,s.bluetooth,p,settingsProgress);
+        settings_.update(v,s.bluetooth,s.wifi,p,settingsProgress);
         appearance_.update(v,p,settingsProgress);
         bluetooth_.update(s.bluetooth,v,p,settingsProgress);
+        wifi_.update(s.wifi,v,p,settingsProgress);
         tellTales_.update(s,p,now,v.iconTest);
         primary_.update(s,v,p,settingsProgress);
         if(settingsProgress==0) {

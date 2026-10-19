@@ -10,6 +10,8 @@ struct DisplayOptions {
     unsigned appearanceFocus=0;
     bool bluetooth=false, bluetoothForgetConfirmation=false;
     unsigned bluetoothFocus=0;
+    bool wifi=false, wifiForgetConfirmation=false, wifiCredentialNotice=false;
+    unsigned wifiFocus=0, wifiNetwork=0;
     TripPage tripPage=TripPage::Odometer;
     InfoPage infoPage=InfoPage::Coolant;
 };

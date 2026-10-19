@@ -5,6 +5,7 @@
 #include "DesktopInput.h"
 #include "PreferenceFile.h"
 #include "BluetoothDemo.h"
+#include "WifiDemo.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -35,6 +36,7 @@ void flush(lv_display_t* display,const lv_area_t* area,std::uint8_t* bytes) {
 }
 ClusterState demo() {
     ClusterState s;
+    cluster::host::WifiDemo::populate(s.wifi);
     s.bluetooth.quality=Quality::Available; s.bluetooth.paired=true; s.bluetooth.connected=true;
     std::snprintf(s.bluetooth.deviceName.data(),s.bluetooth.deviceName.size(),"Rider phone");
     s.bestLapMs={78420,Quality::Available}; // Static best lap sample: 01:18.42.
@@ -70,6 +72,7 @@ void help() {
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
         "P: stationary demo | S: settings | Arrows: focus | Enter: select | Backspace/Esc: back\n"
         "O: key on/off (3000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
+        "F5/F6: Wi-Fi fail next request / unavailable toggle\n"
         "F3: fail next Bluetooth request | F4: Bluetooth service unavailable/restore\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
@@ -431,8 +434,34 @@ int main(int argc,char** argv) {
                     reconcileSettings(view,interrupt,life);
                     dashboard.update(interrupt,view,life,base+15000);capture(output/("bluetooth-speed-stale-"+suffix+".bmp"));
                 }
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view={};view.track=track;view.light=light;view.settings=true;view.wifi=true;
+                    const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
+                    const std::uint64_t base=140000+((track?2:0)+(light?1:0))*20000;
+                    const char* names[]={"networks","connected","scanning","connecting","disconnecting","forgetting","failed","unavailable","stale","forget-confirmation","credentials","empty"};
+                    for(unsigned scene=0;scene<12;++scene) {
+                        auto sample=state;sample.speedKph={0,Quality::Available};sample.gear={0,Quality::Available};
+                        auto& w=sample.wifi;view.wifiForgetConfirmation=false;view.wifiCredentialNotice=false;
+                        if(scene==1||scene==4||scene==5||scene==9) {w.connected=true;w.networkName=w.networks[0].name;}
+                        if(scene>=2&&scene<=6)w.phase=static_cast<WifiPhase>(scene-1);
+                        if(scene==7)w.quality=Quality::Unavailable;
+                        if(scene==8)w.quality=Quality::Stale;
+                        if(scene==9)view.wifiForgetConfirmation=true;
+                        if(scene==10)view.wifiCredentialNotice=true;
+                        if(scene==11)w.count=0;
+                        dashboard.update(sample,view,life,base+scene*1000);dashboard.update(sample,view,life,base+scene*1000+280);
+                        capture(output/("wifi-"+std::string(names[scene])+"-"+suffix+".bmp"));
+                        flushMetrics={};for(int i=0;i<100;++i){dashboard.update(sample,view,life,base+scene*1000+300);lv_refr_now(nullptr);}
+                        if(flushMetrics.calls)throw std::runtime_error("Settled Wi-Fi redraw without changes");
+                    }
+                    auto interruption=state;interruption.speedKph={0,Quality::Available};interruption.engineWarning={true,Quality::Available};
+                    if(reconcileSettings(view,interruption,life)!=SettingsEffect::WifiCancel)throw std::runtime_error("Warning failed to cancel Wi-Fi");
+                    dashboard.update(interruption,view,life,base+13000);capture(output/("wifi-warning-"+suffix+".bmp"));
+                    view.settings=true;view.wifi=true;interruption.engineWarning={false,Quality::Available};interruption.speedKph.quality=Quality::Stale;
+                    reconcileSettings(view,interruption,life);dashboard.update(interruption,view,life,base+14000);capture(output/("wifi-speed-stale-"+suffix+".bmp"));
+                }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 238 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 294 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
@@ -450,6 +479,7 @@ int main(int argc,char** argv) {
                 const auto start=std::chrono::steady_clock::now();
                 auto milliseconds=[&]{return std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count());};
                 cluster::host::BluetoothDemo bluetoothDemo;
+                cluster::host::WifiDemo wifiDemo;
                 const auto dispatchEffect=[&](SettingsEffect effect,std::uint64_t now) {
                     if(effect==SettingsEffect::SavePreferences) {
                         const Preferences requested{view.light,DashboardDesign::Instrument};
@@ -457,7 +487,7 @@ int main(int argc,char** argv) {
                         const bool saved=unchanged||preferenceFile.save(requested);
                         if(saved) confirmedPreferences=requested;
                         appearanceSaveResult(view,saved);
-                    } else bluetoothDemo.request(effect,state,now);
+                    } else {bluetoothDemo.request(effect,state,now);wifiDemo.request(effect,state,view.wifiNetwork,now);}
                 };
                 life.key(true,0); bool running=true,missing=false; help(); std::uint64_t last=0;
                 std::time_t previousMinute=-1;
@@ -500,8 +530,10 @@ int main(int argc,char** argv) {
                         case SDLK_a: state.absWarning.value=!state.absWarning.value; break;
                         case SDLK_e: state.engineWarning.value=!state.engineWarning.value; break;
                         case SDLK_c: state.coolantWarning.value=!state.coolantWarning.value; break;
-                        case SDLK_SPACE: state=demo(); bluetoothDemo=cluster::host::BluetoothDemo{}; missing=false; break;
+                        case SDLK_SPACE: state=demo(); bluetoothDemo=cluster::host::BluetoothDemo{}; wifiDemo=cluster::host::WifiDemo{}; missing=false; break;
                         case SDLK_F1: help(); break;
+                        case SDLK_F5: wifiDemo.failNext(); break;
+                        case SDLK_F6: wifiDemo.toggleAvailability(state); break;
                         case SDLK_F3: bluetoothDemo.failNext(); break;
                         case SDLK_F4: bluetoothDemo.toggleAvailability(state); break;
                         case SDLK_F2: view.iconTest=!view.iconTest; break;
@@ -520,6 +552,7 @@ int main(int argc,char** argv) {
                     view.time=timeText; view.date=dateText;
                     lv_tick_inc(static_cast<std::uint32_t>(now-last)); last=now;
                     bluetoothDemo.update(state,now);
+                    wifiDemo.update(state,now);
                     auto observed=missing?ClusterState{}:state;
                     if(!valid(observed)) throw std::runtime_error("Simulator produced invalid normalized state");
                     dispatchEffect(reconcileSettings(view,observed,life),now);

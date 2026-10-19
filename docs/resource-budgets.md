@@ -16,7 +16,7 @@ python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/pr
 
 Current font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **102,852 payload bytes** and **113,130 compiled host asset section bytes** in total. The removed neon textures previously used 344,064 payload bytes. The source PNG is not linked into firmware.
 
-The object tree now contains 142 objects, including Settings home, Appearance, Bluetooth status/action rows and the instrument visibility group. The Dashboard wrapper is 1,424 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
+The object tree now contains 165 objects, including Settings home, Appearance, Bluetooth and Wi-Fi status/action rows and the instrument visibility group. The Dashboard wrapper is 1,608 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
 
 ## Buffer arithmetic, not an allocation prescription
 

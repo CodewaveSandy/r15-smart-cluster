@@ -58,6 +58,6 @@ Performance objectives are provisional in embedded-architecture.md. Establish re
 
 ## Current evidence
 
-Portable state/lifecycle/presentation tests and the LVGL 9.2.2 desktop dashboard now build and pass. Both layouts/themes, fuel/shift states and R15 Light Signature (3 s boot / 2 s shutdown) are implemented. The render test produces 238 deterministic scenarios without LVGL warnings; host keyboard mappings are tested. See getting-started.md. No flashed firmware, serial implementation, circuit validation or bike verification is claimed. E1 hardware evidence remains pending; E2 is implemented for the host slice and E3 is partial (menus/ride features pending).
+Portable state/lifecycle/presentation tests and the LVGL 9.2.2 desktop dashboard now build and pass. Both layouts/themes, fuel/shift states and R15 Light Signature (3 s boot / 2 s shutdown) are implemented. The render test produces 294 deterministic scenarios without LVGL warnings; host keyboard mappings are tested. See getting-started.md. No flashed firmware, serial implementation, circuit validation or bike verification is claimed. E1 hardware evidence remains pending; E2 is implemented for the host slice and E3 is partial (menus/ride features pending).
 
 Include [power lifecycle](power-lifecycle.md) tests in E2–E4: injected-clock duration checks, missing startup data, urgent warning interruption, key-off/key-on cancellation, animation failures, actual panel startup measurement and retained-power shutdown tests.

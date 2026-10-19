@@ -7,7 +7,7 @@ namespace cluster::ui {
 class SettingsHome {
 public:
     explicit SettingsHome(lv_obj_t* parent);
-    void update(const ViewOptions&,const BluetoothState&,const Palette&,int progress);
+    void update(const ViewOptions&,const BluetoothState&,const WifiState&,const Palette&,int progress);
 private:
     ObjectOwner root_;
     lv_obj_t *title_,*subtitle_,*back_;

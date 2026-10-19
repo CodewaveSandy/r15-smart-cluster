@@ -11,6 +11,7 @@ Build a premium instrument cluster for the Yamaha R15 V4 using two ESP32 MCUs, a
 | [Embedded design](embedded-architecture.md) | Modules, concurrency, state, UART and resource budgets |
 | [UI style guide](lvgl-style-guide.md) | Geometry, typography, themes and instrument behavior |
 | [Settings and transitions](settings.md) | Category grid, animated instruments and Appearance preferences |
+| [Wi-Fi UI](wifi.md) | Networks, connection flows, demo controls and provisioning boundaries |
 | [Bluetooth UI](bluetooth.md) | Connection actions, confirmation, demo states and radio integration boundaries |
 | [Power lifecycle](power-lifecycle.md) | Key-on, boot, running, key-off and shutdown journey |
 | [Implementation plan](implementation-plan.md) | Stages, acceptance gates and tests |

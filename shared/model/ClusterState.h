@@ -3,6 +3,7 @@
 #include <cmath>
 #include "Quality.h"
 #include "BluetoothState.h"
+#include "WifiState.h"
 
 namespace cluster {
 
@@ -13,6 +14,7 @@ template<class T> struct Signal {
 };
 struct ClusterState {
     BluetoothState bluetooth;
+    WifiState wifi;
     Signal<std::uint32_t> currentLapMs, bestLapMs;
     Signal<int> speedKph, engineRpm, gear, fuelPercent, phoneBatteryPercent;
     Signal<bool> quickShifter, vva, phoneConnected, tcsEnabled;
@@ -28,7 +30,7 @@ inline bool valid(const ClusterState& s) {
     const auto real = [](const Signal<double>& v, double lo, double hi) {
         return !v.available() || (std::isfinite(v.value) && v.value >= lo && v.value <= hi);
     };
-    return valid(s.bluetooth) && in(s.speedKph,0,400) && in(s.engineRpm,0,30000) && in(s.gear,0,6) &&
+    return valid(s.wifi) && valid(s.bluetooth) && in(s.speedKph,0,400) && in(s.engineRpm,0,30000) && in(s.gear,0,6) &&
         in(s.fuelPercent,0,100) && in(s.phoneBatteryPercent,0,100) && real(s.odometerKm,0,1e9) &&
         real(s.trip1Km,0,1e9) && real(s.trip2Km,0,1e9) && real(s.batteryVoltageV,0,60) && real(s.coolantTemperatureC,-40,200) &&
         real(s.realtimeFuelLPer100Km,0,1000) && real(s.averageFuelLPer100Km,0,1000) && real(s.averageSpeedKph,0,400);

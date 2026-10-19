@@ -13,15 +13,15 @@ Updated: 2026-10-19. Native LVGL host implementation and applicable host optimiz
 
 ## Current verification
 
-Build completes without compiler warnings. Eight suites pass: model/lifecycle, Light Signature timeline, portable presentation/input, desktop mappings, Bluetooth state/requests, host preferences, typography and LVGL rendering. There are 238 deterministic captures; fuel captures include 0/6/16/17/56/100% in both layouts/themes; representative layouts/themes/warnings/unavailable views were visually inspected. Tests cover fresh-versus-cached presentation, hidden telemetry/urgent reveal and repeated creation/destruction.
+Build completes without compiler warnings. Nine suites pass: model/lifecycle, Light Signature timeline, portable presentation/input, desktop mappings, Bluetooth and Wi-Fi state/requests, host preferences, typography and LVGL rendering. There are 294 deterministic captures; fuel captures include 0/6/16/17/56/100% in both layouts/themes; representative layouts/themes/warnings/unavailable views were visually inspected. Tests cover fresh-versus-cached presentation, hidden telemetry/urgent reveal and repeated creation/destruction.
 
-The LVGL tree contains 142 objects. One hundred identical settled updates cause zero flushes, versus 1,200 callbacks / 38,400,000 pixels before optimization. Font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The current Mac Dashboard wrapper is 1,424 bytes, including the last-input keys and Light Signature frame state. Host buffer sizes are unchanged. Font conversion is byte-reproducible; source licenses/provenance are bundled. The animation wordmark adds 12,288 bytes (12 KiB), replacing the former 336 KiB animation textures. Combined bitmap payload is 102,852 bytes and compiled host asset sections total 113,130 bytes. The source PNG is not a firmware resource.
+The LVGL tree contains 165 objects. One hundred identical settled updates cause zero flushes, versus 1,200 callbacks / 38,400,000 pixels before optimization. Font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The current Mac Dashboard wrapper is 1,608 bytes, including the last-input keys and Light Signature frame state. Host buffer sizes are unchanged. Font conversion is byte-reproducible; source licenses/provenance are bundled. The animation wordmark adds 12,288 bytes (12 KiB), replacing the former 336 KiB animation textures. Combined bitmap payload is 102,852 bytes and compiled host asset sections total 113,130 bytes. The source PNG is not a firmware resource.
 
 See [resource budgets](resource-budgets.md) for repeatable reports and the limits of host measurements, and [optimization sequence](optimization-plan.md) for implementation details.
 
 ## Pending functionality and evidence
 
-Wi-Fi/Navigation/clock screens, functional trips/laps, firmware NVS persistence, UART codec/integration, board drivers, firmware flashing and vehicle adapters are not implemented. Full Maps/Android Auto/CarPlay remains unresolved. No host test constitutes hardware or bike verification.
+Navigation/clock screens, functional trips/laps, firmware NVS persistence, UART codec/integration, board drivers, firmware flashing and vehicle adapters are not implemented. Full Maps/Android Auto/CarPlay remains unresolved. No host test constitutes hardware or bike verification.
 
 Exact delivered Elecrow PCB revision and vehicle MCU model remain unconfirmed. The user reports harness investigation, but detailed pin/voltage/polarity/waveform records have not been supplied here. No Yamaha protocol is treated as verified. Independent warning behavior and retained shutdown power require review and bench tests.
 
@@ -43,4 +43,6 @@ Settings first slice: four-category home, semantic focus/back navigation, entry 
 
 Appearance second slice: Midnight/Daylight preview, current Instrument design, Apply/Cancel and confirmed host restart persistence. Storage corruption/failure/restart and preview-cancellation checks pass; Settings and Appearance stay idle without redundant flushes.
 
-Bluetooth third slice: normalized quality-bearing service state, dynamic actions, pairing/connect progress, Disconnect, confirmed Forget and failure/retry/unavailable presentation. Eight suites pass with 238 deterministic captures. Host-only timed fixtures supply the radio observations; no real pairing, radio key storage or UART commands are implemented.
+Bluetooth third slice: normalized quality-bearing service state, dynamic actions, pairing/connect progress, Disconnect, confirmed Forget and failure/retry/unavailable presentation. Nine suites pass with 294 deterministic captures. Host-only timed fixtures supply the radio observations; no real pairing, radio key storage or UART commands are implemented.
+
+Wi-Fi fourth slice: bounded network selection, progress, Disconnect, confirmed Forget, explicit pending-credentials notice and failed/unknown states implemented on the host. No real scans, credentials or radio commands. See [Wi-Fi](wifi.md).

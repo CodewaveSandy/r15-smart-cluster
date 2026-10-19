@@ -20,6 +20,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/components/SettingsHome.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/AppearancePanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/BluetoothPanel.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/WifiPanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/TellTaleRow.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Tachometer.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/PrimaryReadout.cpp"
@@ -70,6 +71,10 @@ if(BUILD_TESTING)
  target_link_libraries(desktop-input-check PRIVATE SDL2::SDL2)
  target_compile_options(desktop-input-check PRIVATE -Wall -Wextra -Wpedantic)
  add_test(NAME desktop-input COMMAND desktop-input-check)
+ add_executable(wifi-check "${CLUSTER_ROOT}/tests/embedded/wifi-check.cpp")
+ target_include_directories(wifi-check PRIVATE "${CLUSTER_ROOT}")
+ target_compile_options(wifi-check PRIVATE -Wall -Wextra -Wpedantic)
+ add_test(NAME wifi COMMAND wifi-check)
  add_executable(bluetooth-check "${CLUSTER_ROOT}/tests/embedded/bluetooth-check.cpp")
  target_include_directories(bluetooth-check PRIVATE "${CLUSTER_ROOT}")
  target_compile_options(bluetooth-check PRIVATE -Wall -Wextra -Wpedantic)

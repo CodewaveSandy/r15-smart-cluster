@@ -2,14 +2,17 @@
 #include "DisplayOptions.h"
 #include "Lifecycle.h"
 #include "BluetoothMenu.h"
+#include "WifiMenu.h"
 namespace cluster {
 enum class SettingsAction { Open, Back, Next, Previous, Left, Right, Up, Down, Select };
-enum class SettingsEffect { None, SavePreferences, BluetoothPair, BluetoothConnect, BluetoothDisconnect, BluetoothForget, BluetoothCancel };
+enum class SettingsEffect { None, SavePreferences, BluetoothPair, BluetoothConnect, BluetoothDisconnect, BluetoothForget, BluetoothCancel, WifiScan, WifiConnect, WifiDisconnect, WifiForget, WifiCancel };
+inline SettingsEffect closeWifi(DisplayOptions& o) { const bool open=o.wifi;o.wifi=false;o.wifiForgetConfirmation=false;o.wifiCredentialNotice=false;return open?SettingsEffect::WifiCancel:SettingsEffect::None; }
 inline SettingsEffect closeBluetooth(DisplayOptions& options) {
     const bool wasOpen=options.bluetooth;
     options.bluetooth=false; options.bluetoothForgetConfirmation=false;
     return wasOpen?SettingsEffect::BluetoothCancel:SettingsEffect::None;
 }
+inline SettingsEffect closeRadio(DisplayOptions& o) { if(o.wifi) return closeWifi(o);return closeBluetooth(o); }
 inline void cancelAppearance(DisplayOptions& options) {
     if(options.appearance) options.light=options.appearanceOriginalLight;
     options.appearance=false; options.appearanceSaveFailed=false;
@@ -26,6 +29,10 @@ inline bool canOpenSettings(const ClusterState& state,const Lifecycle& life) {
 inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction action,const ClusterState& state,const Lifecycle& life) {
     if(action==SettingsAction::Back) {
         if(options.appearance) cancelAppearance(options);
+        else if(options.wifi) {
+            if(options.wifiForgetConfirmation||options.wifiCredentialNotice) {options.wifiForgetConfirmation=false;options.wifiCredentialNotice=false;options.wifiFocus=0;return SettingsEffect::None;}
+            return closeWifi(options);
+        }
         else if(options.bluetooth) {
             if(options.bluetoothForgetConfirmation) { options.bluetoothForgetConfirmation=false; options.bluetoothFocus=0; return SettingsEffect::None; }
             return closeBluetooth(options);
@@ -35,8 +42,32 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
     }
     if(action==SettingsAction::Open) { if(canOpenSettings(state,life)) options.settings=true; return SettingsEffect::None; }
     if(!options.settings) return SettingsEffect::None;
-    if(!canOpenSettings(state,life)) { cancelAppearance(options); options.settings=false; return closeBluetooth(options); }
-    if(options.bluetooth) {
+    if(!canOpenSettings(state,life)) { cancelAppearance(options); options.settings=false; return closeRadio(options); }
+    if(options.wifi) {
+        if(!state.wifi.available()||!valid(state.wifi)||options.wifiNetwork>=state.wifi.count||state.wifi.phase!=WifiPhase::Idle) options.wifiCredentialNotice=false;
+        const auto menu=wifiMenu(state.wifi,options.wifiForgetConfirmation);
+        options.wifiFocus%=options.wifiCredentialNotice?1u:menu.count;
+        const auto count=options.wifiCredentialNotice?1u:menu.count;
+        if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down) options.wifiFocus=(options.wifiFocus+1)%count;
+        else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up) options.wifiFocus=(options.wifiFocus+count-1)%count;
+        else if(action==SettingsAction::Select) {
+            if(options.wifiCredentialNotice) {options.wifiCredentialNotice=false;return SettingsEffect::WifiConnect;}
+            switch(menu.items[options.wifiFocus]) {
+            case WifiItem::Network:
+                options.wifiNetwork=options.wifiFocus;
+                if(state.wifi.networks[options.wifiNetwork].secured&&!state.wifi.networks[options.wifiNetwork].saved) {options.wifiCredentialNotice=true;break;}
+                return SettingsEffect::WifiConnect;
+            case WifiItem::Scan:return SettingsEffect::WifiScan;
+            case WifiItem::Disconnect:return SettingsEffect::WifiDisconnect;
+            case WifiItem::Forget:options.wifiForgetConfirmation=true;options.wifiFocus=0;break;
+            case WifiItem::ConfirmForget:options.wifiForgetConfirmation=false;options.wifiFocus=0;return SettingsEffect::WifiForget;
+            case WifiItem::Cancel:
+                if(options.wifiForgetConfirmation) {options.wifiForgetConfirmation=false;options.wifiFocus=0;break;}
+                return SettingsEffect::WifiCancel;
+            case WifiItem::Back:return closeWifi(options);
+            }
+        }
+    } else if(options.bluetooth) {
         const auto menu=bluetoothMenu(state.bluetooth,options.bluetoothForgetConfirmation);
         options.bluetoothFocus%=menu.count;
         switch(action) {
@@ -79,6 +110,8 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
             if(options.settingsFocus==0) {
                 options.appearance=true; options.appearanceOriginalLight=options.light;
                 options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false;
+            } else if(options.settingsFocus==2) {
+                options.wifi=true;options.wifiFocus=0;options.wifiForgetConfirmation=false;options.wifiCredentialNotice=false;
             } else if(options.settingsFocus==1) {
                 options.bluetooth=true; options.bluetoothFocus=0; options.bluetoothForgetConfirmation=false;
             }
@@ -90,7 +123,13 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
 }
 inline SettingsEffect reconcileSettings(DisplayOptions& options,const ClusterState& state,const Lifecycle& life) {
     if(!canOpenSettings(state,life)) {
-        cancelAppearance(options); options.settings=false; return closeBluetooth(options);
+        cancelAppearance(options); options.settings=false; return closeRadio(options);
+    }
+    if(options.wifi) {
+        if(!state.wifi.available()||!valid(state.wifi)||state.wifi.phase!=WifiPhase::Idle) {options.wifiForgetConfirmation=false;options.wifiCredentialNotice=false;}
+        if(!state.wifi.connected) options.wifiForgetConfirmation=false;
+        if(options.wifiNetwork>=state.wifi.count) options.wifiCredentialNotice=false;
+        options.wifiFocus%=wifiMenu(state.wifi,options.wifiForgetConfirmation).count;
     }
     if(options.bluetooth) {
         if(!state.bluetooth.available()||!state.bluetooth.paired||
