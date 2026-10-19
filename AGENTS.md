@@ -2,7 +2,7 @@
 
 ## Read before work
 
-Read RULES.md, docs/README.md, docs/architecture.md, docs/embedded-architecture.md and the relevant style/lifecycle/implementation documents, then inspect affected source/tests. RULES.md is the engineering authority. User instructions take precedence except where they would require unsafe vehicle behavior or invented hardware facts.
+Read RULES.md, docs/README.md, docs/architecture.md and the relevant style/lifecycle/implementation documents, then inspect affected source/tests. RULES.md is the engineering authority. User instructions take precedence except where they would require unsafe vehicle behavior or invented hardware facts.
 
 ## Product and boundaries
 
@@ -12,7 +12,7 @@ Normalized shared model/protocol code must not depend on LVGL, board drivers or 
 
 ## Current phase
 
-The first LVGL host slice is implemented. Continue incremental implementation and verification under docs/implementation-plan.md. Hardware firmware requires board-specific validation. Preserve the specified UI; no unsolicited redesign. Boot lasts 3.00 s and shutdown lasts 2.00 s as defined in docs/power-lifecycle.md. Shutdown requires retained power; never claim a firmware-only guarantee. Full Maps/projection remains unresolved.
+The host dashboard, lifecycle, Settings, Appearance preferences and Bluetooth/Wi-Fi demos are implemented. Navigation/clock, UART, real radio/vehicle adapters and hardware firmware are pending. Continue incremental implementation and verification under docs/implementation-plan.md. Hardware firmware requires board-specific validation. Preserve the specified UI; no unsolicited redesign. Boot lasts 3.00 s and shutdown lasts 2.00 s as defined in docs/power-lifecycle.md. Shutdown requires retained power; never claim a firmware-only guarantee. Full Maps/projection remains unresolved.
 
 ## Work procedure
 

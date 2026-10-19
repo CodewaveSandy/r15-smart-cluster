@@ -1,4 +1,4 @@
-# Settings, Appearance and instrument transitions
+# Settings and connectivity
 
 Updated: 2026-10-19. Settings home, Appearance, host preferences, Bluetooth and Wi-Fi UI/demo implemented; Navigation and ESP32 adapters pending.
 
@@ -34,17 +34,91 @@ Mac path: `~/Library/Application Support/R15 Smart Cluster/preferences.bin`. `R1
 
 PreferenceFile performs host filesystem operations outside LVGL rendering, using a flushed/closed temporary sibling followed by atomic replacement. Failed writes report failure and preserve the confirmed file. This does not claim hardware power-loss durability. Display-owned ESP-IDF NVS, target storage scheduling and hardware persistence tests remain firmware work; the UI never calls a filesystem or NVS API.
 
-## Next slices
+## Navigation and future services
 
-The [Bluetooth UI and host demo](bluetooth.md) are implemented with typed request effects and normalized status; actual radio/UART adapters remain pending.
-
-1. [Wi-Fi UI/demo](wifi.md) is implemented. Real provisioning, credentials, radio roles and integration remain unresolved.
-2. Navigation: configuration/status first. Full Google Maps/projection remains a separate feasibility requirement; GPS position alone is not a map renderer.
-
-Submenus share Next/Previous/Select/Back semantics. Touch may be added as another adapter; physical switches must remain sufficient for navigation, with text entry evaluated separately.
+Navigation remains pending. Full Google Maps/Android Auto/CarPlay is an unresolved feasibility requirement; GPS position alone does not provide map rendering or projection. Clock editing and actual time-source/retention also remain pending. Submenus share Next/Previous/Select/Back; touch can be another input adapter, while physical-switch navigation remains a requirement. Text entry needs a separate provisioning decision.
 
 ## Verification
 
 Portable checks cover speed/quality/lifecycle/warning gates, focus wrapping, Apply/Cancel, save effects/failure, preview interruption, transition reversal and immediate interruption. Host storage checks cover restart round trips, malformed sizes, invalid record fields/checksum, atomic replacement, failed replacement preserving the confirmed file and storage failure. Tests use a separate temporary directory under build output.
 
 Render scenarios cover Settings/Appearance, theme previews, focused design, save failure, entry/exit, urgent warnings and stale speed for both layouts/themes, exact dashboard restoration, and zero idle redraws on Appearance, Settings and dashboard. Host rendering and persistence are not board or bike verification.
+
+## Bluetooth
+
+Host UI and timed demo implemented; no Bluetooth stack, phone pairing keys or UART command transport implemented.
+
+### Screen and ownership
+
+Open Settings -> Bluetooth. The persistent gear/speed strip and tell-tales remain visible. Settings home reflects the latest Bluetooth status. The page shows a bounded current-device name, confirmed status and context-dependent actions. Both themes and Street/Track contexts are supported.
+
+BluetoothState is a portable normalized radio observation alongside telemetry. Quality is shared through shared/model/Quality.h. Phase, failure, paired/connected flags and a bounded 32-byte terminated name are validated before presentation. Non-current quality produces Status unavailable and only Back, never a false disconnected state or an actionable Forget. Names render at most 24 supported ASCII characters; unsupported display text uses an explicit fallback instead of missing glyphs.
+
+BluetoothMenu and SettingsNavigation produce typed request effects. Widgets format and render observations; they do not own radios, mutate bond/connection observations, access storage or decode UART. The vehicle MCU remains the proposed radio owner. Requests do not themselves prove success: Disconnect retains the displayed live connection until a confirming observation, and Forget retains the bond until completion.
+
+### Actions and states
+
+| Observed state | Actions |
+| --- | --- |
+| No paired device | Pair new device |
+| Paired, disconnected | Connect, Pair new device, Forget device |
+| Connected | Pair new device, Disconnect, Forget device if bonded |
+| Discoverable / pairing / connecting | Cancel pending pairing/connection |
+| Disconnecting / forgetting | Back while the accepted operation finishes |
+| Failed request | Retry relevant connection/pairing, plus valid current-device actions |
+| Unavailable / stale / unsupported / invalid | Back |
+
+Forget opens a confirmation page with Cancel selected by default. Back cancels confirmation; selecting Forget there emits the request. An accepted Forget operation is not undone by subsequently leaving the page. Disconnect preserves pairing; successful Forget clears both connection and saved bond in the observation.
+
+Back from Bluetooth returns to Settings and requests cancellation of a pending pair/connect, without disconnecting an established link. Motion at/above 20 km/h, stale speed, urgent warnings or lifecycle changes close Settings and issue the same pending-operation cancellation. The 20 km/h threshold remains user-selected UI behavior, not a verified safe riding speed.
+
+### Host demo
+
+The page is marked SIMULATED PHONE SERVICE. It starts with the generic Rider phone connected, matching the existing host phone/battery sample. Pairing, reconnect, disconnect and Forget are timed fixture transitions under the host's monotonic clock. There are no real radio calls, discovered-device scans, pairing secrets or network transmissions.
+
+- P sets the demo stationary; S opens Settings; Right focuses Bluetooth; Enter opens it.
+- Right/Down and Left/Up cycle actions; Enter selects; Backspace/Esc goes back.
+- Pair new device progresses through Ready to pair and Pairing before Connected.
+- F3 makes the next Bluetooth operation time out; use the displayed retry action afterward.
+- F4 toggles unavailable service status for review.
+- Space resets demo telemetry/radio state and clears pending demo work. Saved Appearance preferences are unaffected.
+
+Only one generic phone fixture is represented. Demo bond/connection state resets on restart; it is not part of the display preference file. A cancelled pair/connect never completes from an old timer. A failed disconnect/Forget preserves the last confirmed link/bond rather than reporting optimistic success.
+
+### Required before real integration
+
+Confirm the vehicle MCU, supported Bluetooth roles/profiles, discovery direction, authentication/prompt requirements, number of paired devices and phone application requirements. This UI does not establish Classic Bluetooth, audio, calls, projection or Google Maps capability. Pairing instructions are generic pending that review.
+
+Define device/session identity, command request IDs, acknowledgements/rejection, cancellation/idempotence, timeouts, source freshness and reconnect behavior before binding these effects to UART/radio operations. In particular, real Forget must be bound to the confirmed device identity; a display name is not an identifier. Pairing keys and bond persistence belong with the reviewed radio service, not the display theme/design file. No wire packet format or hardware facts are invented by this UI slice.
+
+### Verification
+
+Portable checks cover state/name validation, unavailable quality, no optimistic state mutation, cancellation and late completion, reconnect, confirmed Forget, failure/retry and preserving confirmed connection on failed disconnect. Deterministic 800 x 480 captures cover 14 Bluetooth states plus warning/stale-speed interruption in both modes/themes. Settled Bluetooth, Settings, Appearance and dashboard frames produce zero redundant flushes. Actual pairing and target timing/resource use require hardware tests.
+
+## Wi-Fi
+
+Radio behavior is simulated on the native LVGL host. Vehicle MCU Wi-Fi drivers, provisioning, credential storage and UART commands are pending.
+
+### Screens and controls
+
+Settings → Wi-Fi retains live gear, compact speed, clock and all tell-tales. Midnight and Daylight share the same geometry in Street and Track. The list contains at most three fixture networks plus Search again, with Saved / Protected / Open labels. This bounded host list is not a claim of production scan capacity; paging or a selected scan window needs a later protocol design.
+
+Select a network to request connection. The saved Rider hotspot fixture and open Guest network connect after a simulated delay. The protected, unsaved Garage Wi-Fi first shows “Credentials pending” and an explicit Simulate connection action. Back cancels that notice. No password is collected, sent, logged or persisted; this is a visual placeholder for provisioning, not authentication. The real credential-entry method and phone hotspot/peer role remain unresolved.
+
+Connected status shows the network name, Disconnect, Forget network and Search again. Disconnect preserves the demo's saved network. Forget requires confirmation with Cancel initially focused; completion removes the connected fixture's saved flag and disconnects. Failed requests preserve confirmed connection state. Scanning/connecting/disconnecting/forgetting, failed, empty, unavailable and stale states are distinct. Unknown status offers Back only, never a false disconnected claim.
+
+Arrow keys cycle actions sequentially; Enter selects; Backspace/Esc goes back. Pending scan/connect is cancelled on leaving. Accepted disconnect/forget can finish after leaving; cancellation does not undo them. Speed at/above 20 km/h, stale/unknown speed, urgent warning or leaving Running closes Settings under the existing policy. The threshold is user-selected UI behavior, not a validated safe riding speed.
+
+### Preview
+
+Run `bash scripts/preview.sh`, then **P → S → Right → Right → Enter**. F5 fails the next Wi-Fi request, F6 toggles unavailable status, Space resets fixtures. Network choices are session-only and never enter the Appearance preference file. Search repeats the fixed host fixture; it does not discover real networks.
+
+### Ownership and integration gates
+
+`WifiState` is a bounded, quality-bearing portable observation. It validates list size, enum bounds and terminated 32-byte SSID storage. Unsupported font bytes or names over 24 characters use a visible fallback; names are not stable network identifiers. `WifiMenu` and SettingsNavigation emit semantic request effects; WifiPanel only renders. The single LVGL owner remains unchanged. WifiDemo handles host-only timing and outcomes outside rendering.
+
+Before real connection support, define stable network identifiers (including same-name networks), scan generation/paging, capabilities/security, request correlation, acknowledgement/timeout/cancellation and session recovery. Bind confirmation and network selection to those identities rather than mutable list positions. Define and review provisioning and vehicle-owned credential protection/storage. No native structs are a wire format. Wi-Fi connection does not establish internet, Maps or projection support.
+
+### Verification
+
+Wi-Fi tests cover unknown status, model bounds, requested versus observed state, cancellation, connection completion, confirmation default, failure retaining an established link, forgetting and access interruption. Wi-Fi render coverage includes 14 states/interruption captures in each layout/theme; the current suite summary is in the [implementation plan](implementation-plan.md). Stable Wi-Fi fixtures produce zero flushes over 100 unchanged updates. Host success is not ESP32 resource or vehicle evidence.

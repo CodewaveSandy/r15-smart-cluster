@@ -26,4 +26,4 @@ Pinned package version, archive/source-font hashes, original codepoints, selecte
 
 Neutral stays a typographic N. QS/VVA keep their badges. The traction-control glyph uses a generic slipping-car silhouette; this does not verify Yamaha's signal or warning semantics.
 
-Run bash scripts/generate-icons.sh to produce only these 12 glyphs as LVGL C assets. Converter: the existing locked lv_font_conv 1.5.3. Output is 4 bpp antialiased/uncompressed at 32 px, except ABS at 30 px to fit the ring cleanly inside a 32 px widget. No runtime SVG parser, full icon-font embedding, installed fonts or network access is required to render.
+Run bash scripts/generate-icons.sh to produce only these 16 glyphs as LVGL C assets. Converter: the existing locked lv_font_conv 1.5.3. Output is 4 bpp antialiased/uncompressed at 32 px, except ABS at 30 px to fit the ring cleanly inside a 32 px widget. No runtime SVG parser, full icon-font embedding, installed fonts or network access is required to render.

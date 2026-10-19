@@ -1,46 +1,15 @@
-# R15 Smart Cluster
+# Project documentation
 
-Updated: 2026-10-19. Phase: native LVGL dashboard and host optimization pass complete; remaining screens and hardware firmware pending.
+The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 480 dual-ESP32 Yamaha R15 V4 cluster. Dashboard, Appearance preferences, Bluetooth UI and Wi-Fi UI are implemented; radio behavior and vehicle observations are simulated. Hardware firmware and full Maps/projection feasibility remain pending.
 
-Build a premium instrument cluster for the Yamaha R15 V4 using two ESP32 MCUs, a UART link and an 800 x 480 LVGL display. Preserve essential instrumentation, clear warning visibility, physical-control operation and a deliberate visual hierarchy.
-
-| Document | Purpose |
+| Guide | Responsibility |
 | --- | --- |
-| [Product scope](product-scope.md) | Requirements and exclusions |
-| [Architecture](architecture.md) | System overview and responsibility boundaries |
-| [Embedded design](embedded-architecture.md) | Modules, concurrency, state, UART and resource budgets |
-| [UI style guide](lvgl-style-guide.md) | Geometry, typography, themes and instrument behavior |
-| [Settings and transitions](settings.md) | Category grid, animated instruments and Appearance preferences |
-| [Wi-Fi UI](wifi.md) | Networks, connection flows, demo controls and provisioning boundaries |
-| [Bluetooth UI](bluetooth.md) | Connection actions, confirmation, demo states and radio integration boundaries |
-| [Power lifecycle](power-lifecycle.md) | Key-on, boot, running, key-off and shutdown journey |
-| [Implementation plan](implementation-plan.md) | Stages, acceptance gates and tests |
-| [Resource budgets](resource-budgets.md) | Repeatable asset audit and target memory/performance evidence |
-| [Optimization sequence](optimization-plan.md) | Incremental improvements, measured host baseline and hardware gates |
-| [Decisions](decisions.md) | Selected direction and proposals |
-| [Milestones](milestones.md) | Delivery sequence |
-| [Status](status.md) | Evidence, blockers and next actions |
-| [Getting started](getting-started.md) | Build, preview, keyboard controls and UI tuning |
-| [Engineering gates](engineering-review.md) | Hardware and release evidence |
-| [OEM inventory](reference/oem-inventory.md) | Functional requirements and verification status |
+| [Preview and development](getting-started.md) | Mac setup, controls, builds, captures and asset regeneration |
+| [Architecture](architecture.md) | MCU ownership, source structure, state/concurrency, proposed UART and hardware boundaries |
+| [UI style](lvgl-style-guide.md) | Approved layouts, typography, themes, instruments and warnings |
+| [Settings and connectivity](settings.md) | Appearance/persistence, navigation, Bluetooth and Wi-Fi behavior/integration gates |
+| [Power lifecycle](power-lifecycle.md) | Three-second boot, two-second shutdown, interruptions and retained-power contract |
+| [Implementation status and plan](implementation-plan.md) | Current feature/evidence matrix, next stages, OEM inventory and release gates |
+| [Resource budgets](resource-budgets.md) | Current host metrics, repeatable audits and required target measurements |
 
-Record unknowns explicitly. Separate design, implementation, bench verification and bike verification. Git operations remain under user control.
-
-## Repository layout
-
-```text
-assets/fonts/             Bundled text-font sources, licenses and LVGL subsets
-assets/icons/             Selected automotive/status icon sources and LVGL subsets
-assets/animations/        R15 source, prompts and compact A8 wordmark
-shared/model/             Portable normalized observations and validation
-embedded/application/     Ignition lifecycle, display options and semantic actions
-embedded/presentation/    Portable formatting, quality decisions and display policy
-embedded/ui/              Dashboard, themes and instrument presentation
-simulator/lvgl/           Native SDL2 preview, LVGL config and host adapter
-tests/embedded/           Portable behavior and render verification
-tools/fonts/              Pinned font converter manifest/lockfile
-scripts/                  Preview and font generation commands
-docs/                     Product, architecture, UI, hardware and workflow
-```
-
-The root CMake project builds the LVGL host preview. Firmware folders will be introduced with board-specific implementations; they are not empty placeholders. Start with the [Mac preview guide](getting-started.md).
+Start with the preview guide to run the project, or the implementation plan to understand what works and what remains. [RULES.md](../RULES.md) is the engineering authority; [AGENTS.md](../AGENTS.md) defines the agent workflow. Keep each guide authoritative for its topic; update it with the implementation rather than appending separate change-history/status documents. Asset-local READMEs, licenses and manifests remain with their source files. Reference images under `reference/` are visual references, not evidence of available vehicle signals or hardware capability.

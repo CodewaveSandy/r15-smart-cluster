@@ -60,8 +60,8 @@ int main() {
     check(info==InfoPage::Coolant,"Info cycles and wraps");
     s={}; s.odometerKm={100,Quality::Available}; s.trip1Km={10,Quality::Available}; s.trip2Km={20,Quality::Available};
     check(tripReading(s,TripPage::Odometer).value==100,"ODO reading");
-    check(tripReading(s,TripPage::Trip1).value==10,"Trip A reading");
-    check(tripReading(s,TripPage::Trip2).value==20,"Trip B reading");
+    check(tripReading(s,TripPage::Trip1).value==10,"Trip 1 reading");
+    check(tripReading(s,TripPage::Trip2).value==20,"Trip 2 reading");
     s.trip1Km={-1,Quality::Available}; check(!valid(s),"Negative trip rejected");
     s.trip1Km={std::numeric_limits<double>::infinity(),Quality::Available}; check(!valid(s),"Infinite trip rejected");
     check(std::strcmp(lapText({0,Quality::Available}).value,"00:00.00")==0,"Zero lap is a valid duration");

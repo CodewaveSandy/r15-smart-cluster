@@ -1,6 +1,23 @@
-# Implementation stages and verification gates
+# Implementation status and plan
 
-Updated: 2026-10-19. Status: host dashboard and host optimization pass complete; remaining screens and hardware gates pending.
+Updated: 2026-10-19. Status: native dashboard, Appearance preferences, Bluetooth and Wi-Fi UI/demos implemented; Navigation, hardware firmware and integrations pending.
+
+## Current implementation
+
+| Feature | Current state |
+| --- | --- |
+| Dashboard | Street centered speed; Track centered current/best lap with secondary speed; equal section heights; Midnight/Daylight |
+| Instruments/assets | Chakra Petch Bold Italic numerals, Inter labels/RPM, Barlow clock; 16 MDI symbols; fractional eight-piece fuel gauge and 16% reserve cue |
+| Ride pages | ODO/Trip 1/Trip 2; coolant, Track, real-time consumption, average consumption, average speed, TCS, unidentified placeholder |
+| Settings | Four-category home, reversible 280 ms compact-speed transition, sequential non-touch focus and access below valid 20 km/h |
+| Appearance | Theme preview/Apply/Cancel and versioned host restart persistence; one Instrument design |
+| Bluetooth | Simulated pairing/connect/cancel/disconnect/confirmed Forget and failed/unknown states |
+| Wi-Fi | Simulated bounded network list/search/connect/disconnect/confirmed Forget; explicit pending-credentials notice |
+| Lifecycle | R15 Light Signature; boot 3,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
+| Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation and zero settled redraws |
+| Pending | Navigation/Maps feasibility, clock editor/source, real trip/lap calculations, firmware NVS, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
+
+Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Only confirmed theme/design persist. UI warning thresholds and the Settings speed gate are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.
 
 ## Sequence
 
@@ -18,15 +35,15 @@ Updated: 2026-10-19. Status: host dashboard and host optimization pass complete;
 
 E2/E3 host work can proceed before delivery. E4 compile preparation can overlap, but board bring-up is a prerequisite to claiming display readiness. E5 can begin with synthetic UART data without Yamaha decoding. Full Maps/projection is a separate scope/feasibility gate; it is not hidden inside E6 BLE work.
 
-## Current implementation and next gates
+## Next implementation gates
 
-The host baseline, dashboard, portable presentation/input, component extraction and applicable host optimizations are implemented. See [current status](status.md), [optimization record](optimization-plan.md) and [resource accounting](resource-budgets.md).
+The host baseline, dashboard, portable presentation/input, settings and applicable host optimizations are implemented. See [resource accounting](resource-budgets.md) for current measurements and [settings](settings.md) for service boundaries.
 
 1. Confirm delivered board revision, schematic/factory example, UART/programming conflicts and vehicle MCU.
 2. Reproduce the matching vendor example and establish a minimal panel target with compatible pinned dependencies.
 3. Measure actual flash/partition fit, internal SRAM/PSRAM, driver buffers, timing and scanout behavior before claiming display readiness.
-4. Complete remaining screens/navigation and any further artwork tuning without changing the approved dashboard baseline unintentionally.
-5. Review the versioned UART contract and persistence ownership, then implement and fault-test their real adapters.
+4. Plan Navigation and clock controls after their service/time-source contracts are reviewed; preserve the approved dashboard and lifecycle visuals.
+5. Review the versioned UART contract and vehicle/radio persistence ownership, then implement and fault-test real adapters. Host theme/design persistence is already implemented; ESP32 NVS is pending.
 
 No empty firmware scaffolding, unused queues or speculative board pins substitute for these gates.
 
@@ -39,7 +56,7 @@ No empty firmware scaffolding, unused queues or speculative board pins substitut
 - Load/soak: worst-case RPM/fuel/turn/shift updates with menus and settings writes; vehicle radio load; log frame times, latency, heap largest block, stack margins, queue high-water marks and loss counters.
 - Vehicle validation: passive only initially; track every signal's evidence and compare actual readouts. Bench and host success never count as bike verification.
 
-Performance objectives are provisional in embedded-architecture.md. Establish representative runs and measured budgets before optimizing or promising frame rate/startup time. Do not gate correctness on internet services or a phone connection.
+Performance objectives are provisional in [architecture](architecture.md). Establish representative runs and measured budgets before optimizing or promising frame rate/startup time. Do not gate correctness on internet services or a phone connection.
 
 ## Open decisions and missing evidence
 
@@ -56,8 +73,49 @@ Performance objectives are provisional in embedded-architecture.md. Establish re
 | Warning unknown/failure behavior and independent indicators | Replacement evaluation |
 | Image size/partition fit and update strategy | OTA or dual-image claims |
 
-## Current evidence
+## Current verification
 
-Portable state/lifecycle/presentation tests and the LVGL 9.2.2 desktop dashboard now build and pass. Both layouts/themes, fuel/shift states and R15 Light Signature (3 s boot / 2 s shutdown) are implemented. The render test produces 294 deterministic scenarios without LVGL warnings; host keyboard mappings are tested. See getting-started.md. No flashed firmware, serial implementation, circuit validation or bike verification is claimed. E1 hardware evidence remains pending; E2 is implemented for the host slice and E3 is partial (menus/ride features pending).
+Nine host suites pass: model/lifecycle, Light Signature, presentation/input, desktop input, Bluetooth, Wi-Fi, preferences, typography and LVGL rendering. The render suite captures 294 scenarios, including both layouts/themes, signal boundaries, warnings/unavailable states, settings transitions, radio progress/failures and interruption. It rejects LVGL warnings and redundant flushes for settled screens. Repeated construction/destruction, cached-versus-fresh rendering and exact dashboard restoration are checked.
 
-Include [power lifecycle](power-lifecycle.md) tests in E2–E4: injected-clock duration checks, missing startup data, urgent warning interruption, key-off/key-on cancellation, animation failures, actual panel startup measurement and retained-power shutdown tests.
+No firmware has been flashed, and no UART, panel, retained-power or bike verification is claimed. Run the [preview and verification commands](getting-started.md) after changes; record actual hardware evidence separately.
+
+## Hardware and release gates
+
+- Confirm actual board revision, panel pin mapping, timing, PSRAM and UART/console conflicts using matching vendor resources.
+- Record harness measurements with connector orientation, pin numbering, conditions, voltage, polarity, loading and uncertainty. Do not infer protocol from wire labels alone.
+- CAN bus lines connect through suitable bus protection/transceiver circuitry. Isolation requires a designed signal/power barrier; generic optocouplers in CAN H/L are not an approved interface. Verify bus type, termination and passive controller operation.
+- Validate each discrete/analog/pulse input separately. No direct vehicle voltage to MCU GPIO; board power input rating does not establish GPIO tolerance.
+- Verify regulated supply under startup, cranking, key-off hold-up, rapid cycling and hard power loss. Shutdown artwork requires retained supply; review [power lifecycle](power-lifecycle.md).
+- Confirm independent warning strategy and failure behavior if either MCU or UART stops. Two MCUs alone do not provide safety certification or fault independence.
+- Measure internal SRAM, PSRAM, flash/image fit, task stacks, queues, render times and radio/acquisition contention under representative load.
+- Review real odometer provenance, persistence atomicity/wear and reset permissions before storing vehicle-owned data.
+- Test boot/shutdown animation timing and urgent-warning interruption on host and panel. Record total key-on latency separately.
+- Keep OEM functionality during initial passive testing. Do not transmit to a real vehicle without an explicitly reviewed active-test phase.
+
+Software, bench, hardware and bike verification are separate evidence levels. No regulatory compliance or production readiness is currently claimed.
+
+## OEM requirements and evidence
+
+The supplied OEM photograph is a functional reference, not proof of available signals or simultaneous operating states.
+
+![OEM cluster reference](reference/oem-cluster.png)
+
+| Function | UI requirement | Vehicle evidence |
+| --- | --- | --- |
+| Speed/RPM | Readable speed, continuous 0–13 RPM scale | Exact sources/calibration pending |
+| Gear/neutral | Gear-first header and neutral tell-tale | User reports harness progress; mappings pending |
+| Fuel | Eight slanted segments, percentage and pump icon | Calibration pending |
+| Turn/high beam | Separate turn arrows and beam pictogram | Detailed measurements pending |
+| ABS/engine/TCS/coolant warning | Distinct visible tell-tales with unknown-state handling | Actual semantics pending |
+| QS/VVA | Badges when supported/active | Real support/rules pending |
+| Phone/battery/call/message | Separate phone status; never confuse phone and bike battery | Connectivity services pending |
+| Odometer | Actual verified value or unavailable | Provenance/retention pending |
+| ODO / Trip 1 / Trip 2 | Vehicle-side calculation with explicit units and reset semantics | Calibration/retention pending |
+| Laps | Current/latest/fastest, monotonic timing | Application implementation pending |
+| Bike battery/coolant | Values and independent signal quality | Electrical sources pending |
+| Economy/average speed | Explicit unavailable until supported | Inputs and OEM semantics pending |
+| Clock/date | Validated editor and explicit time-source quality | Retained clock source pending |
+
+Street/Track are display layouts, not ECU commands. Midnight/Daylight are presentation themes. Keep lower information pages and physical settings navigation. User-selected visual warning thresholds are in the [style guide](lvgl-style-guide.md); they are not verified Yamaha limits. Factory menu ordering, economy units, indicator artwork and independent physical tell-tales require verification.
+
+User observation (2026-10-19): OEM boot approximately 3 s. Info list: coolant, Track toggle, real-time fuel L/100km, average fuel L/100km, average speed km/h, TCS toggle, unidentified final entry. The final entry and consumption/average measurement windows need identification. Host presentation follows this order; no OEM protocol/calculation equivalence is claimed.

@@ -14,7 +14,7 @@ python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/pr
 
 `resource-audit.json` reports each generated asset's exact bitmap payload and allocated host object sections (code/constants/data/BSS as recognized by the platform size tool), excluding debug sections. Host metadata and alignment differ from ESP32. Host executable allocated sections include the simulated framebuffer in BSS and must never be labeled firmware flash usage. The report requires compiled asset objects; raw C file length is not used as a flash estimate. Source TTFs are converter inputs and are not included in the CMake runtime asset list.
 
-Current font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **102,852 payload bytes** and **113,130 compiled host asset section bytes** in total. The removed neon textures previously used 344,064 payload bytes. The source PNG is not linked into firmware.
+Current font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **102,852 payload bytes** and **113,130 compiled host asset section bytes** in total. The source PNG is not linked into firmware.
 
 The object tree now contains 165 objects, including Settings home, Appearance, Bluetooth and Wi-Fi status/action rows and the instrument visibility group. The Dashboard wrapper is 1,608 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
 
@@ -44,7 +44,7 @@ Record build revisions/toolchain, configuration, measurement method and load wit
 
 ## Scope boundary
 
-The shared feature profile is host-verified against LVGL 9.2.2. It is not a complete ESP-IDF configuration or a board driver. UART and settings/persistence are future feature implementations with explicit contracts; empty abstractions or unused bounded queues would provide no current optimization. See [optimization closure and remaining gates](optimization-plan.md).
+The shared feature profile is host-verified against LVGL 9.2.2. It is not a complete ESP-IDF configuration or a board driver. Host settings/persistence and simulated radio menus are implemented. UART, real radio services and firmware NVS require reviewed contracts and platform adapters; see [implementation gates](implementation-plan.md). Avoid unused abstractions or queues.
 
 ## Light Signature rendering cost
 

@@ -9,7 +9,7 @@ Key ON -> boot animation (3.00 s) -> live instrumentation
 Key OFF -> shutdown animation (2.00 s) -> controlled power-off
 ```
 
-Boot lasts exactly 3,000 ms and shutdown lasts exactly 2,000 ms under the monotonic lifecycle controller. The user selected [R15 Light Signature, concept 02](reference/r15-light-signature-concept.png), superseding the neon emblem/zoom artwork. The phase allocation below implements that direction. The running dashboard remains the existing Street/Track UI. Actual panel startup and retained shutdown power still require hardware measurements.
+Boot lasts exactly 3,000 ms and shutdown lasts exactly 2,000 ms under the monotonic lifecycle controller. The user selected [R15 Light Signature, concept 02](reference/r15-light-signature-concept.png). The phase allocation below implements that direction. The running dashboard remains the existing Street/Track UI. Actual panel startup and retained shutdown power still require hardware measurements.
 
 ## Implemented host sequence
 
@@ -35,6 +35,8 @@ During dashboard reveal and initial shutdown fade, current instrumentation conti
 
 ## State model and ownership
 
+The portable controller implements Off, Boot, Running, Shutdown and ReadyForPowerOff. Starting below describes future board initialization, not an implemented controller phase. BootAnimation/ShutdownAnimation are product names for Boot/Shutdown. No persistence/readiness handshake is implemented by the host timer.
+
 | State | Behavior | Exit |
 | --- | --- | --- |
 | Off | No display execution assumed | Stable power and key-on |
@@ -50,7 +52,7 @@ The vehicle MCU owns validated ignition observation and supplies a defined lifec
 
 Animation duration is measured from its first visible frame to its completion. It is distinct from total key-on latency: reset, bootloader and panel initialization add time that must be measured. No total boot-time guarantee is claimed. Boot animation must not wait for CAN, phone, Wi-Fi or BLE readiness. Data acquisition starts as early as practical; latest valid state is ready when instrumentation appears.
 
-Proposed exception: a valid urgent warning interrupts or overlays the boot/shutdown artwork immediately. Never hide critical truth to finish decoration. This exception and which indications qualify must be reviewed before bike use. If animation resources fail, proceed to instrumentation or an explicit fault indication rather than holding a blank screen.
+Implemented host behavior: a valid urgent warning interrupts the boot/shutdown artwork immediately. Never hide critical truth to finish decoration. This exception and which indications qualify must be reviewed before bike use. If animation resources fail, proceed to instrumentation or an explicit fault indication rather than holding a blank screen.
 
 Running means actual received observations where supported. Do not show demo zero speed, neutral, fuel or odometer while waiting. Vehicle odometer is not derived from a demo baseline; unavailable ODO stays unavailable. Date/time needs an explicit source/quality after cold power loss.
 
@@ -64,4 +66,4 @@ Key-on during shutdown cancels power-off and returns to Running if state is vali
 
 ## Verification
 
-Host tests use an injected monotonic clock: duration lower/upper bounds, initial missing data, animation failure, warning interruption, key-on during shutdown, repeated key events and no key-off from link loss. Bench tests measure first visible frame, total startup, shutdown retention, persistence completion, brownout/hard cut, independent MCU resets and rapid off/on cycles. Final animation readiness requires actual-panel inspection and power-path verification.
+Host tests use injected monotonic timing for lifecycle boundaries, repeated key events, key-on during shutdown and urgent-warning presentation; deterministic captures include missing observations and black endpoints. Firmware fault tests must additionally verify animation/driver failure fallback and that UART loss never becomes key-off. Bench tests must measure first visible frame, total startup, retained shutdown supply, persistence completion, brownout/hard cut, independent MCU resets and rapid off/on cycles. Final animation readiness requires actual-panel inspection and power-path verification.

@@ -1,6 +1,6 @@
 # LVGL visual and implementation style guide
 
-Date: 2026-10-18. Status: UI specification; dashboard foundation implemented, remaining screens/artwork pending.
+Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and simulated radio screens implemented. Navigation/clock and hardware integration remain pending.
 
 ## Visual authority
 
@@ -52,9 +52,9 @@ Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens
 
 ## Components and data flow
 
-Create focused Header, Tachometer, SpeedReadout, GearReadout, TellTaleRow, FuelGauge and InfoPanel as their responsibilities are implemented. Each exposes a small typed update API, owns its LVGL subtree and caches displayed values. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
+Dashboard composes Header, TellTaleRow, Tachometer, PrimaryReadout, RideInfoPanel, FuelGauge, SettingsHome, AppearancePanel, BluetoothPanel, WifiPanel and LifecycleOverlay. Each exposes a small typed update API and owns its LVGL subtree; components apply changed values/styles only. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
 
-Screens: Dashboard (Street/Track layouts), Settings, Clock, VehicleInfo, developer Help. Hardware labels must describe actual available controls and time sources; host developer hints remain host-only.  Touch is optional and cannot become required navigation.
+Implemented screens are Dashboard (Street/Track), Settings home, Appearance, Bluetooth and Wi-Fi. Navigation and clock editing remain pending. Developer help stays in Terminal. Hardware labels must describe actual available controls and time sources; touch is optional and cannot become required navigation.
 
 Navigation actions: up/down/left/right/select/back/next/previous. Host keyboard and vehicle input adapters produce the same actions; no keycodes, GPIOs or CAN identifiers in widgets. Display settings/focus remain local. Remote trip/lap actions require the defined command contract and visible failures.
 
@@ -68,7 +68,7 @@ Valid warnings update on the next UI service cycle with no animation delay. RPM 
 
 Use persistent LVGL objects and changed-field updates. Prefer built-in primitives and small static icon paths/masks; profile custom drawing before adopting caches. Cache the invariant RPM ramp if useful. Avoid full-screen image assets, repeated object rebuilding, expensive shadows and large translucent overlays. Keep the exact visual baseline before optimizing; inspect every optimization for regressions.
 
-Required comparisons: both layouts x both themes; neutral and gears; 0/max/unknown speed/RPM; 10,499/10,500/11,399/11,400 shift boundaries; fuel 0/9/10/19/20/21/100 plus both blink phases; simultaneous warnings; phone disconnected and battery unknown; each data quality; settings focus and full date save/cancel; link loss/recovery/reboot. Capture fixed clock and animation phase on host. Inspect native panel for tearing, color ordering, viewing angle and blink/readability at intended installation position.
+Required comparisons: both layouts x both themes; neutral and gears; 0/max/unknown speed/RPM; 10,499/10,500/11,399/11,400 shift boundaries; fuel 0/9/10/19/20/21/100 plus both blink phases; simultaneous warnings; phone disconnected and battery unknown; each data quality; settings focus and Appearance save/cancel; future clock editing needs date validation; link loss/recovery/reboot. Capture fixed clock and animation phase on host. Inspect native panel for tearing, color ordering, viewing angle and blink/readability at intended installation position.
 
 ## Boot and shutdown artwork
 
@@ -98,8 +98,8 @@ Use the selected Pictogrammers MDI automotive/status glyphs through typed Icon r
 
 Bundle source version, hashes, Apache 2.0 license and notices. Only selected glyphs are linked; do not add a runtime SVG renderer or full icon font. The artwork is generic and requires separate OEM/vehicle validation before claiming exact conformity. F2 inspection covers both layouts/themes.
 
-## Settings home and instrument transition
+## Settings presentation
 
-The implemented first Settings slice follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Four category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host saved preferences. Bluetooth and Wi-Fi UI/demos follow the same focus/back navigation; Navigation, real radio provisioning and firmware NVS remain pending.
+The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Four category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host saved preferences. Bluetooth and Wi-Fi UI/demos follow the same focus/back navigation; Navigation, real radio provisioning and firmware NVS remain pending.
 
-Bluetooth uses the shared compact instrument strip, a device/status card and up to three context-sensitive action rows. Unknown service quality offers Back, without displaying stale connection truth. Forget confirmation defaults to Cancel and colors the confirmed Forget action red. Host examples carry a visible simulation label. See [Bluetooth](bluetooth.md).
+Radio pages share the compact instrument strip, a status card and bounded context-sensitive action rows. Unknown service quality offers Back, and Forget confirmation defaults to Cancel. See [settings and connectivity](settings.md) for both radio flows and provisioning boundaries.

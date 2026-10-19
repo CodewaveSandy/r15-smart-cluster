@@ -3,7 +3,7 @@
 #include "../Tokens.h"
 #include <array>
 namespace cluster::ui {
-// First settings slice: four-category focus navigation; submenus follow separately.
+// Category navigation; Appearance and radio panels share the instrument strip.
 class SettingsHome {
 public:
     explicit SettingsHome(lv_obj_t* parent);

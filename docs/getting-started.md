@@ -1,6 +1,6 @@
 # Preview and tune the UI on macOS
 
-Updated: 2026-10-18. This is a native LVGL application with simulated observations, not a browser page or hardware firmware.
+Updated: 2026-10-19. This is a native LVGL application with simulated observations, not a browser page or hardware firmware.
 
 ## 1. Open Terminal
 
@@ -10,7 +10,7 @@ cd /Users/codewavesandy/Desktop/learning/projects/r15-smart-cluster
 
 ## 2. Check the prerequisites
 
-The current Mac already has the compiler, CMake, Ninja and SDL2. On another Mac, install Apple's Command Line Tools and the required Homebrew packages:
+Install Apple's Command Line Tools and the required Homebrew packages:
 
 ```sh
 xcode-select --install
@@ -49,8 +49,11 @@ The script configures a Debug build under build/lvgl, compiles and opens an 800 
 | O | Simulated key-off / key-on |
 | Space | Reset demo values |
 | F1 | Print controls in Terminal |
+| P / S | Stationary neutral fixture / open Settings |
+| F3 / F4 | Fail next Bluetooth request / toggle service availability |
+| F5 / F6 | Fail next Wi-Fi request / toggle service availability |
 | F2 | Illuminate all icons steadily; press again to restore normal status |
-| Esc | Quit |
+| Backspace / Esc | Back in Settings; Esc quits outside Settings |
 
 Fuel: 10–20% yellow, below 10% red, blinking below 20%. RPM: steady shift alert from 10,500; flashing from 11,400. These are UI demonstration thresholds, not verified vehicle limits. Clock/date uses the Mac's local wall clock; deterministic renders use fixed time.
 
@@ -70,11 +73,11 @@ There is no automatic hot reload yet. Ordinary source changes rebuild incrementa
 | embedded/ui/Typography.h | Central font roles for labels, values and instruments |
 | embedded/ui/Dashboard.cpp | Component composition and shift-background theme application |
 | embedded/ui/Geometry.h | Named component positions and bounds, based on shared Metrics |
-| embedded/ui/components/ | Header, tell-tales, tachometer, readouts, info, fuel and lifecycle artwork |
+| embedded/ui/components/ | Dashboard instruments, Settings/Appearance/radio panels and lifecycle artwork |
 | embedded/presentation/ | Bounded instrument/ride-info formatting, quality decisions and fuel/shift policy |
 | embedded/application/DisplayOptions.h and DashboardInput.h | Portable display-local preferences, pages and semantic actions |
 | simulator/lvgl/DesktopInput.h | Host key translation into semantic actions |
-| embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 2000 |
+| embedded/application/Lifecycle.h | Monotonic lifecycle; bootMs=3000 and shutdownMs=2000 |
 | simulator/lvgl/main.cpp | Demo starting values, host keyboard mapping, clock and render scenarios |
 | shared/model/ClusterState.h | Unit-qualified normalized observations and quality |
 | scripts/generate-fonts.sh | Reproducible font sizes/glyph subsets |
@@ -112,23 +115,19 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
-This host slice implements the dashboard foundation and R15 Light Signature (3 s boot / 2 s shutdown). Icons use bundled automotive glyphs; Navigation/clock editing, functional laps/trips, firmware NVS persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. Appearance and host saved preferences are implemented; Bluetooth is a simulated UI flow. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+This host slice implements the dashboard foundation and R15 Light Signature (3 s boot / 2 s shutdown). Icons use bundled automotive glyphs; Navigation/clock editing, functional laps/trips, firmware NVS persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. Appearance and host saved preferences are implemented; Bluetooth and Wi-Fi are simulated UI flows. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
 
-The dashboard has no bottom help/status bar. F1 prints keyboard help in Terminal. Missing data appears as dashes and a DATA UNAVAILABLE header subtitle; F2 shows ICON TEST there. Trip/info selections are independent. TCS toggling changes a host sample only and sends no vehicle command. Track toggling changes the display layout.
-
-Track mode prioritizes the large centered CURRENT LAP readout; speed moves to the smaller right-hand position. The preview supplies a fixed 01:24.38 lap sample for design review. Missing lap data shows dashes; lap start/stop/record functionality remains pending. Street mode retains centered speed.
-
-Track shows BEST LAP in the lower-left panel instead of ODO/trips, with no distance unit. The host sample is 01:18.42; real record calculation/persistence is pending. Enter leaves that panel fixed and preserves the Street trip selection. Both layouts use the same vertical section heights.
+Instrument layouts, information-page order and visual thresholds are defined in the [UI style guide](lvgl-style-guide.md). Implementation boundaries and pending work are tracked in the [implementation plan](implementation-plan.md).
 
 ## Icon assets
 
-Automotive/status symbols come from the pinned Pictogrammers MDI 7.4.47 source font. Only 12 glyphs are compiled into LVGL assets; original source/licenses and hashes are bundled under assets/icons/material-design. Typed roles and widget creation live in embedded/ui/Icons.h and Icons.cpp. Regenerate after changing the selection with bash scripts/generate-icons.sh. Press F2 to inspect all symbols in both themes/layouts. See [icon provenance](../assets/icons/material-design/README.md).
+Automotive/status symbols come from the pinned Pictogrammers MDI 7.4.47 source font. Only 16 glyphs are compiled into LVGL assets; original source/licenses and hashes are bundled under assets/icons/material-design. Typed roles and widget creation live in embedded/ui/Icons.h and Icons.cpp. Regenerate after changing the selection with bash scripts/generate-icons.sh. Press F2 to inspect all symbols in both themes/layouts. See [icon provenance](../assets/icons/material-design/README.md).
 
 ## Resource audit and feature profile
 
-Run `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json` after building to inspect bitmap payload and host asset sections. See [resource budgets](resource-budgets.md) for limitations and required target measurements. The host includes embedded/ui/LvglFeatures.h, which enables only current dashboard widgets and reuses bundled Inter as the default font. Enable additional LVGL features explicitly when actual screens require them, then rebuild and verify. Numeric text now formats on changed input, and covered boot/shutdown instrumentation resumes from the latest snapshot. All existing keyboard controls remain unchanged.
+Run `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json` after building to inspect bitmap payload and host asset sections. See [resource budgets](resource-budgets.md) for limitations and required target measurements. The host includes embedded/ui/LvglFeatures.h, which enables only current dashboard widgets and reuses bundled Inter as the default font. Enable additional LVGL features explicitly when actual screens require them, then rebuild and verify. Numeric text now formats on changed input, and covered boot/shutdown instrumentation resumes from the latest snapshot. Settings reuses arrows for sequential focus instead of telemetry adjustment.
 
 ## R15 Light Signature preview
 
@@ -152,8 +151,8 @@ In Appearance, use arrows to focus Midnight/Daylight and **Enter** to preview it
 
 ## Bluetooth UI demo
 
-Use **P → S → Right → Enter** from Settings home to open Bluetooth. The initial Rider phone is a simulated connected fixture. Arrows cycle actions and Enter selects. Disconnect preserves pairing; Forget requires confirmation. Pair new device shows timed progress and can be cancelled. **F3** fails the next operation; **F4** toggles unavailable service; **Space** resets the radio/telemetry demo. Back returns without dropping an established connection. No real phone is paired and radio bonds are not saved by the Appearance preference file. See [Bluetooth](bluetooth.md) for states and hardware boundaries.
+Use **P → S → Right → Enter** from Settings home to open Bluetooth. The initial Rider phone is a simulated connected fixture. Arrows cycle actions and Enter selects. Disconnect preserves pairing; Forget requires confirmation. Pair new device shows timed progress and can be cancelled. **F3** fails the next operation; **F4** toggles unavailable service; **Space** resets the radio/telemetry demo. Back returns without dropping an established connection. No real phone is paired and radio bonds are not saved by the Appearance preference file. See [Bluetooth](settings.md#bluetooth) for states and hardware boundaries.
 
 ## Wi-Fi UI demo
 
-Use **P → S → Right → Right → Enter**. Arrows select networks/actions; Enter confirms. F5 fails the next Wi-Fi request; F6 toggles service availability. Protected unsaved networks show an explicit simulation notice; no passwords are collected. See [Wi-Fi](wifi.md).
+Use **P → S → Right → Right → Enter**. Arrows select networks/actions; Enter confirms. F5 fails the next Wi-Fi request; F6 toggles service availability. Protected unsaved networks show an explicit simulation notice; no passwords are collected. See [Wi-Fi](settings.md#wi-fi).
