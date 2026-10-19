@@ -15,7 +15,7 @@ while read -r name size source subset; do
     args+=(--range 32-126,176,183,215,8212)
   else
     case "$subset" in
-      secondary) symbols='0123456789RDISPLAY OF' ;;
+      secondary) symbols='0123456789' ;;
       gear) symbols='123456N' ;;
       speed) symbols='0123456789' ;;
       lap) symbols='0123456789:.' ;;

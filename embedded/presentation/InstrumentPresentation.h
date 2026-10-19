@@ -1,15 +1,9 @@
 #pragma once
 #include "shared/model/ClusterState.h"
 #include "PresentationPolicy.h"
-#include "embedded/application/Lifecycle.h"
 #include <algorithm>
 #include <cstdio>
 namespace cluster::presentation {
-inline bool instrumentationVisible(const Lifecycle& life,bool urgentWarning) {
-    const auto phase=life.phase();
-    const bool animation=phase==Phase::Boot||phase==Phase::Shutdown;
-    return phase==Phase::Running || (animation&&urgentWarning);
-}
 struct LapText { char value[16]{}; };
 inline LapText lapText(const Signal<std::uint32_t>& lap) {
     LapText result;

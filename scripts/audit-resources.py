@@ -44,9 +44,9 @@ def main():
     if not size_tool:
         parser.error("A host size tool is required (Xcode Command Line Tools or binutils).")
     rows = []
-    for category in ("fonts", "icons"):
+    for category in ("fonts", "icons", "animations"):
         for source in sorted((root / "assets" / category / "lvgl").glob("*.c")):
-            match = re.search(r"glyph_bitmap\[\]\s*=\s*\{(.*?)\};", source.read_text(), re.S)
+            match = re.search(r"(?:glyph_bitmap|image_data)\[\]\s*=\s*\{(.*?)\};", source.read_text(), re.S)
             if not match:
                 raise RuntimeError(f"Cannot find glyph bitmap in {source}")
             bitmap = re.sub(r"/\*.*?\*/|//[^\n]*", "", match.group(1), flags=re.S)
@@ -59,6 +59,8 @@ def main():
     report = {"scope": "Host object sections exclude debug sections; host ABI/linker results are not ESP32 flash usage.",
               "platform": platform.system(), "assets": rows,
               "total_bitmap_bytes": sum(row["bitmap_bytes"] for row in rows),
+              "font_icon_bitmap_bytes": sum(row["bitmap_bytes"] for row in rows if "/animations/" not in row["asset"]),
+              "animation_bitmap_bytes": sum(row["bitmap_bytes"] for row in rows if "/animations/" in row["asset"]),
               "total_host_asset_section_bytes": sum(row["host_allocated_section_bytes"] for row in rows)}
     executable = build / ("r15-preview.app/Contents/MacOS/r15-preview" if platform.system() == "Darwin" else "r15-preview")
     if executable.exists():

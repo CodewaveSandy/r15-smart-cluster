@@ -24,6 +24,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/components/FuelGauge.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/LifecycleOverlay.cpp"
  "${CLUSTER_ROOT}/embedded/ui/Icons.cpp"
+ "${CLUSTER_ROOT}/assets/animations/lvgl/r15_signature.c"
  "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_32.c"
  "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_30.c"
  "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_caption_12.c"
@@ -51,6 +52,10 @@ if(BUILD_TESTING)
  add_executable(model-check "${CLUSTER_ROOT}/tests/embedded/model-check.cpp")
  target_include_directories(model-check PRIVATE "${CLUSTER_ROOT}")
  add_test(NAME model-lifecycle COMMAND model-check)
+ add_executable(light-signature-check "${CLUSTER_ROOT}/tests/embedded/light-signature-check.cpp")
+ target_include_directories(light-signature-check PRIVATE "${CLUSTER_ROOT}")
+ target_compile_options(light-signature-check PRIVATE -Wall -Wextra -Wpedantic)
+ add_test(NAME light-signature COMMAND light-signature-check)
  add_executable(presentation-input-check "${CLUSTER_ROOT}/tests/embedded/presentation-input-check.cpp")
  target_include_directories(presentation-input-check PRIVATE "${CLUSTER_ROOT}")
  target_compile_options(presentation-input-check PRIVATE -Wall -Wextra -Wpedantic)

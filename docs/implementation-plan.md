@@ -25,7 +25,7 @@ The host baseline, dashboard, portable presentation/input, component extraction 
 1. Confirm delivered board revision, schematic/factory example, UART/programming conflicts and vehicle MCU.
 2. Reproduce the matching vendor example and establish a minimal panel target with compatible pinned dependencies.
 3. Measure actual flash/partition fit, internal SRAM/PSRAM, driver buffers, timing and scanout behavior before claiming display readiness.
-4. Complete remaining screens/navigation and final artwork without changing the approved dashboard baseline unintentionally.
+4. Complete remaining screens/navigation and any further artwork tuning without changing the approved dashboard baseline unintentionally.
 5. Review the versioned UART contract and persistence ownership, then implement and fault-test their real adapters.
 
 No empty firmware scaffolding, unused queues or speculative board pins substitute for these gates.
@@ -58,6 +58,6 @@ Performance objectives are provisional in embedded-architecture.md. Establish re
 
 ## Current evidence
 
-Portable state/lifecycle/presentation tests and the LVGL 9.2.2 desktop dashboard now build and pass. Both layouts/themes, fuel/shift states and initial boot/shutdown artwork are implemented. The render test produces 44 deterministic scenarios without LVGL warnings; native Mac controls were exercised. See getting-started.md. No flashed firmware, serial implementation, circuit validation or bike verification is claimed. E1 hardware evidence remains pending; E2 is implemented for the host slice and E3 is partial (menus/final artwork/ride features pending).
+Portable state/lifecycle/presentation tests and the LVGL 9.2.2 desktop dashboard now build and pass. Both layouts/themes, fuel/shift states and two-second R15 Light Signature are implemented. The render test produces 86 deterministic scenarios without LVGL warnings; native Mac controls were exercised. See getting-started.md. No flashed firmware, serial implementation, circuit validation or bike verification is claimed. E1 hardware evidence remains pending; E2 is implemented for the host slice and E3 is partial (menus/ride features pending).
 
 Include [power lifecycle](power-lifecycle.md) tests in E2–E4: injected-clock duration checks, missing startup data, urgent warning interruption, key-off/key-on cancellation, animation failures, actual panel startup measurement and retained-power shutdown tests.

@@ -12,7 +12,7 @@ Normalized shared model/protocol code must not depend on LVGL, board drivers or 
 
 ## Current phase
 
-The first LVGL host slice is implemented. Continue incremental implementation and verification under docs/implementation-plan.md. Hardware firmware requires board-specific validation. Preserve the specified UI; no unsolicited redesign. Boot and shutdown animations each last 1–1.5 s as defined in docs/power-lifecycle.md. Shutdown requires retained power; never claim a firmware-only guarantee. Full Maps/projection remains unresolved.
+The first LVGL host slice is implemented. Continue incremental implementation and verification under docs/implementation-plan.md. Hardware firmware requires board-specific validation. Preserve the specified UI; no unsolicited redesign. Boot and shutdown animations each last 2.00 s as defined in docs/power-lifecycle.md. Shutdown requires retained power; never claim a firmware-only guarantee. Full Maps/projection remains unresolved.
 
 ## Work procedure
 

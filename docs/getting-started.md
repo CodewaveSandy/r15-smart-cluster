@@ -25,7 +25,7 @@ Only run the installation commands for missing tools. The first configure downlo
 bash scripts/preview.sh
 ```
 
-The script configures a Debug build under build/lvgl, compiles and opens an 800 x 480 native window. Boot artwork runs for 1.25 seconds before the dashboard. Click the window if keys do not respond. Terminal stays attached for diagnostics; quit with Esc or close the window.
+The script configures a Debug build under build/lvgl, compiles and opens an 800 x 480 native window. The two-second R15 Light Signature reveals the dashboard during its last 300 ms. Click the window if keys do not respond. Terminal stays attached for diagnostics; quit with Esc or close the window.
 
 ## 4. Explore representative states
 
@@ -74,7 +74,7 @@ There is no automatic hot reload yet. Ordinary source changes rebuild incrementa
 | embedded/presentation/ | Bounded instrument/ride-info formatting, quality decisions and fuel/shift policy |
 | embedded/application/DisplayOptions.h and DashboardInput.h | Portable display-local preferences, pages and semantic actions |
 | simulator/lvgl/DesktopInput.h | Host key translation into semantic actions |
-| embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 1250 |
+| embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 2000 |
 | simulator/lvgl/main.cpp | Demo starting values, host keyboard mapping, clock and render scenarios |
 | shared/model/ClusterState.h | Unit-qualified normalized observations and quality |
 | scripts/generate-fonts.sh | Reproducible font sizes/glyph subsets |
@@ -83,7 +83,7 @@ Keep vehicle calculations and simulated mutations out of Dashboard.cpp and the U
 
 ## Fonts
 
-Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px animation/secondary-speed font includes the letters required by R15 and DISPLAY OFF. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
+Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px secondary-speed font contains only digits and the unavailable dash. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
 
 To regenerate after a font-size/glyph change (Node/npm required):
 
@@ -100,7 +100,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs five suites: portable model/lifecycle and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 44 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
+This runs six suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 86 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
 
 To build and render without opening a window:
 
@@ -112,7 +112,7 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
-This first slice implements the dashboard foundation and simple progress-line boot/shutdown artwork. Icons use bundled automotive glyphs; full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+This host slice implements the dashboard foundation and two-second R15 Light Signature. Icons use bundled automotive glyphs; full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
 
@@ -129,3 +129,15 @@ Automotive/status symbols come from the pinned Pictogrammers MDI 7.4.47 source f
 ## Resource audit and feature profile
 
 Run `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json` after building to inspect bitmap payload and host asset sections. See [resource budgets](resource-budgets.md) for limitations and required target measurements. The host includes embedded/ui/LvglFeatures.h, which enables only current dashboard widgets and reuses bundled Inter as the default font. Enable additional LVGL features explicitly when actual screens require them, then rebuild and verify. Numeric text now formats on changed input, and covered boot/shutdown instrumentation resumes from the latest snapshot. All existing keyboard controls remain unchanged.
+
+## R15 Light Signature preview
+
+Restart with `bash scripts/preview.sh` to see the two-second boot. Press O for the two-second shutdown; press O again to boot. A valid engine/coolant warning bypasses artwork immediately; press E/C to clear a simulated warning before reviewing the complete sequence. Key-on during shutdown cancels it. The last shutdown interval and off state are completely black; F1 prints controls in Terminal.
+
+For deterministic animation captures without a window:
+
+```sh
+SDL_VIDEODRIVER=dummy bash scripts/preview.sh --animate build/lvgl/animation-preview
+```
+
+This saves the 86 standard scenarios plus 51 motion frames per animation at 40 ms intervals. Source/generated assets and prompts are in assets/animations; Pillow 12.3.0 is needed only for regeneration, not normal builds. See [lifecycle timeline](power-lifecycle.md). The artwork uses one 12 KiB A8 wordmark and procedural blue light slashes. Actual panel performance remains unverified. To export GIF/contact-sheet previews after --animate, run `python3 scripts/export-animation-previews.py build/lvgl/animation-preview` with Pillow installed.

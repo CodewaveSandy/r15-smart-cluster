@@ -15,15 +15,15 @@ int main() {
     s={}; for(int v:{-1,0,72,100,101}) { s.fuelPercent={v,Quality::Available}; check(valid(s)==(v>=0&&v<=100),"Fuel boundaries"); }
     s={}; s.batteryVoltageV={std::numeric_limits<double>::quiet_NaN(),Quality::Available}; check(!valid(s),"Reject available NaN");
     Lifecycle l; check(l.phase()==Phase::Off,"Initial off"); l.key(true,100);
-    l.advance(1349); check(l.phase()==Phase::Boot,"Boot cannot finish early");
-    l.key(true,1300); l.advance(1350); check(l.phase()==Phase::Running,"Repeated on does not restart boot");
-    l.key(false,2000); l.advance(3249); check(l.phase()==Phase::Shutdown,"Shutdown cannot finish early");
-    l.key(true,3250); check(l.phase()==Phase::Running,"Key-on cancels shutdown");
-    l.key(false,4000); l.advance(5250); check(l.phase()==Phase::ReadyForPowerOff,"Shutdown completes");
-    l.key(true,6000); check(l.phase()==Phase::Boot,"New power cycle boots");
+    l.advance(2099); check(l.phase()==Phase::Boot,"Boot cannot finish early");
+    l.key(true,2080); l.advance(2100); check(l.phase()==Phase::Running,"Repeated on does not restart boot");
+    l.key(false,3000); l.advance(4999); check(l.phase()==Phase::Shutdown,"Shutdown cannot finish early");
+    l.key(true,5000); check(l.phase()==Phase::Running,"Key-on cancels shutdown");
+    l.key(false,6000); l.advance(8000); check(l.phase()==Phase::ReadyForPowerOff,"Shutdown completes");
+    l.key(true,9000); check(l.phase()==Phase::Boot,"New power cycle boots");
     s={}; s.engineWarning={true,Quality::Available}; check(urgent(s),"Valid urgent warning");
     s.engineWarning.quality=Quality::Stale; check(!urgent(s),"Stale flag not treated as current warning");
-    check(Lifecycle::animationMs>=1000&&Lifecycle::animationMs<=1500,"Animation duration requirement");
+    check(Lifecycle::animationMs==2000,"Animation duration requirement");
     using namespace cluster::presentation;
     for(int value:{0,9,10,19,20,21,100}) {
         auto on=fuelPresentation({value,Quality::Available},0);

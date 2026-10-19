@@ -10,8 +10,7 @@ struct Metrics {
     static constexpr int fuelSegmentCount=presentation::Policy::fuelSegments, fuelSkew=1;
     static constexpr int rpmHeight=44, lowerDividerY=376, lowerTitleY=399, fuelY=440;
     static constexpr int trackLapY=259, trackLapTitleY=235;
-    static constexpr int shiftRpm=presentation::Policy::shiftRpm, shiftFlashRpm=presentation::Policy::shiftFlashRpm;
-    static constexpr unsigned shiftPeriod=presentation::Policy::shiftPeriod, fuelPeriod=presentation::Policy::fuelPeriod, turnPeriod=presentation::Policy::turnPeriod;
+    static constexpr unsigned turnPeriod=presentation::Policy::turnPeriod;
 };
 struct Palette {
     std::uint32_t background, ink, muted, panel, line, accent, amber, red, beam;

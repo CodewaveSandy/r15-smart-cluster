@@ -45,7 +45,7 @@ int main() {
     requiresGlyphs(fonts::speed,"0123456789");
     requiresGlyphs(fonts::track,"0123456789:.");
     requiresGlyphs(fonts::clock,"0123456789:");
-    requiresGlyphs(fonts::secondary,"0123456789RDISPLAY OF");
+    requiresGlyphs(fonts::secondary,"0123456789");
     if(lv_font_default()!=fonts::label) { std::fprintf(stderr,"Default font does not reuse bundled Inter\n"); ++failed; }
     for(const auto& icon:iconDefinitions) {
         lv_font_glyph_dsc_t glyph{};

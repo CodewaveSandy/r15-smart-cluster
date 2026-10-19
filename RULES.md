@@ -20,7 +20,7 @@ Use RAII and clear allocation/lifetime strategies. Serialize LVGL access through
 
 ## UI
 
-Follow docs/lvgl-style-guide.md and docs/power-lifecycle.md. Centralize geometry, colors, fonts, opacity and timing. Preserve non-touch navigation and warning visibility across screens. Critical truth never waits for decoration. Boot/shutdown artwork each lasts 1–1.5 s; total startup and retained power require measurement. Optimize based on profiling while preserving legibility at 800 x 480.
+Follow docs/lvgl-style-guide.md and docs/power-lifecycle.md. Centralize geometry, colors, fonts, opacity and timing. Preserve non-touch navigation and warning visibility across screens. Critical truth never waits for decoration. Boot/shutdown artwork each lasts 2.00 s; total startup and retained power require measurement. Optimize based on profiling while preserving legibility at 800 x 480.
 
 ## Persistence and failure
 

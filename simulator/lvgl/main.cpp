@@ -60,15 +60,15 @@ void help() {
         "Enter: Street trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
         "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
-        "O: key on/off (1250 ms animation) | Space: reset demo\n"
+        "O: key on/off (2000 ms animation) | Space: reset demo\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
 }
 int main(int argc,char** argv) {
     try {
-        bool render=false; std::filesystem::path output;
-        if(argc==3&&std::string(argv[1])=="--render") { render=true; output=argv[2]; }
-        else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--render directory]\n"); return 2; }
+        bool render=false,animationSequence=false; std::filesystem::path output;
+        if(argc==3&&(std::string(argv[1])=="--render"||std::string(argv[1])=="--animate")) { render=true; animationSequence=std::string(argv[1])=="--animate"; output=argv[2]; }
+        else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--render directory | --animate directory]\n"); return 2; }
         if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER)) throw std::runtime_error(SDL_GetError());
         struct SdlExit { ~SdlExit(){SDL_Quit();} } sdlExit;
         lv_init();
@@ -84,7 +84,7 @@ int main(int argc,char** argv) {
             if(render) {
                 std::filesystem::create_directories(output);
                 view.time="20:55"; view.date="18 Oct 2026";
-                life.key(true,0); life.advance(1250);
+                life.key(true,0); life.advance(2000);
                 for(bool track:{false,true}) for(bool light:{false,true}) {
                     view.track=track; view.light=light;
                     const std::string suffix=std::string(track?"track":"street")+(light?"-day":"-night");
@@ -252,8 +252,8 @@ int main(int argc,char** argv) {
                 matchesFresh(latest,covered,625);
                 latest.engineWarning.value=false;
                 dashboard.update(latest,view,covered,625); lv_refr_now(nullptr);
-                covered.advance(1250);
-                matchesFresh(latest,covered,1250);
+                covered.advance(2000);
+                matchesFresh(latest,covered,2000);
                 // Exercise cache invalidation with units/pages/layouts and every
                 // quality, comparing an updated component tree against a fresh one.
                 for(auto quality:{Quality::Available,Quality::Unavailable,Quality::Unsupported,Quality::Invalid,Quality::Stale,Quality::Available}) {
@@ -265,8 +265,54 @@ int main(int argc,char** argv) {
                     view.infoPage=InfoPage::Battery; view.tripPage=TripPage::TripA;
                     matchesFresh(latest,life,1400);
                 }
+                // Partial dashboard fades must work in both layouts/themes.
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view.track=track; view.light=light; view.imperial=false; view.iconTest=false;
+                    const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
+                    Lifecycle reveal; reveal.key(true,0);
+                    dashboard.update(state,view,reveal,1850); capture(output/("signature-reveal-"+suffix+".bmp"));
+                    Lifecycle ending; ending.key(true,0); ending.advance(2000); ending.key(false,3000);
+                    dashboard.update(state,view,ending,3100); capture(output/("signature-fade-"+suffix+".bmp"));
+                }
+                // Stage boundaries for the selected two-second R15 light signature.
+                view={}; view.time="20:55"; view.date="18 Oct 2026";
+                const auto renderAnimation=[&](bool bootAnimation,unsigned elapsed,const char* prefix) {
+                    Lifecycle animation;
+                    animation.key(true,0);
+                    std::uint64_t origin=0;
+                    if(!bootAnimation) { animation.advance(Lifecycle::animationMs); origin=2500; animation.key(false,origin); }
+                    animation.advance(origin+elapsed);
+                    dashboard.update(state,view,animation,origin+elapsed);
+                    char filename[64]; std::snprintf(filename,sizeof filename,"%s-%04u.bmp",prefix,elapsed);
+                    capture(output/filename);
+                    if(bootAnimation&&elapsed==1000) {
+                        // The wordmark must render, and tapered slashes must not
+                        // expand into filled wedges above the intended blades.
+                        int white=0;
+                        for(int y=235;y<270;++y) for(int x=340;x<460;++x) {
+                            const auto pixel=pixels[y*800+x];
+                            if((pixel>>11)>24&&((pixel>>5)&63)>48&&(pixel&31)>24) ++white;
+                        }
+                        if(white<150||pixels[180*800+200]||pixels[180*800+599])
+                            throw std::runtime_error("Light-signature wordmark or blade geometry is incorrect");
+                    }
+                    if(!bootAnimation&&elapsed>=1900) {
+                        if(std::any_of(pixels.begin(),pixels.end(),[](std::uint16_t pixel){return pixel!=0;}))
+                            throw std::runtime_error("Shutdown final interval is not completely black");
+                    }
+                };
+                for(unsigned elapsed:{0u,100u,250u,349u,350u,500u,700u,850u,1000u,1199u,1200u,1450u,1699u,1700u,1850u,1999u,2000u})
+                    renderAnimation(true,elapsed,"boot-stage");
+                for(unsigned elapsed:{0u,100u,199u,200u,300u,399u,400u,800u,1000u,1249u,1250u,1500u,1750u,1899u,1900u,1999u,2000u})
+                    renderAnimation(false,elapsed,"shutdown-stage");
+                if(animationSequence) {
+                    for(unsigned elapsed=0;elapsed<=2000;elapsed+=40) {
+                        renderAnimation(true,elapsed,"boot-motion");
+                        renderAnimation(false,elapsed,"shutdown-motion");
+                    }
+                }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 44 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 86 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;

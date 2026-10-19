@@ -28,6 +28,7 @@ Record unknowns explicitly. Separate design, implementation, bench verification 
 ```text
 assets/fonts/             Bundled text-font sources, licenses and LVGL subsets
 assets/icons/             Selected automotive/status icon sources and LVGL subsets
+assets/animations/        R15 source, prompts and compact A8 wordmark
 shared/model/             Portable normalized observations and validation
 embedded/application/     Ignition lifecycle, display options and semantic actions
 embedded/presentation/    Portable formatting, quality decisions and display policy

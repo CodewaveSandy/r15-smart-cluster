@@ -71,11 +71,11 @@ Required comparisons: both layouts x both themes; neutral and gears; 0/max/unkno
 
 ## Boot and shutdown artwork
 
-Each animation lasts 1–1.5 s; artwork is undecided. Reuse the theme/type system, use lightweight assets/primitives and support immediate urgent-warning interruption. See [power lifecycle](power-lifecycle.md) for state, power and test requirements.
+Each animation lasts exactly 2.00 s using the selected R15 Light Signature. Draw mirrored tapered blue slashes with crisp white cores around a small solid-white R15 wordmark; use a black backdrop, restrained glow and controlled opacity/retraction. Avoid flashes and oversized zooms. Preserve the dashboard at the reveal/fade endpoints and immediate urgent-warning interruption. See [power lifecycle](power-lifecycle.md) for state, power and test requirements.
 
 ## Typography roles and preview quality
 
-Inter Medium is the primary label font: 14 px general text, 16 px RPM label/value, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. Barlow Semi Condensed SemiBold supplies Street speed (128 px), Track lap (79 px), gear (72 px), animation titles/Track speed (46 px) and clock (30 px). These choices favor restrained interface labels and distinctive instrument numerals.
+Inter Medium is the primary label font: 14 px general text, 16 px RPM label/value, 18 px speed units, and 12 px for compact date/ticks. Inter SemiBold at 23 px supplies mode/supporting values. Barlow Semi Condensed SemiBold supplies Street speed (128 px), Track lap (79 px), gear (72 px), Track speed (46 px) and clock (30 px). These choices favor restrained interface labels and distinctive instrument numerals.
 
 Use embedded/ui/Typography.h roles; generate bitmap assets at their actual logical size using scripts/generate-fonts.sh. Maintain 4-bit antialiased coverage and full required glyph subsets. Bitmap generation does not enable OpenType features automatically; tabular-number behavior must be explicitly implemented/verified if needed. Keep changing values in stable bounds.
 

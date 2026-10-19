@@ -1,5 +1,6 @@
 #include "Dashboard.h"
 #include "embedded/presentation/InstrumentPresentation.h"
+#include "embedded/presentation/LightSignatureAnimation.h"
 #include "WidgetPrimitives.h"
 
 namespace cluster::ui {
@@ -23,9 +24,10 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         lv_obj_set_style_bg_grad(root_.get(),shift?&shiftGradient_:nullptr,0);
         ink(root_.get(),p.ink);
     }
+    const auto animation=animationFrame(life,urgent(s),now);
     // The opaque lifecycle cover makes dashboard mutations invisible. Resume
     // directly from the latest snapshot on reveal; never replay a hidden backlog.
-    if(instrumentationVisible(life,urgent(s))) {
+    if(animation.dashboardVisible) {
         header_.update(s,v,p);
         tellTales_.update(s,p,now,v.iconTest);
         tachometer_.update(s.engineRpm,p);
@@ -33,7 +35,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         rideInfo_.update(s,v,p);
         fuel_.update(s.fuelPercent,p,now);
     }
-    overlay_.update(life,urgent(s),p,now);
+    overlay_.update(animation);
     initialized_=true; previousLight_=v.light; previousShift_=shift;
 }
 } // namespace cluster::ui

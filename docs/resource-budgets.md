@@ -14,7 +14,9 @@ python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/pr
 
 `resource-audit.json` reports each generated asset's exact bitmap payload and allocated host object sections (code/constants/data/BSS as recognized by the platform size tool), excluding debug sections. Host metadata and alignment differ from ESP32. Host executable allocated sections include the simulated framebuffer in BSS and must never be labeled firmware flash usage. The report requires compiled asset objects; raw C file length is not used as a flash estimate. Source TTFs are converter inputs and are not included in the CMake runtime asset list.
 
-After role-specific subsetting, font/icon bitmap payload totals 75,833 bytes and host asset sections total 85,796 bytes. Keep the 4 bpp rendering and inspect new glyph additions. The object tree remains 72 objects. The Dashboard wrapper is 840 bytes on the current Mac ABI (192 bytes of additional input tracking versus the previous stage); report the actual target size independently.
+Current font/icon bitmap payload is 72,633 bytes after removing obsolete animation-title glyphs. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **84,921 payload bytes** and **94,715 compiled host asset section bytes** in total. The removed neon textures previously used 344,064 payload bytes. The source PNG is not linked into firmware.
+
+The object tree now contains 69 objects, down from 72 after removal of the unused emblem/sweep image objects. The Dashboard wrapper is 840 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
 
 ## Buffer arithmetic, not an allocation prescription
 
@@ -43,3 +45,7 @@ Record build revisions/toolchain, configuration, measurement method and load wit
 ## Scope boundary
 
 The shared feature profile is host-verified against LVGL 9.2.2. It is not a complete ESP-IDF configuration or a board driver. UART and settings/persistence are future feature implementations with explicit contracts; empty abstractions or unused bounded queues would provide no current optimization. See [optimization closure and remaining gates](optimization-plan.md).
+
+## Light Signature rendering cost
+
+The renderer uses a constant number of line/triangle draws and one small A8 wordmark at native or smaller scale. LV_USE_IMAGE remains enabled; no PNG decoder, vector parser, full-screen texture or oversized image zoom is needed. Bounded application work does not prove a target frame rate: measure LVGL transient draw memory, stack/heap headroom, render/flush timing and retained power on the actual board. Host captures establish appearance/timing logic only.

@@ -22,4 +22,4 @@ See the [step-by-step preview guide](docs/getting-started.md), [project document
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-Tests check portable state/lifecycle/presentation behavior and render 44 deterministic scenarios. Simulated output is not bike verification.
+Tests check portable state/lifecycle/presentation behavior and render 86 deterministic scenarios, including the two-second R15 Light Signature timeline. Simulated output is not bike verification.

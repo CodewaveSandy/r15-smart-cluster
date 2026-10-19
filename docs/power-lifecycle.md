@@ -1,15 +1,37 @@
 # Ignition and display lifecycle
 
-Date: 2026-10-18. User-selected journey; hardware implementation unverified.
+Updated: 2026-10-19. User-selected journey; hardware implementation unverified.
 
 ## Intended journey
 
 ```text
-Key ON -> boot animation (1.0–1.5 s) -> live instrumentation
-Key OFF -> shutdown animation (1.0–1.5 s) -> controlled power-off
+Key ON -> boot animation (2.00 s) -> live instrumentation
+Key OFF -> shutdown animation (2.00 s) -> controlled power-off
 ```
 
-Both animations are product requirements. The host implements initial progress-line artwork with Lifecycle::animationMs set to 1,250 ms. Final artwork remains undecided; preserve the instrument style, use lightweight LVGL primitives/assets and avoid video decoding. Actual first-visible-frame timing and retained shutdown power still require panel and power-path measurements.
+Both animations last exactly 2,000 ms under the monotonic lifecycle controller. The user selected [R15 Light Signature, concept 02](reference/r15-light-signature-concept.png), superseding the neon emblem/zoom artwork. The phase allocation below implements that direction. The running dashboard remains the existing Street/Track UI. Actual panel startup and retained shutdown power still require hardware measurements.
+
+## Implemented host sequence
+
+| Boot interval | Behavior |
+| --- | --- |
+| 0–350 ms | Two slender blue light slashes ignite from black |
+| 350–850 ms | Blades brighten and broaden; the white R15 wordmark appears |
+| 850–1,200 ms | Full signature, with a short controlled highlight beneath the wordmark |
+| 1,200–1,700 ms | Blades move outward into slim accents; wordmark fades |
+| 1,700–2,000 ms | Current dashboard reveals beneath the fading accents |
+
+| Shutdown interval | Behavior |
+| --- | --- |
+| 0–200 ms | Current dashboard fades to black |
+| 200–400 ms | Light Signature appears |
+| 400–1,250 ms | Slashes extinguish from outside inward; wordmark shrinks slightly |
+| 1,250–1,900 ms | Lights finish extinguishing; small R15 wordmark fades away |
+| 1,900–2,000 ms | Completely black |
+
+AnimationFrame is a portable function of monotonic elapsed time. The renderer draws a fixed number of mirrored line/triangle primitives and one small A8 wordmark. There are no flashes, particle systems, queued callbacks, full-screen textures or separate animation tasks. The logo never grows beyond native size. Both themes use the same black/blue/white signature palette.
+
+During dashboard reveal and initial shutdown fade, current instrumentation continues updating beneath the cover. Valid urgent warnings remove the overlay immediately in every animation stage. Key-on cancels shutdown. Off/ReadyForPowerOff remain black; keyboard help stays in Terminal.
 
 ## State model and ownership
 
@@ -17,9 +39,9 @@ Both animations are product requirements. The host implements initial progress-l
 | --- | --- | --- |
 | Off | No display execution assumed | Stable power and key-on |
 | Starting | Minimal board initialization; start acquisition/UART concurrently; unknown values remain unknown | Display can render boot animation |
-| BootAnimation | Play 1–1.5 s using monotonic timing while state acquisition continues | Animation completes -> Running; valid urgent warnings can interrupt/overlay immediately |
+| BootAnimation | Play 2.00 s using monotonic timing while state acquisition continues | Animation completes -> Running; valid urgent warnings can interrupt/overlay immediately |
 | Running | Actual speed/ODO/gear and other supported observations; dashes/status for missing data | Confirmed key-off -> ShutdownAnimation; independent faults remain explicit |
-| ShutdownAnimation | Play 1–1.5 s; stop optional work, request bounded persistence and retain essential indication | Animation complete and required bounded shutdown work finishes -> ReadyForPowerOff |
+| ShutdownAnimation | Play 2.00 s; stop optional work, request bounded persistence and retain essential indication | Animation complete and required bounded shutdown work finishes -> ReadyForPowerOff |
 | ReadyForPowerOff | Report readiness to the power owner if supported; no unverified power-control GPIO | Hardware safely removes retained supply |
 
 The vehicle MCU owns validated ignition observation and supplies a defined lifecycle event/status. The display lifecycle controller owns navigation/animation transitions; widgets do not monitor power pins. The electrical hold-up/latch controller is a separate hardware responsibility. Display communications failure alone never means key-off. If ignition events are not yet available, bench simulation must be visibly identified.
@@ -34,7 +56,7 @@ Running means actual received observations where supported. Do not show demo zer
 
 ## Shutdown power contract
 
-A switched supply that disappears at key-off cannot run a shutdown animation. Hardware must provide ignition sensing separately from a retained regulated supply for both MCUs as needed. Required retention covers detection, the 1–1.5 s animation, bounded pending writes, coordination and measured margin. Component values, capacitor sizing, latch circuit, thresholds and readiness wiring remain undecided. Firmware cannot promise animation under hard power removal or brownout.
+A switched supply that disappears at key-off cannot run a shutdown animation. Hardware must provide ignition sensing separately from a retained regulated supply for both MCUs as needed. Required retention covers detection, the 2.00 s animation, bounded pending writes, coordination and measured margin. Component values, capacitor sizing, latch circuit, thresholds and readiness wiring remain undecided. Firmware cannot promise animation under hard power removal or brownout.
 
 Persist preferences on change through bounded/coalesced writes; do not depend exclusively on a final shutdown write. Vehicle counters require their own wear, retention and power-loss policy before being treated as reliable persistence. The display may report ready, but it must not cut shared power while vehicle-side required work is pending. Define an overall bounded shutdown deadline and hardware fallback before implementation; no indefinite wait for the other MCU or phone.
 

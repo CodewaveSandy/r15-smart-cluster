@@ -1,0 +1,11 @@
+{
+  "generator": "built-in image_gen.imagegen",
+  "concept": "02 R15 Light Signature",
+  "conversion": "scripts/generate-animation-assets.py",
+  "pillow": "12.3.0",
+  "format": "192x64 A8 luminance mask; aspect-preserving 160x40 content fit",
+  "sha256": {
+    "source/r15-signature.png": "ce5d690021aee53c0fc72086f5d6cf3d98897c21319451a54ab95308a7885474",
+    "lvgl/r15_signature.c": "633a611a14858ef0b26f2668ff8aee69ee41919fb319fd6c7d0d1077df7a94b9"
+  }
+}

@@ -58,7 +58,9 @@ struct FuelLayout {
 };
 struct LifecycleLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::height};
-    static constexpr TextArea title{100,160,600}, subtitle{100,230,600};
-    static constexpr Rect progress{240,285,320,3}, fill{0,0,1,3};
+    static constexpr Point center{Metrics::width/2,220};
+    static constexpr Rect wordmark{304,220,192,64};
+    static constexpr int highlightY=286;
+    static constexpr Point outer{-286,-48},elbow{-170,20},inner{-92,44};
 };
 } // namespace cluster::ui::geometry
