@@ -50,6 +50,7 @@ struct FuelLayout {
     static constexpr TextArea title{Metrics::fuelX,Metrics::lowerTitleY,110};
     static constexpr TextArea value{690,Metrics::lowerTitleY-5,82};
     static constexpr Point pump{550,Metrics::fuelY-10};
+    static constexpr Rect reserveMarker{Metrics::fuelX+Metrics::fuelWidth*presentation::Policy::fuelReservePercent/100,Metrics::fuelY-5,2,4};
     static constexpr Rect segment(int i) {
         const int x=Metrics::fuelX+i*Metrics::fuelWidth/Metrics::fuelSegmentCount;
         const int end=Metrics::fuelX+(i+1)*Metrics::fuelWidth/Metrics::fuelSegmentCount;

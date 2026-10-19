@@ -1,3 +1,4 @@
+#include "embedded/ui/Geometry.h"
 #include "embedded/ui/Dashboard.h"
 #include "embedded/ui/Typography.h"
 #include <SDL.h>
@@ -98,6 +99,21 @@ int main(int argc,char** argv) {
                     const auto fuelOn=pixels[cluster::ui::Metrics::fuelY*800+590];
                     dashboard.update(low,view,life,500); capture(output/(suffix+"-fuel-off.bmp"));
                     if(fuelOn==pixels[cluster::ui::Metrics::fuelY*800+590]) throw std::runtime_error("Fuel blink did not reach rendered pixels");
+                    for(int percent:{0,6,16,17,56,100}) {
+                        auto partial=state; partial.fuelPercent.value=percent;
+                        dashboard.update(partial,view,life,0);
+                        capture(output/(suffix+"-fuel-"+std::to_string(percent)+".bmp"));
+                        if(percent==56) {
+                            const auto segment=cluster::ui::geometry::FuelLayout::segment(4);
+                            int filled=0,empty=0;
+                            for(int x=segment.x;x<segment.x+segment.width;++x) {
+                                const auto pixel=pixels[(segment.y+segment.height/2)*800+x];
+                                if(pixel==lv_color_to_u16(lv_color_hex(palette.accent))) ++filled;
+                                if(pixel==lv_color_to_u16(lv_color_hex(palette.panel))) ++empty;
+                            }
+                            if(!filled||!empty) throw std::runtime_error("Partial fuel segment lost its filled or empty portion");
+                        }
+                    }
                     ClusterState missing; dashboard.update(missing,view,life,1400); capture(output/(suffix+"-unavailable.bmp"));
                     auto warning=state; warning.engineRpm.value=11400; warning.engineWarning.value=true; warning.absWarning.value=true;
                     dashboard.update(warning,view,life,1200); capture(output/(suffix+"-warning.bmp"));
@@ -312,7 +328,7 @@ int main(int argc,char** argv) {
                     }
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 86 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 110 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;

@@ -13,9 +13,9 @@ Updated: 2026-10-19. Native LVGL host implementation and applicable host optimiz
 
 ## Current verification
 
-Build completes without compiler warnings. Six suites pass: model/lifecycle, Light Signature timeline, portable presentation/input, desktop mappings, typography and LVGL rendering. There are 86 deterministic captures; the 41 original running/warning/unavailable/icon/page captures remain byte-identical after the lifecycle change; representative layouts/themes/warnings/unavailable views were visually inspected. Tests cover fresh-versus-cached presentation, hidden telemetry/urgent reveal and repeated creation/destruction.
+Build completes without compiler warnings. Six suites pass: model/lifecycle, Light Signature timeline, portable presentation/input, desktop mappings, typography and LVGL rendering. There are 110 deterministic captures; fuel captures include 0/6/16/17/56/100% in both layouts/themes; representative layouts/themes/warnings/unavailable views were visually inspected. Tests cover fresh-versus-cached presentation, hidden telemetry/urgent reveal and repeated creation/destruction.
 
-The LVGL tree contains 70 objects. One hundred identical settled updates cause zero flushes, versus 1,200 callbacks / 38,400,000 pixels before optimization. Font/icon bitmap payload is 88,972 bytes with the angular numeral subsets. The current Mac Dashboard wrapper is 848 bytes, including the last-input keys and Light Signature frame state. Host buffer sizes are unchanged. Font conversion is byte-reproducible; source licenses/provenance are bundled. The animation wordmark adds 12,288 bytes (12 KiB), replacing the former 336 KiB animation textures. Combined bitmap payload is 101,260 bytes and compiled host asset sections total 111,324 bytes. The source PNG is not a firmware resource.
+The LVGL tree contains 71 objects. One hundred identical settled updates cause zero flushes, versus 1,200 callbacks / 38,400,000 pixels before optimization. Font/icon bitmap payload is 88,972 bytes with the angular numeral subsets. The current Mac Dashboard wrapper is 952 bytes, including the last-input keys and Light Signature frame state. Host buffer sizes are unchanged. Font conversion is byte-reproducible; source licenses/provenance are bundled. The animation wordmark adds 12,288 bytes (12 KiB), replacing the former 336 KiB animation textures. Combined bitmap payload is 101,260 bytes and compiled host asset sections total 111,324 bytes. The source PNG is not a firmware resource.
 
 See [resource budgets](resource-budgets.md) for repeatable reports and the limits of host measurements, and [optimization sequence](optimization-plan.md) for implementation details.
 
@@ -34,3 +34,5 @@ Exact delivered Elecrow PCB revision and vehicle MCU model remain unconfirmed. T
 5. Define persistence ownership and power-loss behavior before implementing storage; retain OEM function during initial passive bike observation.
 
 See [implementation stages](implementation-plan.md) and [engineering gates](engineering-review.md). No simulator, source build or asset size establishes production readiness.
+
+Fuel now has partial-piece coverage, a forward slant and a 16% reserve indication derived from the user-supplied 11 L / approximately 1.76 L capacities. Portable coverage/reserve boundary checks and rendered mixed filled/empty piece checks pass. Actual tank/sensor calibration remains unverified.

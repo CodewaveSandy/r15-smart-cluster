@@ -25,13 +25,21 @@ int main() {
     s.engineWarning.quality=Quality::Stale; check(!urgent(s),"Stale flag not treated as current warning");
     check(Lifecycle::animationMs==2000,"Animation duration requirement");
     using namespace cluster::presentation;
-    for(int value:{0,9,10,19,20,21,100}) {
+    for(int value:{0,1,6,9,10,12,13,15,16,17,19,20,21,50,72,99,100}) {
         auto on=fuelPresentation({value,Quality::Available},0);
         auto off=fuelPresentation({value,Quality::Available},500);
         check(on.lit,"Fuel starts lit"); check(off.lit==(value>=20),"Fuel blink threshold");
         check(on.severity==(value<10?FuelSeverity::Critical:value<=20?FuelSeverity::Warning:FuelSeverity::Normal),"Fuel severity boundaries");
-        check(on.segments==(value*8+99)/100,"Fuel segment count");
+        int coverage=0;
+        for(int i=0;i<Policy::fuelSegments;++i) {
+            const int fill=on.segmentFill(i);
+            check(fill>=0&&fill<=100,"Fuel coverage bounded"); coverage+=fill;
+        }
+        check(coverage==value*8,"Fuel retains fractional segment coverage");
+        check(on.reserve==(value<=16),"Reserve threshold from supplied capacities");
     }
+    check(fuelPresentation({6,Quality::Available},0).segmentFill(0)==48,"Six percent gives roughly half of first segment");
+    check(!fuelPresentation({},0).reserve && !fuelPresentation({10,Quality::Stale},0).reserve,"Unknown fuel never asserts reserve");
     check(fuelPresentation({},0).severity==FuelSeverity::Unknown,"Unknown fuel is not empty");
     for(int rpm:{10499,10500,11399,11400}) {
         check(shiftLit({rpm,Quality::Available},0)==(rpm>=10500),"Shift threshold");

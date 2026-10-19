@@ -7,7 +7,7 @@ struct Metrics {
     static constexpr int width=800, height=480, margin=28, content=744;
     static constexpr int headerRule=85, tellTaleY=98, rpmY=164;
     static constexpr int speedX=240, speedWidth=320, fuelX=583, fuelWidth=189;
-    static constexpr int fuelSegmentCount=presentation::Policy::fuelSegments, fuelSkew=1;
+    static constexpr int fuelSegmentCount=presentation::Policy::fuelSegments, fuelSkew=4;
     static constexpr int rpmHeight=44, lowerDividerY=376, lowerTitleY=399, fuelY=440;
     static constexpr int trackLapY=259, trackLapTitleY=235;
     static constexpr unsigned turnPeriod=presentation::Policy::turnPeriod;

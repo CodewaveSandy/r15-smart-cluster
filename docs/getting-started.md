@@ -100,7 +100,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs six suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 86 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
+This runs six suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 110 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
 
 To build and render without opening a window:
 
@@ -141,3 +141,5 @@ SDL_VIDEODRIVER=dummy bash scripts/preview.sh --animate build/lvgl/animation-pre
 ```
 
 This saves the 86 standard scenarios plus 51 motion frames per animation at 40 ms intervals. Source/generated assets and prompts are in assets/animations; Pillow 12.3.0 is needed only for regeneration, not normal builds. See [lifecycle timeline](power-lifecycle.md). The artwork uses one 12 KiB A8 wordmark and procedural blue light slashes. Actual panel performance remains unverified. To export GIF/contact-sheet previews after --animate, run `python3 scripts/export-animation-previews.py build/lvgl/animation-preview` with Pillow installed.
+
+Fuel preview: `[` / `]` change the simulated reading by 1%. At 56% the fifth piece is partly filled; at 6% the first piece is roughly half filled. `RESERVE` appears at/below 16% for a valid reading, matching the user-supplied approximate reserve ratio. These are host samples, not calibrated fuel-volume measurements.

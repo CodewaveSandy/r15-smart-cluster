@@ -14,12 +14,20 @@ inline LapText lapText(const Signal<std::uint32_t>& lap) {
     return result;
 }
 enum class FuelSeverity { Normal, Warning, Critical, Unknown };
-struct FuelPresentation { int segments; FuelSeverity severity; bool lit; };
+struct FuelPresentation {
+    int percent;
+    FuelSeverity severity;
+    bool lit, reserve;
+    // Each segment holds 100 coverage units: 1% changes eight units in total.
+    int segmentFill(int index) const {
+        return std::clamp(percent*Policy::fuelSegments-index*100,0,100);
+    }
+};
 inline FuelPresentation fuelPresentation(const Signal<int>& fuel,std::uint64_t now) {
-    if(!fuel.available()) return {0,FuelSeverity::Unknown,true};
+    if(!fuel.available()) return {0,FuelSeverity::Unknown,true,false};
     const int value=std::clamp(fuel.value,0,100);
-    return {(value*Policy::fuelSegments+99)/100,value<10?FuelSeverity::Critical:value<=20?FuelSeverity::Warning:FuelSeverity::Normal,
-        value>=20 || (now/Policy::fuelPeriod)%2==0};
+    return {value,value<10?FuelSeverity::Critical:value<=20?FuelSeverity::Warning:FuelSeverity::Normal,
+        value>=20 || (now/Policy::fuelPeriod)%2==0,value<=Policy::fuelReservePercent};
 }
 inline bool shiftLit(const Signal<int>& rpm,std::uint64_t now) {
     return rpm.available() && rpm.value>=Policy::shiftRpm &&

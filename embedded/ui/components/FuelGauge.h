@@ -17,7 +17,11 @@ public:
     void update(const Signal<int>& fuel,const Palette&,std::uint64_t now);
 private:
     presentation::SignalChange<int> lastFuel_;
-    ObjectOwner fuelTitle_, fuelValue_, pump_, fuelDivider_;
+    struct SegmentStyle { int fill=0; std::uint32_t active=0, empty=0; };
+    static void drawSegment(lv_event_t*);
+    ObjectOwner fuelTitle_, fuelValue_, pump_, fuelDivider_, reserveMarker_;
+    // Stable callback data; no per-frame allocations or widget reconstruction.
+    std::array<SegmentStyle,Metrics::fuelSegmentCount> segmentStyles_{};
     std::array<ObjectOwner,Metrics::fuelSegmentCount> fuel_{};
 };
 } // namespace cluster::ui

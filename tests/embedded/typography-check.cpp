@@ -30,6 +30,7 @@ int main() {
     if(fonts::gear->line_height>60) { std::fprintf(stderr,"Gear exceeds header height\n"); ++failed; }
     fits(fonts::caption,"CLOCK UNAVAILABLE",geometry::HeaderLayout::date.width);
     fits(fonts::label,"DATA UNAVAILABLE",geometry::HeaderLayout::subtitle.width);
+    fits(fonts::label,"RESERVE",geometry::FuelLayout::title.width);
     for(const auto* font:{fonts::caption,fonts::label,fonts::value,fonts::unit,fonts::heading}) {
         for(unsigned code:{176u,183u,215u,8212u}) {
             lv_font_glyph_dsc_t glyph{};
