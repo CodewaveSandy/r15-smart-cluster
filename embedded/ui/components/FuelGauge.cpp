@@ -45,7 +45,7 @@ void FuelGauge::update(const Signal<int>& fuelSignal,const Palette& p,std::uint6
     text(fuelTitle_.get(),fuel.reserve?"RESERVE":"FUEL");
     ink(fuelTitle_.get(),fuel.reserve?fuelColor:p.muted);
     paint(reserveMarker_.get(),p.amber);
-    if(lastFuel_.update(fuelSignal)) text(fuelValue_.get(),fuelText(fuelSignal).value);
+    if(lastFuel_.update(fuelSignal)) fuelText_.update(fuelValue_.get(),fuelText(fuelSignal).value);
     ink(fuelValue_.get(),fuelColor);
     ink(pump_.get(),fuelColor); show(pump_.get(),lit);
     for(int i=0;i<Metrics::fuelSegmentCount;++i) {

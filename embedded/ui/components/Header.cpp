@@ -28,7 +28,7 @@ void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,
     // Header status and badges are cheap; numeric text is formatted only when
     // its input changes. The presenter remains the sole formatting authority.
     const auto presentation=presentation::headerStatus(s,v,v.iconTest);
-    if(gearChanged) text(gear_,presentation::gearText(s.gear).value);
+    if(gearChanged) gearText_.update(gear_,presentation::gearText(s.gear).value);
     ink(gear_,presentation.neutral?p.accent:p.ink);
     text(mode_,presentation.mode); text(subtitle_,presentation.subtitle);
     ink(subtitle_,presentation.unavailable?p.amber:p.muted);
@@ -36,7 +36,7 @@ void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,
     show(qs_,presentation.quickShifter); ink(qs_,p.accent);
     show(vva_,presentation.vva); ink(vva_,p.amber);
     statusLamp(phone_,s.phoneConnected,true,p.accent,p,v.iconTest);
-    if(batteryChanged||connectionChanged) text(phoneBattery_,presentation::phoneBatteryText(s.phoneConnected,s.phoneBatteryPercent).value);
+    if(batteryChanged||connectionChanged) batteryText_.update(phoneBattery_,presentation::phoneBatteryText(s.phoneConnected,s.phoneBatteryPercent).value);
     ink(phoneBattery_,p.muted);
 }
 } // namespace cluster::ui

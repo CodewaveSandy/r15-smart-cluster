@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "../ReadoutText.h"
 #include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
@@ -15,6 +16,7 @@ public:
     PrimaryReadout& operator=(const PrimaryReadout&)=delete;
     void update(const ClusterState&,const ViewOptions&,const Palette&,int settingsProgress=0);
 private:
+    ReadoutText speedText_, lapText_;
     presentation::SignalChange<int> lastSpeed_;
     presentation::SignalChange<std::uint32_t> lastLap_;
     bool previousImperial_=false;

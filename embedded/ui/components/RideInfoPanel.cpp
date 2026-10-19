@@ -32,9 +32,9 @@ void RideInfoPanel::update(const ClusterState& s,const ViewOptions& v,const Pale
     const auto presentation=rideInfoPresentation(s,v);
     show(tripUnit_.get(),presentation.showDistance);
     text(tripTitle_.get(),presentation.tripTitle);
-    text(tripValue_.get(),presentation.tripValue.value);
+    tripText_.update(tripValue_.get(),presentation.tripValue.value);
     text(tripUnit_.get(),presentation.tripUnit);
     text(infoTitle_.get(),presentation.infoTitle);
-    text(infoValue_.get(),presentation.infoValue.value);
+    infoText_.update(infoValue_.get(),presentation.infoValue.value);
 }
 } // namespace cluster::ui

@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "../ReadoutText.h"
 #include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
@@ -16,6 +17,7 @@ public:
     Tachometer& operator=(const Tachometer&)=delete;
     void update(const Signal<int>& rpm,const Palette&);
 private:
+    ReadoutText rpmText_;
     presentation::SignalChange<int> lastRpm_;
     lv_grad_dsc_t rampGradient_{};
     ObjectOwner rpmBed_, rpmValue_, rpmUnit_, caption_;

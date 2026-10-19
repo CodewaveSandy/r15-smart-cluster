@@ -14,7 +14,7 @@ Updated: 2026-10-19. Status: native dashboard, Appearance preferences, Bluetooth
 | Bluetooth | Simulated pairing/connect/cancel/disconnect/confirmed Forget and failed/unknown states |
 | Wi-Fi | Simulated bounded network list/search/connect/disconnect/confirmed Forget; explicit pending-credentials notice |
 | Lifecycle | R15 Light Signature; boot 3,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
-| Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation and zero settled redraws |
+| Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation, persistent readout text buffers, dirty-driven SDL presentation and zero settled redraws |
 | Pending | Navigation/Maps feasibility, clock editor/source, real trip/lap calculations, firmware NVS, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
 
 Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Only confirmed theme/design persist. UI warning thresholds and the Settings speed gate are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.

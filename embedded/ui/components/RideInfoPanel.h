@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "../ReadoutText.h"
 #include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
@@ -15,6 +16,7 @@ public:
     RideInfoPanel& operator=(const RideInfoPanel&)=delete;
     void update(const ClusterState&,const ViewOptions&,const Palette&);
 private:
+    ReadoutText tripText_, infoText_;
     presentation::SignalChange<double> lastDistance_,lastInfoValue_;
     presentation::SignalChange<std::uint32_t> lastBestLap_;
     presentation::SignalChange<bool> lastTcs_;

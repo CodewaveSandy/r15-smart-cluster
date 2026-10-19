@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "../ReadoutText.h"
 #include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
@@ -16,6 +17,7 @@ public:
     Header& operator=(const Header&)=delete;
     void update(const ClusterState&,const ViewOptions&,const Palette&,int settingsProgress=0);
 private:
+    ReadoutText gearText_, batteryText_;
     presentation::SignalChange<int> lastGear_,lastPhoneBattery_;
     presentation::SignalChange<bool> lastPhoneConnection_;
     ObjectOwner header_;

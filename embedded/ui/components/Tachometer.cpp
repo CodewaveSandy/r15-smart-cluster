@@ -28,6 +28,6 @@ void Tachometer::update(const Signal<int>& rpm,const Palette& p) {
     paint(rpmBed_.get(),p.panel);
     const int fill=rpm.available()?std::clamp(rpm.value,0,TachometerLayout::scaleMaxRpm)*Metrics::content/TachometerLayout::scaleMaxRpm:0;
     show(rpmClip_,fill>0); lv_obj_set_width(rpmClip_,std::max(1,fill));
-    if(lastRpm_.update(rpm)) text(rpmValue_.get(),presentation::rpmNumberText(rpm).value);
+    if(lastRpm_.update(rpm)) rpmText_.update(rpmValue_.get(),presentation::rpmNumberText(rpm).value);
 }
 } // namespace cluster::ui

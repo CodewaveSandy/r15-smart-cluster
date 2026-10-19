@@ -1,4 +1,5 @@
 #include "embedded/ui/Typography.h"
+#include "embedded/ui/ReadoutText.h"
 #include "embedded/ui/Icons.h"
 #include "embedded/ui/Geometry.h"
 #include <cstdio>
@@ -68,5 +69,25 @@ int main() {
     fits(fonts::label,"Credentials pending - Enter simulates connection",650);
     fits(fonts::heading,"Forget connected network?",650);
     fits(fonts::value,"Protected",160);
+    {
+        auto* display=lv_display_create(800,480);
+        ReadoutText storage;
+        auto* label=lv_label_create(lv_screen_active());
+        lv_label_set_long_mode(label,LV_LABEL_LONG_CLIP);
+        storage.update(label,"0");
+        const auto* address=lv_label_get_text(label);
+        // Alternate lengths, UTF-8 unavailable text, and the full buffer capacity.
+        const char values[][32]={"13,000","0","—","99:59.99","1234567890123456789012345678901"};
+        for(int iteration=0;iteration<1000;++iteration) {
+            const auto& value=values[iteration%5];
+            storage.update(label,value);
+            storage.update(label,value);
+            if(lv_label_get_text(label)!=address || std::strcmp(lv_label_get_text(label),value)) {
+                std::fprintf(stderr,"Readout storage moved or text was corrupted\n"); ++failed; break;
+            }
+        }
+        lv_obj_delete(label); // Storage outlives the LVGL label.
+        lv_display_delete(display);
+    }
     lv_deinit(); return failed?1:0;
 }

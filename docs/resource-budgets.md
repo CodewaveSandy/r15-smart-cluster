@@ -16,7 +16,7 @@ python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/pr
 
 Current font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **102,852 payload bytes** and **113,130 compiled host asset section bytes** in total. The source PNG is not linked into firmware.
 
-The object tree now contains 165 objects, including Settings home, Appearance, Bluetooth and Wi-Fi status/action rows and the instrument visibility group. The Dashboard wrapper is 1,608 bytes on the current Mac ABI, including input tracking and animation state. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
+The object tree now contains 165 objects, including Settings home, Appearance, Bluetooth and Wi-Fi status/action rows and the instrument visibility group. The Dashboard wrapper is 1,864 bytes on the current Mac ABI, including input tracking, animation state and 256 bytes of persistent readout text. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
 
 ## Buffer arithmetic, not an allocation prescription
 
@@ -49,3 +49,9 @@ The shared feature profile is host-verified against LVGL 9.2.2. It is not a comp
 ## Light Signature rendering cost
 
 The renderer uses a constant number of line/triangle draws and one small A8 wordmark at native or smaller scale. LV_USE_IMAGE remains enabled; no PNG decoder, vector parser, full-screen texture or oversized image zoom is needed. Bounded application work does not prove a target frame rate: measure LVGL transient draw memory, stack/heap headroom, render/flush timing and retained power on the actual board. Host captures establish appearance/timing logic only.
+
+## Readout and desktop presentation updates
+
+Eight changing instrument labels (speed, current/best lap or distance, RPM, gear, phone battery, ride information and fuel) use component-owned 32-byte buffers with LVGL static text binding. After initial binding, these text replacements do not allocate label text storage. This does not claim all LVGL layout/render work is allocation-free. Buffers outlive their labels and are never moved. A host check exercises repeated length/quality changes and stable buffer addresses.
+
+The SDL preview uploads its framebuffer only after an LVGL flush, and presents only after an upload or window repaint event. Exposure, resize and restore reuse the texture; renderer device reset recreates it and forces an upload. The render suite checks initial/changed uploads, 100 idle calls, and repaint without upload using a software SDL renderer. The event/UI service loop continues at its existing cadence. Target rendering and hardware memory measurements remain pending.

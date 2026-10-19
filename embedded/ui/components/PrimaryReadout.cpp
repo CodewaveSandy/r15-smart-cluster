@@ -49,8 +49,8 @@ void PrimaryReadout::update(const ClusterState& s,const ViewOptions& v,const Pal
     const bool lapChanged=lastLap_.update(s.currentLapMs);
     if(!initialized_ || speedChanged || (v.track&&lapChanged) || previousImperial_!=v.imperial || previousTrack_!=v.track) {
         const auto presentation=primaryPresentation(s,v);
-        text(speed_.get(),presentation.speed.value);
-        if(v.track) text(lap_.get(),presentation.lap.value);
+        speedText_.update(speed_.get(),presentation.speed.value);
+        if(v.track) lapText_.update(lap_.get(),presentation.lap.value);
     }
     if(!initialized_ || previousTrack_!=v.track) {
         lv_obj_set_style_text_font(speed_.get(),v.track?fonts::secondary:fonts::speed,0);

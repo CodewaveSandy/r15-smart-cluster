@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "../ReadoutText.h"
 #include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
@@ -16,6 +17,7 @@ public:
     FuelGauge& operator=(const FuelGauge&)=delete;
     void update(const Signal<int>& fuel,const Palette&,std::uint64_t now);
 private:
+    ReadoutText fuelText_;
     presentation::SignalChange<int> lastFuel_;
     struct SegmentStyle { int fill=0; std::uint32_t active=0, empty=0; };
     static void drawSegment(lv_event_t*);

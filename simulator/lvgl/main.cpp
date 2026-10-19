@@ -25,14 +25,59 @@ std::array<std::uint16_t,800*480> pixels{};
 int warnings=0;
 struct FlushMetrics { std::uint64_t calls=0, pixels=0; };
 FlushMetrics flushMetrics;
+bool framebufferDirty=true;
 void logMessage(lv_log_level_t, const char* message) { ++warnings; std::fprintf(stderr,"%s",message); }
 void flush(lv_display_t* display,const lv_area_t* area,std::uint8_t* bytes) {
+    framebufferDirty=true;
     ++flushMetrics.calls;
     flushMetrics.pixels+=std::uint64_t(area->x2-area->x1+1)*(area->y2-area->y1+1);
     const auto* source=reinterpret_cast<std::uint16_t*>(bytes);
     for(int y=area->y1;y<=area->y2;++y)
         std::copy_n(source+(y-area->y1)*(area->x2-area->x1+1),area->x2-area->x1+1,pixels.data()+y*800+area->x1);
     lv_display_flush_ready(display);
+}
+struct PresentWork { bool uploaded=false, presented=false; };
+PresentWork presentFramebuffer(SDL_Renderer* renderer,SDL_Texture* texture,bool& repaint) {
+    PresentWork work;
+    if(framebufferDirty) {
+        if(SDL_UpdateTexture(texture,nullptr,pixels.data(),800*2))
+            throw std::runtime_error(SDL_GetError());
+        framebufferDirty=false;
+        repaint=true;
+        work.uploaded=true;
+    }
+    if(repaint) {
+        if(SDL_RenderClear(renderer) || SDL_RenderCopy(renderer,texture,nullptr,nullptr))
+            throw std::runtime_error(SDL_GetError());
+        SDL_RenderPresent(renderer);
+        repaint=false;
+        work.presented=true;
+    }
+    return work;
+}
+// Exercise the same presentation path as the interactive preview under dummy SDL.
+void checkPresentation() {
+    auto* surface=SDL_CreateRGBSurfaceWithFormat(0,800,480,16,SDL_PIXELFORMAT_RGB565);
+    if(!surface) throw std::runtime_error(SDL_GetError());
+    std::unique_ptr<SDL_Surface,decltype(&SDL_FreeSurface)> ownedSurface(surface,SDL_FreeSurface);
+    std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)> renderer(SDL_CreateSoftwareRenderer(surface),SDL_DestroyRenderer);
+    if(!renderer) throw std::runtime_error(SDL_GetError());
+    std::unique_ptr<SDL_Texture,decltype(&SDL_DestroyTexture)> texture(SDL_CreateTexture(renderer.get(),SDL_PIXELFORMAT_RGB565,SDL_TEXTUREACCESS_STREAMING,800,480),SDL_DestroyTexture);
+    if(!texture) throw std::runtime_error(SDL_GetError());
+    bool repaint=true;
+    framebufferDirty=true;
+    auto work=presentFramebuffer(renderer.get(),texture.get(),repaint);
+    if(!work.uploaded || !work.presented) throw std::runtime_error("Initial framebuffer was not presented");
+    for(int i=0;i<100;++i) {
+        work=presentFramebuffer(renderer.get(),texture.get(),repaint);
+        if(work.uploaded || work.presented) throw std::runtime_error("Idle SDL presentation repeated");
+    }
+    repaint=true;
+    work=presentFramebuffer(renderer.get(),texture.get(),repaint);
+    if(work.uploaded || !work.presented) throw std::runtime_error("Window repaint must reuse texture");
+    framebufferDirty=true;
+    work=presentFramebuffer(renderer.get(),texture.get(),repaint);
+    if(!work.uploaded || !work.presented) throw std::runtime_error("Changed framebuffer was not presented");
 }
 ClusterState demo() {
     ClusterState s;
@@ -99,6 +144,7 @@ int main(int argc,char** argv) {
             ClusterState state=demo(); cluster::ui::ViewOptions view; Lifecycle life;
             view.light=confirmedPreferences.light; view.bluetoothDemo=true;
             if(render) {
+                checkPresentation();
                 std::filesystem::create_directories(output);
                 view.time="20:55"; view.date="18 Oct 2026";
                 life.key(true,0); life.advance(Lifecycle::bootMs);
@@ -492,9 +538,20 @@ int main(int argc,char** argv) {
                 life.key(true,0); bool running=true,missing=false; help(); std::uint64_t last=0;
                 std::time_t previousMinute=-1;
                 char timeText[16]{},dateText[32]{};
+                bool repaint=true;
                 while(running) {
                     const auto now=milliseconds(); SDL_Event event;
                     while(SDL_PollEvent(&event)) {
+                        if(event.type==SDL_RENDER_DEVICE_RESET) {
+                            texture.reset(SDL_CreateTexture(renderer.get(),SDL_PIXELFORMAT_RGB565,SDL_TEXTUREACCESS_STREAMING,800,480));
+                            if(!texture) throw std::runtime_error(SDL_GetError());
+                            framebufferDirty=true;
+                        }
+                        if(event.type==SDL_RENDER_TARGETS_RESET) repaint=true;
+                        if(event.type==SDL_WINDOWEVENT &&
+                           (event.window.event==SDL_WINDOWEVENT_EXPOSED ||
+                            event.window.event==SDL_WINDOWEVENT_SIZE_CHANGED ||
+                            event.window.event==SDL_WINDOWEVENT_RESTORED)) repaint=true;
                         if(event.type==SDL_QUIT) running=false;
                         if(event.type!=SDL_KEYDOWN) continue;
                         const auto key=event.key.keysym.sym;
@@ -558,8 +615,7 @@ int main(int argc,char** argv) {
                     dispatchEffect(reconcileSettings(view,observed,life),now);
                     observed=missing?ClusterState{}:state;
                     dashboard.update(observed,view,life,now); lv_timer_handler();
-                    SDL_UpdateTexture(texture.get(),nullptr,pixels.data(),800*2);
-                    SDL_RenderClear(renderer.get()); SDL_RenderCopy(renderer.get(),texture.get(),nullptr,nullptr); SDL_RenderPresent(renderer.get());
+                    presentFramebuffer(renderer.get(),texture.get(),repaint);
                     std::this_thread::sleep_for(std::chrono::milliseconds(8));
                 }
             }
