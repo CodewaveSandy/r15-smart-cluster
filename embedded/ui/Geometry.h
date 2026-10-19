@@ -72,6 +72,12 @@ struct AppearanceLayout {
     static constexpr Rect cancel{484,278,136,44},apply{636,278,136,44};
     static constexpr TextArea status{28,292,440};
 };
+struct BluetoothLayout {
+    static constexpr Rect bounds=SettingsLayout::bounds;
+    static constexpr TextArea title{28,5,500},back{690,12,82},subtitle{28,36,700};
+    static constexpr Rect device{28,58,744,78};
+    static constexpr Rect row(unsigned i) { return {28,154+int(i)*56,744,48}; }
+};
 struct LifecycleLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::height};
     static constexpr Point center{Metrics::width/2,220};

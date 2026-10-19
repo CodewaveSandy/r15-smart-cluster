@@ -100,7 +100,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs seven suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, preference storage/restart checks, typography bounds/glyph coverage, and 174 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
+This runs eight suites: portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, Bluetooth state/requests, preference storage/restart checks, typography bounds/glyph coverage, and 238 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
 
 To build and render without opening a window:
 
@@ -112,7 +112,7 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
-This host slice implements the dashboard foundation and R15 Light Signature (3 s boot / 2 s shutdown). Icons use bundled automotive glyphs; full settings/clock editing, functional laps/trips, persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
+This host slice implements the dashboard foundation and R15 Light Signature (3 s boot / 2 s shutdown). Icons use bundled automotive glyphs; Wi-Fi/Navigation/clock editing, functional laps/trips, firmware NVS persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. Appearance and host saved preferences are implemented; Bluetooth is a simulated UI flow. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.
 
@@ -140,12 +140,16 @@ For deterministic animation captures without a window:
 SDL_VIDEODRIVER=dummy bash scripts/preview.sh --animate build/lvgl/animation-preview
 ```
 
-This saves the 174 standard scenarios plus 76 boot and 51 shutdown motion frames at 40 ms intervals. Source/generated assets and prompts are in assets/animations; Pillow 12.3.0 is needed only for regeneration, not normal builds. See [lifecycle timeline](power-lifecycle.md). The artwork uses one 12 KiB A8 wordmark and procedural blue light slashes. Actual panel performance remains unverified. To export GIF/contact-sheet previews after --animate, run `python3 scripts/export-animation-previews.py build/lvgl/animation-preview` with Pillow installed.
+This saves the 238 standard scenarios plus 76 boot and 51 shutdown motion frames at 40 ms intervals. Source/generated assets and prompts are in assets/animations; Pillow 12.3.0 is needed only for regeneration, not normal builds. See [lifecycle timeline](power-lifecycle.md). The artwork uses one 12 KiB A8 wordmark and procedural blue light slashes. Actual panel performance remains unverified. To export GIF/contact-sheet previews after --animate, run `python3 scripts/export-animation-previews.py build/lvgl/animation-preview` with Pillow installed.
 
 Fuel preview: `[` / `]` change the simulated reading by 1%. At 56% the fifth piece is partly filled; at 6% the first piece is roughly half filled. `RESERVE` appears at/below 16% for a valid reading, matching the user-supplied approximate reserve ratio. These are host samples, not calibrated fuel-volume measurements.
 
 ## Settings and Appearance
 
-Restart with `bash scripts/preview.sh`. After boot, press **P** to set the host demo to stationary/neutral, then **S** to open Settings. **Right/Down** advance through Appearance → Bluetooth → Wi-Fi → Navigation, wrapping around; **Left/Up** go backward. **I** also cycles forward. **Backspace** or **Esc** returns with the speed transition (Esc closes the app when outside Settings). **D** still previews the other theme. **Enter** opens Appearance when its tile is focused; radio/navigation submenus remain pending. Settings closes immediately if speed becomes stale or reaches 20 km/h, a valid urgent warning appears or the lifecycle leaves Running. See [Settings design](settings.md).
+Restart with `bash scripts/preview.sh`. After boot, press **P** to set the host demo to stationary/neutral, then **S** to open Settings. **Right/Down** advance through Appearance → Bluetooth → Wi-Fi → Navigation, wrapping around; **Left/Up** go backward. **I** also cycles forward. **Backspace** or **Esc** returns with the speed transition (Esc closes the app when outside Settings). **D** still previews the other theme. **Enter** opens Appearance when its tile is focused; Bluetooth also opens with Enter; Wi-Fi/Navigation remain pending. Settings closes immediately if speed becomes stale or reaches 20 km/h, a valid urgent warning appears or the lifecycle leaves Running. See [Settings design](settings.md).
 
 In Appearance, use arrows to focus Midnight/Daylight and **Enter** to preview it. Continue through Instrument, Cancel and Apply; Enter activates the focused choice. Apply saves the confirmed theme/design for the next Mac preview launch. Cancel/Back restores the previous theme. The save file is `~/Library/Application Support/R15 Smart Cluster/preferences.bin`; use `R15_SETTINGS_PATH` for an isolated override. **D** remains a temporary host preview shortcut and does not save automatically. Only theme/design are persistent in this slice.
+
+## Bluetooth UI demo
+
+Use **P → S → Right → Enter** from Settings home to open Bluetooth. The initial Rider phone is a simulated connected fixture. Arrows cycle actions and Enter selects. Disconnect preserves pairing; Forget requires confirmation. Pair new device shows timed progress and can be cancelled. **F3** fails the next operation; **F4** toggles unavailable service; **Space** resets the radio/telemetry demo. Back returns without dropping an established connection. No real phone is paired and radio bonds are not saved by the Appearance preference file. See [Bluetooth](bluetooth.md) for states and hardware boundaries.

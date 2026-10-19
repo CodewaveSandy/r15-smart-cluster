@@ -1,6 +1,6 @@
 # Settings, Appearance and instrument transitions
 
-Updated: 2026-10-19. Settings home, Appearance and host preference persistence implemented; radio/navigation submenus and ESP32 storage adapter pending.
+Updated: 2026-10-19. Settings home, Appearance, host preferences and Bluetooth UI/demo implemented; Wi-Fi/Navigation and ESP32 adapters pending.
 
 ## Visual direction
 
@@ -8,7 +8,7 @@ The user selected the category-grid concept in [settings-concept.png](reference/
 
 ## Navigation and access
 
-SettingsHome owns a persistent four-tile tree. SettingsNavigation reduces semantic actions without LVGL, SDL, storage or radio dependencies. The host maps S to Open, Right/Down to next, Left/Up to previous, I to next, Enter to Select, and Backspace/Esc to Back. Focus wraps. Enter opens Appearance; the other category submenus remain pending and show Not configured/Setup required.
+SettingsHome owns a persistent four-tile tree. SettingsNavigation reduces semantic actions without LVGL, SDL, storage or radio dependencies. The host maps S to Open, Right/Down to next, Left/Up to previous, I to next, Enter to Select, and Backspace/Esc to Back. Focus wraps. Enter opens Appearance or Bluetooth. Wi-Fi and Navigation remain pending and show Not configured/Setup required. Bluetooth home status follows confirmed service observations.
 
 A valid speed observation from 0 up to (but excluding) 20 km/h, Running lifecycle and no valid urgent warning are required to open Settings. Speed at/above 20 km/h, unavailable/stale speed, urgent warning or power transition close it. Unconfirmed Appearance previews are cancelled on interruption. The renderer independently enforces instrument visibility so a stale view option cannot hide readings. Physical input detection and the vehicle command channel are unimplemented. The 20 km/h threshold is user-selected UI behavior, not a validated safe riding speed. The gate always uses normalized km/h even when display units are imperial; future pairing/text-entry restrictions require their own review.
 
@@ -36,9 +36,10 @@ PreferenceFile performs host filesystem operations outside LVGL rendering, using
 
 ## Next slices
 
-1. Bluetooth: supported pairing/discovery/confirmation, paired devices, Disconnect and Forget. UI consumes confirmed vehicle-radio status and issues typed requests; no optimistic connection state.
-2. Wi-Fi: network identity, connection progress, credentials, Disconnect and Forget. Whether the phone is hotspot, peer or another endpoint remains unresolved.
-3. Navigation: configuration/status first. Full Google Maps/projection remains a separate feasibility requirement; GPS position alone is not a map renderer.
+The [Bluetooth UI and host demo](bluetooth.md) are implemented with typed request effects and normalized status; actual radio/UART adapters remain pending.
+
+1. Wi-Fi: network identity, connection progress, credentials, Disconnect and Forget. Whether the phone is hotspot, peer or another endpoint remains unresolved.
+2. Navigation: configuration/status first. Full Google Maps/projection remains a separate feasibility requirement; GPS position alone is not a map renderer.
 
 Submenus share Next/Previous/Select/Back semantics. Touch may be added as another adapter; physical switches must remain sufficient for navigation, with text entry evaluated separately.
 

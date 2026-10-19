@@ -1,6 +1,7 @@
 #include "SettingsHome.h"
 #include "../WidgetPrimitives.h"
 #include "../Icons.h"
+#include "embedded/presentation/BluetoothPresentation.h"
 namespace cluster::ui {
 using namespace widget;
 using namespace geometry;
@@ -21,9 +22,11 @@ SettingsHome::SettingsHome(lv_obj_t* parent):root_(box(parent,SettingsLayout::bo
     }
     show(root_.get(),false);
 }
-void SettingsHome::update(const ViewOptions& options,const Palette& p,int progress) {
-    show(root_.get(),progress>0&&!options.appearance);
+void SettingsHome::update(const ViewOptions& options,const BluetoothState& radio,const Palette& p,int progress) {
+    show(root_.get(),progress>0&&!options.appearance&&!options.bluetooth);
     if(progress==0) return;
+    const auto bluetooth=presentation::bluetoothPresentation(radio,false);
+    text(details_[1],bluetooth.status);
     const lv_opa_t alpha=progress*255/1000;
     for(auto* label:{title_,subtitle_,back_}) fade(label,alpha);
     ink(title_,p.ink); ink(subtitle_,p.muted); ink(back_,p.muted);
@@ -36,7 +39,7 @@ void SettingsHome::update(const ViewOptions& options,const Palette& p,int progre
         const auto border=color(selected?p.accent:p.line);
         if(!lv_color_eq(lv_obj_get_style_border_color(tiles_[i],0),border)) lv_obj_set_style_border_color(tiles_[i],border,0);
         ink(icons_[i],selected?p.accent:p.muted);
-        ink(names_[i],p.ink); ink(details_[i],p.muted);
+        ink(names_[i],p.ink); ink(details_[i],i==1?(bluetooth.error?p.red:bluetooth.active?p.accent:p.muted):p.muted);
     }
 }
 }

@@ -11,7 +11,7 @@ int main() {
         const auto action=host::dashboardAction(mapping.first);
         if(!action||*action!=mapping.second) { std::fprintf(stderr,"Desktop semantic mapping mismatch\n"); return 1; }
     }
-    for(const auto key:{SDLK_UP,SDLK_RIGHT,SDLK_0,SDLK_o,SDLK_F2,SDLK_ESCAPE}) {
+    for(const auto key:{SDLK_UP,SDLK_RIGHT,SDLK_0,SDLK_o,SDLK_F2,SDLK_F3,SDLK_F4,SDLK_ESCAPE}) {
         if(host::dashboardAction(key)) { std::fprintf(stderr,"Simulator key consumed by navigation adapter\n"); return 1; }
     }
     if(host::settingsAction(SDLK_UP,false) || host::settingsAction(SDLK_ESCAPE,false)) return 1;

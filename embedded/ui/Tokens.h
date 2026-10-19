@@ -17,5 +17,5 @@ struct Palette {
 };
 inline constexpr Palette midnight{0x090e14,0xedf4fb,0x91a4b7,0x14202c,0x253544,0x78e4c1,0xf5d45b,0xff7980,0x77baff};
 inline constexpr Palette daylight{0xeff3f5,0x122333,0x4d6577,0xe0e8ec,0xc7d3db,0x007757,0x946000,0xbf263a,0x246bb0};
-struct ViewOptions:DisplayOptions { bool iconTest=false; const char* time="—:—"; const char* date="CLOCK UNAVAILABLE"; };
+struct ViewOptions:DisplayOptions { bool iconTest=false, bluetoothDemo=false; const char* time="—:—"; const char* date="CLOCK UNAVAILABLE"; };
 } // namespace cluster::ui

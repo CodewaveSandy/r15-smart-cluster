@@ -8,6 +8,8 @@ struct DisplayOptions {
     unsigned settingsFocus=0;
     bool appearance=false, appearanceOriginalLight=false, appearanceSaveFailed=false;
     unsigned appearanceFocus=0;
+    bool bluetooth=false, bluetoothForgetConfirmation=false;
+    unsigned bluetoothFocus=0;
     TripPage tripPage=TripPage::Odometer;
     InfoPage infoPage=InfoPage::Coolant;
 };

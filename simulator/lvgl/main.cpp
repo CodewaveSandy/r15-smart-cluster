@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include "DesktopInput.h"
 #include "PreferenceFile.h"
+#include "BluetoothDemo.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -34,6 +35,8 @@ void flush(lv_display_t* display,const lv_area_t* area,std::uint8_t* bytes) {
 }
 ClusterState demo() {
     ClusterState s;
+    s.bluetooth.quality=Quality::Available; s.bluetooth.paired=true; s.bluetooth.connected=true;
+    std::snprintf(s.bluetooth.deviceName.data(),s.bluetooth.deviceName.size(),"Rider phone");
     s.bestLapMs={78420,Quality::Available}; // Static best lap sample: 01:18.42.
     s.currentLapMs={84380,Quality::Available}; // Static lap sample: 01:24.38.
     s.speedKph={60,Quality::Available}; s.engineRpm={8500,Quality::Available};
@@ -67,6 +70,7 @@ void help() {
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
         "P: stationary demo | S: settings | Arrows: focus | Enter: select | Backspace/Esc: back\n"
         "O: key on/off (3000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
+        "F3: fail next Bluetooth request | F4: Bluetooth service unavailable/restore\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
 }
@@ -90,7 +94,7 @@ int main(int argc,char** argv) {
         {
             cluster::ui::Dashboard dashboard(lv_screen_active());
             ClusterState state=demo(); cluster::ui::ViewOptions view; Lifecycle life;
-            view.light=confirmedPreferences.light;
+            view.light=confirmedPreferences.light; view.bluetoothDemo=true;
             if(render) {
                 std::filesystem::create_directories(output);
                 view.time="20:55"; view.date="18 Oct 2026";
@@ -386,8 +390,49 @@ int main(int argc,char** argv) {
                     dashboard.update(parked,view,life,offset+7280); lv_refr_now(nullptr);
                     if(before!=pixels) { throw std::runtime_error("Settings exit failed to restore dashboard exactly: "+suffix); }
                 }
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view={}; view.track=track; view.light=light; view.settings=true; view.bluetooth=true; view.bluetoothDemo=true;
+                    view.time="20:55"; view.date="18 Oct 2026";
+                    const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
+                    const std::uint64_t base=50000+((track?2:0)+(light?1:0))*20000;
+                    const char* names[]={"connected","paired","unpaired","discoverable","pairing","connecting","disconnecting","forgetting","forget-confirmation","timeout","rejected","unavailable","stale","connected-error"};
+                    for(unsigned scene=0;scene<14;++scene) {
+                        auto sample=state; sample.speedKph={0,Quality::Available}; sample.gear={0,Quality::Available};
+                        auto& radio=sample.bluetooth;
+                        view.bluetoothForgetConfirmation=false; view.bluetoothFocus=0;
+                        switch(scene) {
+                        case 1:radio.connected=false;break;
+                        case 2:radio.connected=false;radio.paired=false;radio.deviceName.fill(0);break;
+                        case 3:radio.connected=false;radio.phase=BluetoothPhase::Discoverable;break;
+                        case 4:radio.connected=false;radio.phase=BluetoothPhase::Pairing;break;
+                        case 5:radio.connected=false;radio.phase=BluetoothPhase::Connecting;break;
+                        case 6:radio.phase=BluetoothPhase::Disconnecting;break;
+                        case 7:radio.phase=BluetoothPhase::Forgetting;break;
+                        case 8:view.bluetoothForgetConfirmation=true;break;
+                        case 9:radio.connected=false;radio.phase=BluetoothPhase::Failed;radio.failure=BluetoothFailure::Timeout;break;
+                        case 10:radio.connected=false;radio.paired=false;radio.phase=BluetoothPhase::Failed;radio.failure=BluetoothFailure::Rejected;break;
+                        case 11:radio.quality=Quality::Unavailable;break;
+                        case 12:radio.quality=Quality::Stale;break;
+                        case 13:radio.phase=BluetoothPhase::Failed;radio.failure=BluetoothFailure::Timeout;break;
+                        default:break;
+                        }
+                        sample.phoneConnected={radio.connected,radio.quality};
+                        dashboard.update(sample,view,life,base+scene*1000);
+                        dashboard.update(sample,view,life,base+scene*1000+280);
+                        capture(output/("bluetooth-"+std::string(names[scene])+"-"+suffix+".bmp"));
+                        flushMetrics={};
+                        for(int idle=0;idle<100;++idle) { dashboard.update(sample,view,life,base+scene*1000+300); lv_refr_now(nullptr); }
+                        if(flushMetrics.calls) throw std::runtime_error("Settled Bluetooth redraw without changes");
+                    }
+                    auto interrupt=state; interrupt.speedKph={0,Quality::Available}; interrupt.engineWarning={true,Quality::Available};
+                    if(reconcileSettings(view,interrupt,life)!=SettingsEffect::BluetoothCancel) throw std::runtime_error("Warning failed to cancel Bluetooth UI operation");
+                    dashboard.update(interrupt,view,life,base+14000); capture(output/("bluetooth-warning-"+suffix+".bmp"));
+                    view.settings=true;view.bluetooth=true;interrupt.engineWarning={false,Quality::Available};interrupt.speedKph.quality=Quality::Stale;
+                    reconcileSettings(view,interrupt,life);
+                    dashboard.update(interrupt,view,life,base+15000);capture(output/("bluetooth-speed-stale-"+suffix+".bmp"));
+                }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 174 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 238 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
@@ -404,6 +449,16 @@ int main(int argc,char** argv) {
                 if(!texture) throw std::runtime_error(SDL_GetError());
                 const auto start=std::chrono::steady_clock::now();
                 auto milliseconds=[&]{return std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count());};
+                cluster::host::BluetoothDemo bluetoothDemo;
+                const auto dispatchEffect=[&](SettingsEffect effect,std::uint64_t now) {
+                    if(effect==SettingsEffect::SavePreferences) {
+                        const Preferences requested{view.light,DashboardDesign::Instrument};
+                        const bool unchanged=requested.light==confirmedPreferences.light&&requested.design==confirmedPreferences.design;
+                        const bool saved=unchanged||preferenceFile.save(requested);
+                        if(saved) confirmedPreferences=requested;
+                        appearanceSaveResult(view,saved);
+                    } else bluetoothDemo.request(effect,state,now);
+                };
                 life.key(true,0); bool running=true,missing=false; help(); std::uint64_t last=0;
                 std::time_t previousMinute=-1;
                 char timeText[16]{},dateText[32]{};
@@ -415,14 +470,7 @@ int main(int argc,char** argv) {
                         const auto key=event.key.keysym.sym;
                         if(event.key.repeat && key!=SDLK_LEFT&&key!=SDLK_RIGHT&&key!=SDLK_UP&&key!=SDLK_DOWN&&key!=SDLK_LEFTBRACKET&&key!=SDLK_RIGHTBRACKET) continue;
                         if(const auto action=cluster::host::settingsAction(key,view.settings)) {
-                            const auto effect=settingsAction(view,*action,missing?ClusterState{}:state,life);
-                            if(effect==SettingsEffect::SavePreferences) {
-                                const Preferences requested{view.light,DashboardDesign::Instrument};
-                                const bool unchanged=requested.light==confirmedPreferences.light&&requested.design==confirmedPreferences.design;
-                                const bool saved=unchanged||preferenceFile.save(requested);
-                                if(saved) confirmedPreferences=requested;
-                                appearanceSaveResult(view,saved);
-                            }
+                            dispatchEffect(settingsAction(view,*action,missing?ClusterState{}:state,life),now);
                             continue;
                         }
                         if(view.settings&&(key==SDLK_RETURN||key==SDLK_t||key==SDLK_TAB)) continue;
@@ -452,8 +500,10 @@ int main(int argc,char** argv) {
                         case SDLK_a: state.absWarning.value=!state.absWarning.value; break;
                         case SDLK_e: state.engineWarning.value=!state.engineWarning.value; break;
                         case SDLK_c: state.coolantWarning.value=!state.coolantWarning.value; break;
-                        case SDLK_SPACE: state=demo(); missing=false; break;
+                        case SDLK_SPACE: state=demo(); bluetoothDemo=cluster::host::BluetoothDemo{}; missing=false; break;
                         case SDLK_F1: help(); break;
+                        case SDLK_F3: bluetoothDemo.failNext(); break;
+                        case SDLK_F4: bluetoothDemo.toggleAvailability(state); break;
                         case SDLK_F2: view.iconTest=!view.iconTest; break;
                         default: if(key>=SDLK_0&&key<=SDLK_6) state.gear.value=key-SDLK_0; break;
                         }
@@ -469,9 +519,11 @@ int main(int argc,char** argv) {
                     }
                     view.time=timeText; view.date=dateText;
                     lv_tick_inc(static_cast<std::uint32_t>(now-last)); last=now;
-                    const auto observed=missing?ClusterState{}:state;
+                    bluetoothDemo.update(state,now);
+                    auto observed=missing?ClusterState{}:state;
                     if(!valid(observed)) throw std::runtime_error("Simulator produced invalid normalized state");
-                    reconcileSettings(view,observed,life);
+                    dispatchEffect(reconcileSettings(view,observed,life),now);
+                    observed=missing?ClusterState{}:state;
                     dashboard.update(observed,view,life,now); lv_timer_handler();
                     SDL_UpdateTexture(texture.get(),nullptr,pixels.data(),800*2);
                     SDL_RenderClear(renderer.get()); SDL_RenderCopy(renderer.get(),texture.get(),nullptr,nullptr); SDL_RenderPresent(renderer.get());

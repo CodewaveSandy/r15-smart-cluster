@@ -89,3 +89,7 @@ User selected the category-grid concept and requested speed to animate into the 
 ## D20 — Appearance and confirmed host preferences (2026-10-19)
 
 After committing Settings home as 5e0d2c1, implement Appearance with native theme/design thumbnails and explicit preview/Apply/Cancel. Only Instrument is offered. Confirmed theme/design are encoded in a versioned validated eight-byte record and restored at host startup. The host adapter performs file replacement outside rendering; failures keep the preview open, while cancellation or access interruption restores the original theme. Do not persist navigation, unconfirmed previews or vehicle data. Render tests isolate storage. ESP32 NVS remains a board-firmware task; radio and navigation screens remain subsequent slices.
+
+## D21 — Bluetooth UI and observed-state requests (2026-10-19)
+
+After committing Appearance as d04d05c, add Bluetooth status/actions, cancellable pairing/connection, Disconnect, confirmed Forget and explicit error/unavailable states. Use portable normalized radio observations and typed request effects; widgets never optimistically mutate connection/bond state. A host-only timed single-phone fixture exercises the UI and is marked simulated. Back/access interruption cancels pending pair/connect without dropping an established link; accepted Forget is not undone. Real profiles, authentication, identity/session-bound commands, bond storage and UART/radio adapters require review before hardware integration. See [Bluetooth](bluetooth.md).

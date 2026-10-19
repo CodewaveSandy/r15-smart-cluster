@@ -6,6 +6,7 @@
 #include "components/Header.h"
 #include "components/SettingsHome.h"
 #include "components/AppearancePanel.h"
+#include "components/BluetoothPanel.h"
 #include "embedded/presentation/SettingsTransition.h"
 #include "components/TellTaleRow.h"
 #include "components/Tachometer.h"
@@ -38,6 +39,7 @@ private:
     Tachometer tachometer_;
     SettingsHome settings_;
     AppearancePanel appearance_;
+    BluetoothPanel bluetooth_;
     PrimaryReadout primary_;
     RideInfoPanel rideInfo_;
     FuelGauge fuel_;
