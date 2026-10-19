@@ -10,6 +10,7 @@ Build a premium instrument cluster for the Yamaha R15 V4 using two ESP32 MCUs, a
 | [Architecture](architecture.md) | System overview and responsibility boundaries |
 | [Embedded design](embedded-architecture.md) | Modules, concurrency, state, UART and resource budgets |
 | [UI style guide](lvgl-style-guide.md) | Geometry, typography, themes and instrument behavior |
+| [Settings and transitions](settings.md) | Category grid, animated speed strip and staged submenu/persistence plan |
 | [Power lifecycle](power-lifecycle.md) | Key-on, boot, running, key-off and shutdown journey |
 | [Implementation plan](implementation-plan.md) | Stages, acceptance gates and tests |
 | [Resource budgets](resource-budgets.md) | Repeatable asset audit and target memory/performance evidence |

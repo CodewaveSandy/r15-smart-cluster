@@ -75,6 +75,30 @@
       "name": "gas-station",
       "codepoint": "F0298",
       "size": 32
+    },
+    {
+      "role": "appearance",
+      "name": "palette",
+      "codepoint": "F03D8",
+      "size": 32
+    },
+    {
+      "role": "bluetooth",
+      "name": "bluetooth",
+      "codepoint": "F00AF",
+      "size": 32
+    },
+    {
+      "role": "wifi",
+      "name": "wifi",
+      "codepoint": "F05A9",
+      "size": 32
+    },
+    {
+      "role": "navigation",
+      "name": "map-marker-outline",
+      "codepoint": "F07D9",
+      "size": 32
     }
   ]
 }

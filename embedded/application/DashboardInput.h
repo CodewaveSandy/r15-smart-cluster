@@ -6,6 +6,7 @@ enum class InputEffect { None, RequestTcsToggle };
 // Semantic actions modify display state only. Vehicle requests leave through a
 // typed effect; the host may simulate them, a future transport must validate them.
 inline InputEffect applyAction(DisplayOptions& options,DashboardAction action) {
+    if(options.settings && action!=DashboardAction::ToggleTheme && action!=DashboardAction::ToggleUnits) return InputEffect::None;
     switch(action) {
     case DashboardAction::NextTrip:
         if(!options.track) options.tripPage=next(options.tripPage);

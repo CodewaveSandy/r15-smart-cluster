@@ -2,7 +2,7 @@
 
 Source: [Pictogrammers Material Design Icons](https://pictogrammers.com/library/mdi/), official [@mdi/font 7.4.47 package](https://registry.npmjs.org/@mdi/font/-/font-7.4.47.tgz). The unmodified source font is bundled for reproducible offline conversion, not linked into the application.
 
-The font and selected icons are licensed under Apache 2.0. Preserve [upstream license notice](LICENSE.txt), [Apache license](Apache-2.0.txt), and [NOTICE](NOTICE.txt) with distributed generated assets. No brand/logo glyphs are selected.
+The font and selected icons are licensed under Apache 2.0. Preserve [upstream license notice](LICENSE.txt), [Apache license](Apache-2.0.txt), and [NOTICE](NOTICE.txt) with distributed generated assets. No OEM vehicle badges are selected.
 
 Pinned package version, archive/source-font hashes, original codepoints, selected names and raster sizes are recorded in [manifest.json](manifest.json). These are generic symbols; no OEM/regulatory conformity is claimed.
 
@@ -19,6 +19,10 @@ Pinned package version, archive/source-font hashes, original codepoints, selecte
 | Hazard | hazard-lights |
 | Phone connection | cellphone |
 | Fuel | gas-station |
+| Appearance | palette |
+| Bluetooth | bluetooth |
+| Wi-Fi | wifi |
+| Navigation | map-marker-outline |
 
 Neutral stays a typographic N. QS/VVA keep their badges. The traction-control glyph uses a generic slipping-car silhouette; this does not verify Yamaha's signal or warning semantics.
 

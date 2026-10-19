@@ -64,6 +64,7 @@ void help() {
         "Enter: Street trip page | I: info page | T: toggle selected TCS/Track (simulation only)\n"
         "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
+        "P: stationary demo | S: settings | Arrows: focus | Backspace/Esc: back\n"
         "O: key on/off (3000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
 }
@@ -331,8 +332,39 @@ int main(int argc,char** argv) {
                     for(unsigned elapsed=0;elapsed<=Lifecycle::bootMs;elapsed+=40) renderAnimation(true,elapsed,"boot-motion");
                     for(unsigned elapsed=0;elapsed<=Lifecycle::shutdownMs;elapsed+=40) renderAnimation(false,elapsed,"shutdown-motion");
                 }
+                for(bool track:{false,true}) for(bool light:{false,true}) {
+                    view={}; view.track=track; view.light=light; view.time="20:55"; view.date="18 Oct 2026";
+                    const std::uint64_t offset=((track?2:0)+(light?1:0))*10000;
+                    auto parked=state; parked.speedKph={0,Quality::Available}; parked.gear={0,Quality::Available};
+                    const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
+                    dashboard.update(parked,view,life,offset+6000); lv_refr_now(nullptr);
+                    const auto before=pixels;
+                    settingsAction(view,SettingsAction::Open,parked,life);
+                    dashboard.update(parked,view,life,offset+6100);
+                    dashboard.update(parked,view,life,offset+6240); capture(output/("settings-enter-"+suffix+".bmp"));
+                    dashboard.update(parked,view,life,offset+6380); capture(output/("settings-home-"+suffix+".bmp"));
+                    for(unsigned focus=1;focus<4;++focus) {
+                        view.settingsFocus=focus; dashboard.update(parked,view,life,offset+6400+focus);
+                        capture(output/("settings-focus-"+std::to_string(focus)+"-"+suffix+".bmp"));
+                    }
+                    flushMetrics={};
+                    for(int i=0;i<100;++i) { dashboard.update(parked,view,life,offset+6500); lv_refr_now(nullptr); }
+                    if(flushMetrics.calls) throw std::runtime_error("Settled settings redraw without changes");
+                    auto warning=parked; warning.engineWarning={true,Quality::Available};
+                    dashboard.update(warning,view,life,offset+6510); capture(output/("settings-warning-"+suffix+".bmp"));
+                    auto unavailable=parked; unavailable.speedKph.quality=Quality::Stale;
+                    dashboard.update(unavailable,view,life,offset+6520); capture(output/("settings-unavailable-"+suffix+".bmp"));
+                    // Re-enter, return, and compare the exact original dashboard.
+                    view.settings=false; dashboard.update(parked,view,life,offset+6600);
+                    view.settings=true; dashboard.update(parked,view,life,offset+6700); dashboard.update(parked,view,life,offset+6980);
+                    settingsAction(view,SettingsAction::Back,parked,life);
+                    dashboard.update(parked,view,life,offset+7000);
+                    dashboard.update(parked,view,life,offset+7140); capture(output/("settings-exit-"+suffix+".bmp"));
+                    dashboard.update(parked,view,life,offset+7280); lv_refr_now(nullptr);
+                    if(before!=pixels) { throw std::runtime_error("Settings exit failed to restore dashboard exactly: "+suffix); }
+                }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 122 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered 154 scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
@@ -359,6 +391,11 @@ int main(int argc,char** argv) {
                         if(event.type!=SDL_KEYDOWN) continue;
                         const auto key=event.key.keysym.sym;
                         if(event.key.repeat && key!=SDLK_LEFT&&key!=SDLK_RIGHT&&key!=SDLK_UP&&key!=SDLK_DOWN&&key!=SDLK_LEFTBRACKET&&key!=SDLK_RIGHTBRACKET) continue;
+                        if(const auto action=cluster::host::settingsAction(key,view.settings)) {
+                            settingsAction(view,*action,missing?ClusterState{}:state,life);
+                            continue;
+                        }
+                        if(view.settings&&(key==SDLK_RETURN||key==SDLK_t||key==SDLK_TAB)) continue;
                         if(const auto action=cluster::host::dashboardAction(key)) {
                             const auto effect=applyAction(view,*action);
                             // Only the simulator handles this request until a reviewed
@@ -375,6 +412,7 @@ int main(int argc,char** argv) {
                         case SDLK_DOWN: state.engineRpm.value=std::max(0,state.engineRpm.value-100); break;
                         case SDLK_LEFTBRACKET: state.fuelPercent.value=std::max(0,state.fuelPercent.value-1); break;
                         case SDLK_RIGHTBRACKET: state.fuelPercent.value=std::min(100,state.fuelPercent.value+1); break;
+                        case SDLK_p: state.speedKph={0,Quality::Available}; state.gear={0,Quality::Available}; missing=false; break;
                         case SDLK_x: missing=!missing; break;
                         case SDLK_o: life.key(!life.ignition(),now); break;
                         case SDLK_l: state.left.value=!state.left.value; state.right.value=false; break;
@@ -403,6 +441,7 @@ int main(int argc,char** argv) {
                     lv_tick_inc(static_cast<std::uint32_t>(now-last)); last=now;
                     const auto observed=missing?ClusterState{}:state;
                     if(!valid(observed)) throw std::runtime_error("Simulator produced invalid normalized state");
+                    reconcileSettings(view,observed,life);
                     dashboard.update(observed,view,life,now); lv_timer_handler();
                     SDL_UpdateTexture(texture.get(),nullptr,pixels.data(),800*2);
                     SDL_RenderClear(renderer.get()); SDL_RenderCopy(renderer.get(),texture.get(),nullptr,nullptr); SDL_RenderPresent(renderer.get());

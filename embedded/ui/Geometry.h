@@ -57,6 +57,13 @@ struct FuelLayout {
         return {x,Metrics::fuelY,end-x,12};
     }
 };
+struct SettingsLayout {
+    static constexpr Rect bounds{0,140,800,340};
+    static constexpr TextArea title{28,5,500}, back{690,12,82};
+    static constexpr TextArea subtitle{28,38,600};
+    static constexpr Rect tile(int i) { return {28+(i%2)*382,76+(i/2)*120,362,106}; }
+    static constexpr int speedCenter=200,speedY=22,unitY=43;
+};
 struct LifecycleLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::height};
     static constexpr Point center{Metrics::width/2,220};

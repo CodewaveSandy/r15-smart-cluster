@@ -17,6 +17,7 @@ find_package(SDL2 REQUIRED CONFIG)
 add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/Dashboard.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Header.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/SettingsHome.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/TellTaleRow.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Tachometer.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/PrimaryReadout.cpp"

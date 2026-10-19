@@ -44,6 +44,9 @@ inline void show(lv_obj_t* o,bool yes) {
     if(lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN)==!yes) return;
     if(yes) lv_obj_remove_flag(o,LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(o,LV_OBJ_FLAG_HIDDEN);
 }
+inline void fade(lv_obj_t* o,lv_opa_t opacity) {
+    if(lv_obj_get_style_opa(o,0)!=opacity) lv_obj_set_style_opa(o,opacity,0);
+}
 inline void alignRight(lv_obj_t* o) { lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_RIGHT,0); }
 inline void statusLamp(lv_obj_t* o,const Signal<bool>& signal,bool phase,std::uint32_t active,const Palette& p,bool iconTest=false) {
     const auto presentation=presentation::lampPresentation(signal,phase,iconTest);

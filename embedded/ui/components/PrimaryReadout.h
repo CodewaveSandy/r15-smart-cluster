@@ -13,12 +13,13 @@ public:
     explicit PrimaryReadout(lv_obj_t* parent);
     PrimaryReadout(const PrimaryReadout&)=delete;
     PrimaryReadout& operator=(const PrimaryReadout&)=delete;
-    void update(const ClusterState&,const ViewOptions&,const Palette&);
+    void update(const ClusterState&,const ViewOptions&,const Palette&,int settingsProgress=0);
 private:
     presentation::SignalChange<int> lastSpeed_;
     presentation::SignalChange<std::uint32_t> lastLap_;
     bool previousImperial_=false;
     ObjectOwner speed_, unit_, lap_, lapHint_, speedTitle_;
     bool initialized_=false, previousTrack_=false;
+    int previousProgress_=0;
 };
 } // namespace cluster::ui

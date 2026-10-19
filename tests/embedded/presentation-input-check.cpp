@@ -1,6 +1,8 @@
 #include "embedded/presentation/DashboardPresentation.h"
 #include "embedded/application/DashboardInput.h"
 #include "embedded/presentation/SignalChange.h"
+#include "embedded/application/SettingsNavigation.h"
+#include "embedded/presentation/SettingsTransition.h"
 #include <cstdio>
 #include <cstring>
 #include <initializer_list>
@@ -114,5 +116,58 @@ int main() {
     const auto tripBefore=options.tripPage;
     applyAction(options,static_cast<DashboardAction>(999));
     check(options.tripPage==tripBefore&&options.light&&options.imperial,"Unknown action leaves preferences unchanged");
+    DisplayOptions menu;
+    ClusterState parked; parked.speedKph={0,Quality::Available}; Lifecycle running;
+    running.key(true,0); running.advance(Lifecycle::bootMs);
+    settingsAction(menu,SettingsAction::Open,parked,running);
+    check(menu.settings,"Stationary settings entry");
+    const auto savedTrip=menu.tripPage;
+    applyAction(menu,DashboardAction::NextTrip);
+    check(menu.tripPage==savedTrip,"Settings suppresses hidden dashboard actions");
+    settingsAction(menu,SettingsAction::Right,parked,running);
+    check(menu.settingsFocus==1,"Right selects Bluetooth");
+    settingsAction(menu,SettingsAction::Down,parked,running);
+    check(menu.settingsFocus==2,"Down advances to Wi-Fi");
+    settingsAction(menu,SettingsAction::Next,parked,running);
+    check(menu.settingsFocus==3,"Next advances to Navigation");
+    settingsAction(menu,SettingsAction::Right,parked,running);
+    check(menu.settingsFocus==0,"Settings sequential navigation wraps");
+    parked.speedKph={20,Quality::Available}; reconcileSettings(menu,parked,running);
+    check(!menu.settings,"Limit closes settings");
+    settingsAction(menu,SettingsAction::Open,parked,running);
+    check(!menu.settings,"Limit blocks entry");
+    for(int speed:{-1,0,1,19,20,21,400}) {
+        menu.settings=false; parked.speedKph={speed,Quality::Available};
+        settingsAction(menu,SettingsAction::Open,parked,running);
+        check(menu.settings==(speed>=0&&speed<20),"Settings speed boundary");
+    }
+    menu.settings=true; parked.speedKph={19,Quality::Available}; reconcileSettings(menu,parked,running);
+    check(menu.settings,"Settings stays open below limit");
+    parked.speedKph.value=20; reconcileSettings(menu,parked,running);
+    check(!menu.settings,"Crossing 20 km/h closes settings");
+    menu.settings=true; menu.settingsFocus=0;
+    settingsAction(menu,SettingsAction::Left,parked,running);
+    check(menu.settingsFocus==3,"Left wraps to previous tile");
+    settingsAction(menu,SettingsAction::Up,parked,running);
+    check(menu.settingsFocus==2,"Up selects previous tile");
+    menu.settings=false;
+    for(auto quality:{Quality::Unavailable,Quality::Stale,Quality::Invalid,Quality::Unsupported}) {
+        parked.speedKph={0,quality}; settingsAction(menu,SettingsAction::Open,parked,running);
+        check(!menu.settings,"Unknown speed blocks entry");
+    }
+    parked.speedKph={0,Quality::Available}; parked.engineWarning={true,Quality::Available};
+    settingsAction(menu,SettingsAction::Open,parked,running);
+    check(!menu.settings,"Urgent warning blocks settings");
+    parked.engineWarning={false,Quality::Available};
+    Lifecycle off; settingsAction(menu,SettingsAction::Open,parked,off);
+    check(!menu.settings,"Power-off blocks settings");
+    SettingsTransition transition;
+    check(transition.update(true,100)==0,"Transition starts at dashboard");
+    const int half=transition.update(true,240);
+    check(half>0&&half<1000,"Transition has intermediate position");
+    check(transition.update(false,240)==half,"Reversal preserves current position");
+    check(transition.update(false,520)==0,"Reversal returns to dashboard");
+    transition.update(true,600); check(transition.update(true,880)==1000,"Transition settles in 280ms");
+    check(transition.update(false,881,true)==0,"Warning bypasses transition immediately");
     return failures?1:0;
 }

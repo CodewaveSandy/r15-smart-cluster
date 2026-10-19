@@ -97,3 +97,7 @@ Both modes share the same 44 px RPM height, y=376 lower divider and bottom-panel
 Use the selected Pictogrammers MDI automotive/status glyphs through typed Icon roles in embedded/ui/Icons.h. The symbol set includes proper high-beam rays, coolant thermometer/waves, engine, ABS ring, traction-control, message bubble, call handset, hazard triangle, solid turn arrows, phone and fuel pump. Neutral remains N. Use the 32 px native bitmap subset, with ABS at 30 px to avoid clipping its ring. Keep baseline placement and 12% inactive / 100% active presentation consistent. No fades delay warning activation.
 
 Bundle source version, hashes, Apache 2.0 license and notices. Only selected glyphs are linked; do not add a runtime SVG renderer or full icon font. The artwork is generic and requires separate OEM/vehicle validation before claiming exact conformity. F2 inspection covers both layouts/themes.
+
+## Settings home and instrument transition
+
+The implemented first Settings slice follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Four category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance controls/persistence and radio submenus follow in later slices.

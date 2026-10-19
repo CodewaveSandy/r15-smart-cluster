@@ -14,5 +14,13 @@ int main() {
     for(const auto key:{SDLK_UP,SDLK_RIGHT,SDLK_0,SDLK_o,SDLK_F2,SDLK_ESCAPE}) {
         if(host::dashboardAction(key)) { std::fprintf(stderr,"Simulator key consumed by navigation adapter\n"); return 1; }
     }
+    if(host::settingsAction(SDLK_UP,false) || host::settingsAction(SDLK_ESCAPE,false)) return 1;
+    for(const auto& mapping: {std::pair<SDL_Keycode,SettingsAction>{SDLK_s,SettingsAction::Open},
+            {SDLK_UP,SettingsAction::Up},{SDLK_DOWN,SettingsAction::Down},
+            {SDLK_LEFT,SettingsAction::Left},{SDLK_RIGHT,SettingsAction::Right},
+            {SDLK_BACKSPACE,SettingsAction::Back},{SDLK_ESCAPE,SettingsAction::Back}}) {
+        const auto action=host::settingsAction(mapping.first,true);
+        if(!action||*action!=mapping.second) return 1;
+    }
     return 0;
 }

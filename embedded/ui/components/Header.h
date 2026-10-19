@@ -14,7 +14,7 @@ public:
     explicit Header(lv_obj_t* parent);
     Header(const Header&)=delete;
     Header& operator=(const Header&)=delete;
-    void update(const ClusterState&,const ViewOptions&,const Palette&);
+    void update(const ClusterState&,const ViewOptions&,const Palette&,int settingsProgress=0);
 private:
     presentation::SignalChange<int> lastGear_,lastPhoneBattery_;
     presentation::SignalChange<bool> lastPhoneConnection_;

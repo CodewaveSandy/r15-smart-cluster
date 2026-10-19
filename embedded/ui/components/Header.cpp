@@ -18,7 +18,8 @@ Header::Header(lv_obj_t* parent) {
     date_=label(header_.get(),HeaderLayout::date,"CLOCK UNAVAILABLE",fonts::caption); alignRight(date_);
     rules_[0].reset(box(parent,HeaderLayout::divider)); rules_[1].reset(box(parent,HeaderLayout::gearDivider));
 }
-void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p) {
+void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,int settingsProgress) {
+    for(auto* label:{mode_,subtitle_,qs_,vva_}) fade(label,255-settingsProgress*255/1000);
     for(const auto& r:rules_) paint(r.get(),p.line);
     ink(date_,p.muted);
     const bool gearChanged=lastGear_.update(s.gear);
