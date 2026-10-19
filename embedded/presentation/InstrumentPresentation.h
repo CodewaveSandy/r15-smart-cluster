@@ -1,9 +1,15 @@
 #pragma once
 #include "shared/model/ClusterState.h"
-#include "Tokens.h"
+#include "PresentationPolicy.h"
+#include "embedded/application/Lifecycle.h"
 #include <algorithm>
 #include <cstdio>
-namespace cluster::ui {
+namespace cluster::presentation {
+inline bool instrumentationVisible(const Lifecycle& life,bool urgentWarning) {
+    const auto phase=life.phase();
+    const bool animation=phase==Phase::Boot||phase==Phase::Shutdown;
+    return phase==Phase::Running || (animation&&urgentWarning);
+}
 struct LapText { char value[16]{}; };
 inline LapText lapText(const Signal<std::uint32_t>& lap) {
     LapText result;
@@ -18,11 +24,11 @@ struct FuelPresentation { int segments; FuelSeverity severity; bool lit; };
 inline FuelPresentation fuelPresentation(const Signal<int>& fuel,std::uint64_t now) {
     if(!fuel.available()) return {0,FuelSeverity::Unknown,true};
     const int value=std::clamp(fuel.value,0,100);
-    return {(value*8+99)/100,value<10?FuelSeverity::Critical:value<=20?FuelSeverity::Warning:FuelSeverity::Normal,
-        value>=20 || (now/Metrics::fuelPeriod)%2==0};
+    return {(value*Policy::fuelSegments+99)/100,value<10?FuelSeverity::Critical:value<=20?FuelSeverity::Warning:FuelSeverity::Normal,
+        value>=20 || (now/Policy::fuelPeriod)%2==0};
 }
 inline bool shiftLit(const Signal<int>& rpm,std::uint64_t now) {
-    return rpm.available() && rpm.value>=Metrics::shiftRpm &&
-        (rpm.value<Metrics::shiftFlashRpm || (now/Metrics::shiftPeriod)%2==0);
+    return rpm.available() && rpm.value>=Policy::shiftRpm &&
+        (rpm.value<Policy::shiftFlashRpm || (now/Policy::shiftPeriod)%2==0);
 }
 }

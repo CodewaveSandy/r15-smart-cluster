@@ -1,7 +1,7 @@
 #include "Header.h"
 #include "../WidgetPrimitives.h"
 #include "../Icons.h"
-#include <cstdio>
+#include "embedded/presentation/DashboardPresentation.h"
 
 namespace cluster::ui {
 using namespace widget;
@@ -21,18 +21,21 @@ Header::Header(lv_obj_t* parent) {
 void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p) {
     for(const auto& r:rules_) paint(r.get(),p.line);
     ink(date_,p.muted);
-    char b[96];
-    if(s.gear.available()) { if(s.gear.value==0) std::snprintf(b,sizeof b,"N"); else std::snprintf(b,sizeof b,"%d",s.gear.value); } else std::snprintf(b,sizeof b,"—");
-    text(gear_,b); ink(gear_,s.gear.available()&&s.gear.value==0?p.accent:p.ink);
-    text(mode_,v.track?"TRACK":"STREET");
-    const bool unavailable=!s.speedKph.available()||!s.engineRpm.available()||!s.gear.available();
-    text(subtitle_,v.iconTest?"ICON TEST":unavailable?"DATA UNAVAILABLE":v.track?"LAP / PERFORMANCE":"ROAD / EVERYDAY");
-    ink(subtitle_,unavailable?p.amber:p.muted);
+    const bool gearChanged=lastGear_.update(s.gear);
+    const bool batteryChanged=lastPhoneBattery_.update(s.phoneBatteryPercent);
+    const bool connectionChanged=lastPhoneConnection_.update(s.phoneConnected);
+    // Header status and badges are cheap; numeric text is formatted only when
+    // its input changes. The presenter remains the sole formatting authority.
+    const auto presentation=presentation::headerStatus(s,v,v.iconTest);
+    if(gearChanged) text(gear_,presentation::gearText(s.gear).value);
+    ink(gear_,presentation.neutral?p.accent:p.ink);
+    text(mode_,presentation.mode); text(subtitle_,presentation.subtitle);
+    ink(subtitle_,presentation.unavailable?p.amber:p.muted);
     text(clock_,v.time); text(date_,v.date);
-    show(qs_,v.iconTest||(s.quickShifter.available()&&s.quickShifter.value)); ink(qs_,p.accent);
-    show(vva_,v.iconTest||(s.vva.available()&&s.vva.value)); ink(vva_,p.amber);
+    show(qs_,presentation.quickShifter); ink(qs_,p.accent);
+    show(vva_,presentation.vva); ink(vva_,p.amber);
     statusLamp(phone_,s.phoneConnected,true,p.accent,p,v.iconTest);
-    if(s.phoneConnected.available()&&s.phoneConnected.value&&s.phoneBatteryPercent.available()) std::snprintf(b,sizeof b,"PHONE %d%%",s.phoneBatteryPercent.value);
-    else std::snprintf(b,sizeof b,"PHONE —"); text(phoneBattery_,b); ink(phoneBattery_,p.muted);
+    if(batteryChanged||connectionChanged) text(phoneBattery_,presentation::phoneBatteryText(s.phoneConnected,s.phoneBatteryPercent).value);
+    ink(phoneBattery_,p.muted);
 }
 } // namespace cluster::ui

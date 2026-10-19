@@ -9,7 +9,7 @@ Key ON -> boot animation (1.0–1.5 s) -> live instrumentation
 Key OFF -> shutdown animation (1.0–1.5 s) -> controlled power-off
 ```
 
-Both animations are product requirements. Their artwork is undecided; preserve the instrument UI style, use lightweight LVGL primitives/assets and avoid video decoding. The nominal duration is a configurable token within the requested range, not an implemented constant.
+Both animations are product requirements. The host implements initial progress-line artwork with Lifecycle::animationMs set to 1,250 ms. Final artwork remains undecided; preserve the instrument style, use lightweight LVGL primitives/assets and avoid video decoding. Actual first-visible-frame timing and retained shutdown power still require panel and power-path measurements.
 
 ## State model and ownership
 

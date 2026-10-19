@@ -15,4 +15,4 @@
 #define LV_USE_PERF_MONITOR 0
 #define LV_USE_MEM_MONITOR 0
 #define LV_GRADIENT_MAX_STOPS 6
-#define LV_FONT_MONTSERRAT_14 1
+#include "../../embedded/ui/LvglFeatures.h"

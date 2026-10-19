@@ -47,3 +47,11 @@ Use selected Pictogrammers MDI 7.4.47 glyphs for automotive and communication st
 ## Dashboard component ownership — 2026-10-19
 
 Use fixed-size value components for the seven dashboard responsibilities. Own top-level LVGL objects with a standard unique pointer/deleter, retain private borrowed descendant handles and let LVGL delete descendants recursively. Destroy components before their dashboard parent; keep stored gradient descriptors alive until their objects are deleted. This gives independently reusable components without extra grouping objects, wrapper allocations, virtual interfaces or component tasks. Consolidate layout bounds in Geometry.h and preserve the approved render baseline. Portable presentation extraction follows separately.
+
+## Portable display behavior and input effects — 2026-10-19
+
+Keep bounded text formatting, quality/lamp decisions and demonstration thresholds in embedded/presentation, independent of rendering/platform libraries. Keep display-local options/actions in embedded/application and key translation in the host adapter. Vehicle-affecting selections return typed requests instead of mutating observations in application/UI code. Only the simulator currently handles a TCS-toggle request; production commands still require a reviewed capability/protocol contract. Do not create unused settings navigation actions before their screens are implemented.
+
+## Host optimization closure — 2026-10-19
+
+Preserve 4 bpp font quality and subset the large fonts by their actual roles. Reuse bundled Inter for LVGL's default font and explicitly disable unused widget/layout features while keeping current theme styles. Share this feature profile without pretending it configures a board allocator, RTOS or DMA. Use small last-input keys for numeric formatting instead of a second full telemetry/text cache; defer instrumentation behind opaque lifecycle artwork but reveal latest state immediately for valid urgent warnings. Report the measured host memory tradeoff and asset sizes separately from future firmware measurements. UART/persistence implementation follows its reviewed contracts, rather than introducing unused optimization scaffolding.

@@ -1,10 +1,9 @@
 #include "PrimaryReadout.h"
 #include "../WidgetPrimitives.h"
-#include "../InstrumentPresentation.h"
-#include <cmath>
-#include <cstdio>
+#include "embedded/presentation/DashboardPresentation.h"
 
 namespace cluster::ui {
+using namespace cluster::presentation;
 using namespace widget;
 using namespace geometry;
 PrimaryReadout::PrimaryReadout(lv_obj_t* parent) {
@@ -21,8 +20,13 @@ PrimaryReadout::PrimaryReadout(lv_obj_t* parent) {
 }
 void PrimaryReadout::update(const ClusterState& s,const ViewOptions& v,const Palette& p) {
     ink(unit_.get(),p.muted);
-    char b[32];
-    if(s.speedKph.available()) std::snprintf(b,sizeof b,"%d",int(std::lround(s.speedKph.value*(v.imperial?0.621371:1)))); else std::snprintf(b,sizeof b,"—"); text(speed_.get(),b);
+    const bool speedChanged=lastSpeed_.update(s.speedKph);
+    const bool lapChanged=lastLap_.update(s.currentLapMs);
+    if(!initialized_ || speedChanged || (v.track&&lapChanged) || previousImperial_!=v.imperial || previousTrack_!=v.track) {
+        const auto presentation=primaryPresentation(s,v);
+        text(speed_.get(),presentation.speed.value);
+        if(v.track) text(lap_.get(),presentation.lap.value);
+    }
     if(!initialized_ || previousTrack_!=v.track) {
         lv_obj_set_style_text_font(speed_.get(),v.track?fonts::secondary:fonts::speed,0);
         place(speed_.get(),v.track?ReadoutLayout::trackSpeed:ReadoutLayout::streetSpeed);
@@ -31,7 +35,6 @@ void PrimaryReadout::update(const ClusterState& s,const ViewOptions& v,const Pal
     text(unit_.get(),v.imperial?"mph":"km/h");
     show(lap_.get(),v.track); show(lapHint_.get(),v.track); show(speedTitle_.get(),v.track);
     ink(lapHint_.get(),p.accent); ink(speedTitle_.get(),p.muted);
-    text(lap_.get(),lapText(s.currentLapMs).value);
-    initialized_=true; previousTrack_=v.track;
+    initialized_=true; previousTrack_=v.track; previousImperial_=v.imperial;
 }
 } // namespace cluster::ui

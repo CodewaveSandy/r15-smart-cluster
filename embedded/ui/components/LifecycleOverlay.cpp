@@ -1,6 +1,7 @@
 #include "LifecycleOverlay.h"
 #include "../WidgetPrimitives.h"
 #include <algorithm>
+#include "embedded/presentation/InstrumentPresentation.h"
 
 namespace cluster::ui {
 using namespace widget;
@@ -17,7 +18,7 @@ LifecycleOverlay::LifecycleOverlay(lv_obj_t* parent) {
 void LifecycleOverlay::update(const Lifecycle& life,bool urgentWarning,const Palette& p,std::uint64_t now) {
     const auto phase=life.phase();
     const bool animation=phase==Phase::Boot||phase==Phase::Shutdown;
-    const bool cover=phase!=Phase::Running&&!(animation&&urgentWarning);
+    const bool cover=!presentation::instrumentationVisible(life,urgentWarning);
     show(overlay_.get(),cover); paint(overlay_.get(),p.background);
     text(animationTitle_,phase==Phase::Boot?"R15":phase==Phase::Shutdown?"R15":"DISPLAY OFF");
     text(animationSubtitle_,phase==Phase::Boot?"SMART CLUSTER  /  STARTING":phase==Phase::Shutdown?"ENDING THE RIDE":"PRESS O TO TURN THE KEY ON");

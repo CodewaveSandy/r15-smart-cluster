@@ -1,12 +1,12 @@
 # Milestones
 
-Baseline: 2026-10-18.
+Updated: 2026-10-19.
 
 | Stage | Goal | Status |
 | --- | --- | --- |
 | E0 | Review architecture, style, lifecycle and hardware unknowns | Documentation drafted |
 | E1 | Confirm board, reproduce vendor example and pin toolchain | Pending |
-| E2 | Portable normalized state and shared host LVGL foundation | First host slice implemented and tested |
+| E2 | Portable normalized state and shared host LVGL foundation | Portable state/presentation/input and host optimization implemented and tested |
 | E3 | Complete visual layouts, warnings, navigation and lifecycle animations | Dashboard and initial animations implemented; remaining screens/features pending |
 | E4 | Display firmware and measured panel/memory/power behavior | Pending |
 | E5 | Documented UART protocol and fault-tested synthetic bench link | Pending |

@@ -38,7 +38,7 @@ Use bundled Inter Medium/SemiBold and Barlow Semi Condensed SemiBold under the s
 | Red | #ff7980 | #bf263a |
 | High beam | #77baff | #246bb0 |
 
-Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens. Shared widget constructors use tokens; screens compose widgets rather than copying style logic. Theme changes never change telemetry or riding behavior. Preserve the specified red shift background gradient (#492731 -> #b34c48 -> #64303b) and readable warning palette; profile its redraw cost.
+Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens. Portable display thresholds are in embedded/presentation/PresentationPolicy.h; rendering Metrics reference them. Shared widget constructors use tokens; screens compose widgets rather than copying style logic. Theme changes never change telemetry or riding behavior. Preserve the specified red shift background gradient (#492731 -> #b34c48 -> #64303b) and readable warning palette; profile its redraw cost.
 
 ## Instrument behavior
 

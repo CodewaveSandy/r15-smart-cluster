@@ -1,56 +1,36 @@
 # Project status
 
-Baseline: 2026-10-18. Current phase: first host implementation.
+Updated: 2026-10-19. Native LVGL host implementation and applicable host optimization pass complete; hardware firmware pending.
 
-## Established direction
+## Implemented
 
-- Two ESP32s, UART interconnect and LVGL display rendering.
-- Elecrow 7-inch 800 x 480 HMI family selected; user supplied the vendor wiki. Delivered PCB revision and vehicle MCU model remain unconfirmed.
-- UI geometry, themes, typography and instrument behavior specified in the style guide.
-- Key-on boot and key-off shutdown animations each specified at 1–1.5 s. Retained power circuit and total startup timing remain unverified.
-- User reports investigating the 20-pin harness and identifying most major functions. Detailed pin/voltage/polarity/waveform evidence has not yet been supplied here.
-- Full Maps/projection remains unresolved by explicit user choice.
+- Dual-ESP32 responsibility boundaries, normalized observations and explicit signal quality.
+- C++17/LVGL 9.2.2/SDL2 host preview with shared UI source, seven reusable components, RAII ownership and centralized geometry.
+- Street centered speed and Track centered current lap with secondary speed and best lap; Midnight/Daylight themes, 72 px gear/neutral display and bundled Inter/Barlow typography.
+- Independent trip/info pages, semantic display actions and host keyboard adapter. ODO/trips/laps remain fixed simulated samples. TCS requests are handled only by the simulator.
+- Automotive icon subsets, minimal-gap fuel segments, warning/shift presentation and 1,250 ms initial boot/shutdown artwork with urgent-warning reveal.
+- Role-specific font subsets, minimal LVGL feature profile, change-aware mutations/formatting and deferred covered instrumentation. Host clock formatting updates by minute.
 
-## Current deliverables
+## Current verification
 
-Architecture, resource/concurrency proposals, style guide, power lifecycle, implementation stages and verification gates are documented. Active documentation describes the project baseline. The first LVGL host slice is implemented: portable observations/quality, model validation, monotonic ignition lifecycle, shared palettes, Inter/Barlow subsets, dashboard layouts/themes and keyboard simulator. Default CMake and scripts/preview.sh build the native SDL2 preview. Host dependency: LVGL 9.2.2 pinned by archive hash; font converter 1.5.3 pinned by lockfile.
+Build completes without compiler warnings. Five suites pass: model/lifecycle, portable presentation/input, desktop mappings, typography and LVGL rendering. The 44 deterministic captures remain byte-identical through the optimization pass; representative layouts/themes/warnings/unavailable views were visually inspected. Tests cover fresh-versus-cached presentation, hidden telemetry/urgent reveal and repeated creation/destruction.
 
-Verification: a fresh Debug configure/build completes without compiler warnings; portable model/lifecycle/fuel/shift tests and 44 deterministic render scenarios pass.  Typography bounds and required-glyph checks pass. Render tests reject runtime warnings. Representative layouts/themes/fuel/unavailable/warning/lifecycle captures inspected; native Mac mode/theme/speed, key-off/on and unavailable controls exercised. Board flash, UART codec, vehicle adapter and hardware validation remain pending. Settings, persistence, functional trips/laps are not implemented in this slice.
+The LVGL tree contains 72 objects. One hundred identical settled updates cause zero flushes, versus 1,200 callbacks / 38,400,000 pixels before optimization. Bundled bitmap payload is 75,833 bytes, versus 90,391; host asset sections excluding debug are 85,796 bytes, versus 101,413. The current Mac Dashboard wrapper is 840 bytes, including a 192-byte increase for small last-input keys. Host buffer sizes are unchanged. Font conversion is byte-reproducible; source licenses/provenance are bundled.
+
+See [resource budgets](resource-budgets.md) for repeatable reports and the limits of host measurements, and [optimization sequence](optimization-plan.md) for implementation details.
+
+## Pending functionality and evidence
+
+Settings/clock editing, functional trips/laps, persistence, UART codec/integration, board drivers, firmware flashing and vehicle adapters are not implemented. Full Maps/Android Auto/CarPlay remains unresolved. No host test constitutes hardware or bike verification.
+
+Exact delivered Elecrow PCB revision and vehicle MCU model remain unconfirmed. The user reports harness investigation, but detailed pin/voltage/polarity/waveform records have not been supplied here. No Yamaha protocol is treated as verified. Independent warning behavior and retained shutdown power require review and bench tests.
 
 ## Next actions
 
-1. Review architecture, lifecycle exceptions and scope.
-2. Confirm delivered board revision, matching schematic/example and vehicle MCU model.
-3. Preview/tune the host UI; establish the board-specific panel smoke target after revision confirmation.
-4. Refine components/artwork and add remaining navigation/screens with deterministic tests.
-5. Define/test UART, then integrate synthetic bench data before measured bike inputs.
+1. Confirm delivered board revision, matching schematic/factory example and vehicle MCU.
+2. Establish the board panel smoke target and measure firmware/partition fit, internal SRAM/PSRAM, buffering, scanout and warning latency.
+3. Implement remaining navigation/screens and final lifecycle artwork with deterministic verification.
+4. Review the UART contract, then implement codec and synthetic bench integration before measured bike inputs.
+5. Define persistence ownership and power-loss behavior before implementing storage; retain OEM function during initial passive bike observation.
 
-See [implementation plan](implementation-plan.md). No simulator or design result counts as bike verification.
-
-## Typography implementation
-
-Inter 4.1 Medium/SemiBold and pinned Barlow Semi Condensed SemiBold are bundled with their OFL licenses and hashes. Labels and large numerals use centralized role mappings; RPM text is 16 px. Font conversion is reproducible through the existing locked converter. Native Mac enlargement uses linear filtering. F2 provides a preview-only all-icons test; render verification includes both icon-test themes for 44 scenarios. Icon artwork uses the bundled MDI system described below.
-
-## Dashboard presentation
-
-The dashboard omits the footer and GEAR caption. Speed is horizontally centered in Street/Track; rendered digit bounds are tested for unknown/one/two/three-digit values. Trip and info lists cycle independently, with simulated TCS and display-only Track toggles. Fuel segments use minimal separation. The render suite covers all four list pages in both modes/themes (44 saved scenarios); source status is visible in the header subtitle and simulation remains identified by the host window/terminal.
-
-## Track information hierarchy
-
-Track mode uses the large centered 79 px lap readout and a secondary 46 px speed readout on the right. Street remains unchanged. The host provides a fixed lap sample; portable tests cover mm:ss.hh formatting, minute boundaries, stale values and display overflow. Both themes, warnings and unavailable views are rendered and inspected.
-
-## Track best lap and shared spacing
-
-Track lower-left is a fixed BEST LAP observation (host sample 01:18.42); Enter only cycles trips in Street. Unknown best lap displays dashes. Both modes share RPM height, lower divider and lower-panel/fuel positions. Render checks enforce shared vertical geometry and verify that Track best lap does not change when Street trip selection changes. Functional lap recording remains pending.
-
-## Automotive icon assets
-
-The 12 selected MDI 7.4.47 glyphs replace rough line paths and MSG/CALL/TCS/ABS text stand-ins. Typed icon widgets use local antialiased subsets; neutral and QS/VVA retain text. Source/license/hash records and regeneration script are included. All-icon checks now cover both themes/layouts, for 44 saved render scenarios overall; glyph coverage/bounds checks include every selected icon. OEM conformity is unverified.
-
-## Optimization first pass — 2026-10-19
-
-Host render metrics now report work for 100 identical settled updates. Redundant flushes fell from 1,200 callbacks / 38,400,000 pixels to zero, with the same 72 LVGL objects and unchanged host buffer sizes. All 44 baseline renders remain byte-identical. Stable-state regression checks include both layouts/themes, unknown values, warnings, blink phase and boot artwork. Firmware measurements remain pending. See [optimization sequence](optimization-plan.md) for remaining stages and boundaries.
-
-## Reusable dashboard components — 2026-10-19
-
-Dashboard composition now delegates to seven focused components with RAII object ownership, named tell-tales and centralized geometry. The LVGL object count remains 72; all 44 baseline renders are byte-identical and idle updates still flush zero pixels. Repeated creation/destruction tests check object-count restoration and underlying pixels. Font bounds checks use the layout definitions. Build and host tests pass; no hardware claims are added. Next: portable presentation decisions and semantic input.
+See [implementation stages](implementation-plan.md) and [engineering gates](engineering-review.md). No simulator, source build or asset size establishes production readiness.

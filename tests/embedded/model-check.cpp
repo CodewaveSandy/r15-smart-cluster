@@ -1,6 +1,7 @@
 #include "shared/model/ClusterState.h"
 #include "embedded/application/Lifecycle.h"
-#include "embedded/ui/InstrumentPresentation.h"
+#include "embedded/application/DashboardPages.h"
+#include "embedded/presentation/InstrumentPresentation.h"
 #include <cstdio>
 #include <cstring>
 #include <initializer_list>
@@ -23,7 +24,7 @@ int main() {
     s={}; s.engineWarning={true,Quality::Available}; check(urgent(s),"Valid urgent warning");
     s.engineWarning.quality=Quality::Stale; check(!urgent(s),"Stale flag not treated as current warning");
     check(Lifecycle::animationMs>=1000&&Lifecycle::animationMs<=1500,"Animation duration requirement");
-    using namespace cluster::ui;
+    using namespace cluster::presentation;
     for(int value:{0,9,10,19,20,21,100}) {
         auto on=fuelPresentation({value,Quality::Available},0);
         auto off=fuelPresentation({value,Quality::Available},500);

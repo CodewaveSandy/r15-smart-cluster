@@ -17,6 +17,8 @@ Reproduce with scripts/generate-fonts.sh. Converter: lv_font_conv 1.5.3, pinned 
 | barlow_track_79 | Track lap timer | 79 px SemiBold |
 | barlow_clock_30 | Clock | 30 px SemiBold |
 
-Text fonts include ASCII, degree, middle dot, multiplication sign and em dash. Numeric fonts include digits, N, colon, full stop, hyphen and em dash. The secondary/title font additionally includes uppercase letters and space. Generate required glyphs when adding text; missing-glyph warnings fail render tests.
+Text fonts include ASCII, degree, middle dot, multiplication sign and em dash. Large subsets are role-specific: gear uses 1–6/N; Street speed uses digits; Track lap uses digits/colon/full stop; clock uses digits/colon; secondary speed/title uses digits and the letters/space in R15 and DISPLAY OFF. Every subset includes the unavailable em dash. Generate required glyphs when adding text; missing-glyph warnings fail render tests.
 
 Typography roles are centralized in embedded/ui/Typography.h. These C files are intentional runtime assets; do not edit glyph data manually. Flash fit must be measured in the eventual firmware build. Mac Retina interpolation improves enlarged preview presentation but does not increase the physical panel's resolution or font coverage.
+
+Audit payload and compiled host object sections with `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json`. All font/icon bitmaps total 75,833 bytes after subsetting; this is not the total application image. See [resource accounting](../../../docs/resource-budgets.md).

@@ -3,6 +3,7 @@
 #include "Tokens.h"
 #include "Geometry.h"
 #include <cstring>
+#include "embedded/presentation/DashboardPresentation.h"
 
 // Small LVGL construction/mutation operations shared by the dashboard components.
 // No transport, formatting policy, ownership registry or global mutable state.
@@ -45,13 +46,9 @@ inline void show(lv_obj_t* o,bool yes) {
 }
 inline void alignRight(lv_obj_t* o) { lv_obj_set_style_text_align(o,LV_TEXT_ALIGN_RIGHT,0); }
 inline void statusLamp(lv_obj_t* o,const Signal<bool>& signal,bool phase,std::uint32_t active,const Palette& p,bool iconTest=false) {
-    const auto observation=iconTest?Signal<bool>{true,Quality::Available}:signal;
-    phase=iconTest||phase;
-    const bool known=observation.available(), lit=known && observation.value && phase;
-    const bool unsupported=observation.quality==Quality::Unsupported;
-    const auto c=known ? (lit?active:p.muted):unsupported?p.muted:p.amber;
-    ink(o,c);
-    const auto opacity=known?(lit?255:31):unsupported?31:150;
-    if(lv_obj_get_style_opa(o,0)!=opacity) lv_obj_set_style_opa(o,opacity,0);
+    const auto presentation=presentation::lampPresentation(signal,phase,iconTest);
+    const auto tone=presentation.tone;
+    ink(o,tone==presentation::LampTone::Active?active:tone==presentation::LampTone::Unknown?p.amber:p.muted);
+    if(lv_obj_get_style_opa(o,0)!=presentation.opacity) lv_obj_set_style_opa(o,presentation.opacity,0);
 }
 } // namespace cluster::ui::widget

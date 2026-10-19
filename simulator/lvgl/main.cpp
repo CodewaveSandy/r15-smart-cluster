@@ -1,6 +1,7 @@
 #include "embedded/ui/Dashboard.h"
 #include "embedded/ui/Typography.h"
 #include <SDL.h>
+#include "DesktopInput.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -229,6 +230,41 @@ int main(int argc,char** argv) {
                     if(pixels!=retainedPixels)
                         throw std::runtime_error("Dashboard destruction did not restore underlying screen");
                 }
+                // Hidden telemetry is applied once from the latest snapshot on
+                // reveal; an urgent warning must bypass the cover in this update.
+                Lifecycle covered; covered.key(true,0);
+                view.iconTest=false;
+                dashboard.update(state,view,covered,625); lv_refr_now(nullptr);
+                auto latest=state; latest.speedKph.value=160; latest.gear.value=6;
+                latest.fuelPercent.value=9; latest.currentLapMs.value=91230;
+                latest.coolantTemperatureC.value=95;
+                flushMetrics={};
+                dashboard.update(latest,view,covered,625); lv_refr_now(nullptr);
+                if(flushMetrics.calls) throw std::runtime_error("Hidden telemetry caused visible redraw");
+                const auto matchesFresh=[&](const ClusterState& sample,const Lifecycle& lifecycle,std::uint64_t now) {
+                    dashboard.update(sample,view,lifecycle,now); lv_refr_now(nullptr);
+                    const auto revealed=pixels;
+                    cluster::ui::Dashboard reference(lv_screen_active());
+                    reference.update(sample,view,lifecycle,now); lv_refr_now(nullptr);
+                    if(pixels!=revealed) throw std::runtime_error("Deferred or cached presentation differs from latest snapshot");
+                };
+                latest.engineWarning.value=true;
+                matchesFresh(latest,covered,625);
+                latest.engineWarning.value=false;
+                dashboard.update(latest,view,covered,625); lv_refr_now(nullptr);
+                covered.advance(1250);
+                matchesFresh(latest,covered,1250);
+                // Exercise cache invalidation with units/pages/layouts and every
+                // quality, comparing an updated component tree against a fresh one.
+                for(auto quality:{Quality::Available,Quality::Unavailable,Quality::Unsupported,Quality::Invalid,Quality::Stale,Quality::Available}) {
+                    latest.speedKph.quality=quality; latest.gear.quality=quality;
+                    latest.phoneBatteryPercent.quality=quality; latest.batteryVoltageV.quality=quality;
+                    latest.tripAKm.quality=quality; latest.bestLapMs.quality=quality;
+                    latest.currentLapMs.quality=quality; latest.fuelPercent.quality=quality;
+                    view.track=!view.track; view.imperial=!view.imperial;
+                    view.infoPage=InfoPage::Battery; view.tripPage=TripPage::TripA;
+                    matchesFresh(latest,life,1400);
+                }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
                 std::printf("Rendered 44 scenarios to %s\n",output.string().c_str());
             } else {
@@ -248,6 +284,8 @@ int main(int argc,char** argv) {
                 const auto start=std::chrono::steady_clock::now();
                 auto milliseconds=[&]{return std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count());};
                 life.key(true,0); bool running=true,missing=false; help(); std::uint64_t last=0;
+                std::time_t previousMinute=-1;
+                char timeText[16]{},dateText[32]{};
                 while(running) {
                     const auto now=milliseconds(); SDL_Event event;
                     while(SDL_PollEvent(&event)) {
@@ -255,6 +293,14 @@ int main(int argc,char** argv) {
                         if(event.type!=SDL_KEYDOWN) continue;
                         const auto key=event.key.keysym.sym;
                         if(event.key.repeat && key!=SDLK_LEFT&&key!=SDLK_RIGHT&&key!=SDLK_UP&&key!=SDLK_DOWN&&key!=SDLK_LEFTBRACKET&&key!=SDLK_RIGHTBRACKET) continue;
+                        if(const auto action=cluster::host::dashboardAction(key)) {
+                            const auto effect=applyAction(view,*action);
+                            // Only the simulator handles this request until a reviewed
+                            // command protocol and actual vehicle capability exist.
+                            if(effect==InputEffect::RequestTcsToggle&&!missing&&state.tcsEnabled.available())
+                                state.tcsEnabled.value=!state.tcsEnabled.value;
+                            continue;
+                        }
                         switch(key) {
                         case SDLK_ESCAPE: running=false; break;
                         case SDLK_RIGHT: state.speedKph.value=std::min(180,state.speedKph.value+1); break;
@@ -263,15 +309,6 @@ int main(int argc,char** argv) {
                         case SDLK_DOWN: state.engineRpm.value=std::max(0,state.engineRpm.value-100); break;
                         case SDLK_LEFTBRACKET: state.fuelPercent.value=std::max(0,state.fuelPercent.value-1); break;
                         case SDLK_RIGHTBRACKET: state.fuelPercent.value=std::min(100,state.fuelPercent.value+1); break;
-                        case SDLK_TAB: view.track=!view.track; break;
-                        case SDLK_d: view.light=!view.light; break;
-                        case SDLK_u: view.imperial=!view.imperial; break;
-                        case SDLK_RETURN: if(!view.track) view.tripPage=next(view.tripPage); break;
-                        case SDLK_i: view.infoPage=next(view.infoPage); break;
-                        case SDLK_t:
-                            if(view.infoPage==InfoPage::Track) view.track=!view.track;
-                            else if(view.infoPage==InfoPage::Tcs&&!missing&&state.tcsEnabled.available()) state.tcsEnabled.value=!state.tcsEnabled.value;
-                            break;
                         case SDLK_x: missing=!missing; break;
                         case SDLK_o: life.key(!life.ignition(),now); break;
                         case SDLK_l: state.left.value=!state.left.value; state.right.value=false; break;
@@ -289,8 +326,13 @@ int main(int argc,char** argv) {
                     }
                     life.advance(now);
                     state.vva.value=state.engineRpm.value>7500; // Simulator-only display demonstration.
-                    const auto wall=std::time(nullptr); std::tm local{}; localtime_r(&wall,&local);
-                    char timeText[16],dateText[32]; std::strftime(timeText,sizeof timeText,"%H:%M",&local); std::strftime(dateText,sizeof dateText,"%d %b %Y",&local);
+                    const auto wall=std::time(nullptr);
+                    if(wall/60!=previousMinute) {
+                        std::tm local{}; localtime_r(&wall,&local);
+                        std::strftime(timeText,sizeof timeText,"%H:%M",&local);
+                        std::strftime(dateText,sizeof dateText,"%d %b %Y",&local);
+                        previousMinute=wall/60;
+                    }
                     view.time=timeText; view.date=dateText;
                     lv_tick_inc(static_cast<std::uint32_t>(now-last)); last=now;
                     const auto observed=missing?ClusterState{}:state;

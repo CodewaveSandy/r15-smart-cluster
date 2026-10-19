@@ -2,6 +2,7 @@
 #include "../WidgetPrimitives.h"
 #include <algorithm>
 #include <cstdio>
+#include "embedded/presentation/DashboardPresentation.h"
 
 namespace cluster::ui {
 using namespace widget;
@@ -21,10 +22,9 @@ Tachometer::Tachometer(lv_obj_t* parent) {
 }
 void Tachometer::update(const Signal<int>& rpm,const Palette& p) {
     for(const auto& t:ticks_) ink(t.get(),p.muted);
-    char b[32];
     paint(rpmBed_.get(),p.panel);
     const int fill=rpm.available()?std::clamp(rpm.value,0,TachometerLayout::scaleMaxRpm)*Metrics::content/TachometerLayout::scaleMaxRpm:0;
     show(rpmClip_,fill>0); lv_obj_set_width(rpmClip_,std::max(1,fill));
-    if(rpm.available()) std::snprintf(b,sizeof b,"%d rpm",rpm.value); else std::snprintf(b,sizeof b,"— rpm"); text(rpmValue_.get(),b);
+    if(lastRpm_.update(rpm)) text(rpmValue_.get(),presentation::rpmText(rpm).value);
 }
 } // namespace cluster::ui

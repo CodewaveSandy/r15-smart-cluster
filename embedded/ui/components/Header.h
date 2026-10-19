@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
 #include <array>
@@ -15,6 +16,8 @@ public:
     Header& operator=(const Header&)=delete;
     void update(const ClusterState&,const ViewOptions&,const Palette&);
 private:
+    presentation::SignalChange<int> lastGear_,lastPhoneBattery_;
+    presentation::SignalChange<bool> lastPhoneConnection_;
     ObjectOwner header_;
     lv_obj_t *gear_, *mode_, *subtitle_, *clock_, *date_, *phone_, *qs_, *vva_, *phoneBattery_;
     std::array<ObjectOwner,2> rules_{};

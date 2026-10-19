@@ -1,6 +1,7 @@
 #pragma once
 #include "lvgl.h"
 #include "../ObjectOwner.h"
+#include "embedded/presentation/SignalChange.h"
 #include "../Tokens.h"
 #include "shared/model/ClusterState.h"
 
@@ -14,6 +15,12 @@ public:
     RideInfoPanel& operator=(const RideInfoPanel&)=delete;
     void update(const ClusterState&,const ViewOptions&,const Palette&);
 private:
+    presentation::SignalChange<double> lastDistance_,lastInfoValue_;
+    presentation::SignalChange<std::uint32_t> lastBestLap_;
+    presentation::SignalChange<bool> lastTcs_;
+    bool initialized_=false,previousTrack_=false,previousImperial_=false;
+    TripPage previousTrip_=TripPage::Odometer;
+    InfoPage previousInfo_=InfoPage::Coolant;
     ObjectOwner lowerRule_, tripTitle_, tripValue_, tripUnit_, infoTitle_, infoValue_;
 };
 } // namespace cluster::ui

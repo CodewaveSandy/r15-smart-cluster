@@ -1,10 +1,10 @@
 #include "FuelGauge.h"
 #include "../WidgetPrimitives.h"
 #include "../Icons.h"
-#include "../InstrumentPresentation.h"
-#include <cstdio>
+#include "embedded/presentation/DashboardPresentation.h"
 
 namespace cluster::ui {
+using namespace cluster::presentation;
 using namespace widget;
 using namespace geometry;
 namespace {
@@ -29,12 +29,12 @@ FuelGauge::FuelGauge(lv_obj_t* parent) {
 }
 void FuelGauge::update(const Signal<int>& fuelSignal,const Palette& p,std::uint64_t now) {
     ink(fuelTitle_.get(),p.muted);
-    char b[16];
     const auto fuel=fuelPresentation(fuelSignal,now);
     const auto fuelColor=fuelSignal.available()&&fuelSignal.value<10?p.red:
         fuelSignal.available()&&fuelSignal.value<=20?p.amber:p.accent;
     const bool lit=fuel.lit;
-    if(fuelSignal.available()) std::snprintf(b,sizeof b,"%d%%",fuelSignal.value); else std::snprintf(b,sizeof b,"—"); text(fuelValue_.get(),b); ink(fuelValue_.get(),fuelColor);
+    if(lastFuel_.update(fuelSignal)) text(fuelValue_.get(),fuelText(fuelSignal).value);
+    ink(fuelValue_.get(),fuelColor);
     ink(pump_.get(),fuelColor); show(pump_.get(),lit);
     const int segments=fuel.segments;
     for(int i=0;i<Metrics::fuelSegmentCount;++i) background(fuel_[i].get(),i<segments&&lit?fuelColor:p.panel);

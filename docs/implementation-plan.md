@@ -1,6 +1,6 @@
 # Implementation stages and verification gates
 
-Date: 2026-10-18. Status: first host implementation underway; hardware gates pending.
+Updated: 2026-10-19. Status: host dashboard and host optimization pass complete; remaining screens and hardware gates pending.
 
 ## Sequence
 
@@ -18,15 +18,17 @@ Date: 2026-10-18. Status: first host implementation underway; hardware gates pen
 
 E2/E3 host work can proceed before delivery. E4 compile preparation can overlap, but board bring-up is a prerequisite to claiming display readiness. E5 can begin with synthetic UART data without Yamaha decoding. Full Maps/projection is a separate scope/feasibility gate; it is not hidden inside E6 BLE work.
 
-## First implementation slice after plan review
+## Current implementation and next gates
 
-1. Confirm board SKU/revision, schematic and official working example; identify UART/programming conflicts. Confirm vehicle MCU model separately.
-2. Define deterministic baseline images and scenarios with fixed time/animation phase. Keep generated captures outside tracked source unless explicitly chosen as test fixtures.
-3. Pin compatible framework/LVGL versions and establish host build plus minimal panel build. Document the host preview workflow.
-4. Implement tokens, Inter/Barlow subsets, header, speed, RPM and fuel to one host LVGL dashboard.
-5. Compare both layouts/themes before adding menus or UART; profile object count, redraw area, fonts and firmware size early.
+The host baseline, dashboard, portable presentation/input, component extraction and applicable host optimizations are implemented. See [current status](status.md), [optimization record](optimization-plan.md) and [resource accounting](resource-budgets.md).
 
-No empty firmware scaffolding or speculative board pins are needed during the documentation stage.
+1. Confirm delivered board revision, schematic/factory example, UART/programming conflicts and vehicle MCU.
+2. Reproduce the matching vendor example and establish a minimal panel target with compatible pinned dependencies.
+3. Measure actual flash/partition fit, internal SRAM/PSRAM, driver buffers, timing and scanout behavior before claiming display readiness.
+4. Complete remaining screens/navigation and final artwork without changing the approved dashboard baseline unintentionally.
+5. Review the versioned UART contract and persistence ownership, then implement and fault-test their real adapters.
+
+No empty firmware scaffolding, unused queues or speculative board pins substitute for these gates.
 
 ## Test strategy
 

@@ -71,7 +71,9 @@ There is no automatic hot reload yet. Ordinary source changes rebuild incrementa
 | embedded/ui/Dashboard.cpp | Component composition and shift-background theme application |
 | embedded/ui/Geometry.h | Named component positions and bounds, based on shared Metrics |
 | embedded/ui/components/ | Header, tell-tales, tachometer, readouts, info, fuel and lifecycle artwork |
-| embedded/ui/InstrumentPresentation.h | Fuel/shift presentation rules, independent of LVGL |
+| embedded/presentation/ | Bounded instrument/ride-info formatting, quality decisions and fuel/shift policy |
+| embedded/application/DisplayOptions.h and DashboardInput.h | Portable display-local preferences, pages and semantic actions |
+| simulator/lvgl/DesktopInput.h | Host key translation into semantic actions |
 | embedded/application/Lifecycle.h | Monotonic lifecycle; animationMs is currently 1250 |
 | simulator/lvgl/main.cpp | Demo starting values, host keyboard mapping, clock and render scenarios |
 | shared/model/ClusterState.h | Unit-qualified normalized observations and quality |
@@ -81,7 +83,7 @@ Keep vehicle calculations and simulated mutations out of Dashboard.cpp and the U
 
 ## Fonts
 
-Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px animation/secondary-speed font also includes uppercase letters. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
+Inter/Barlow subsets use lv_font_conv 1.5.3, 4-bit antialiasing and no compression. Edit embedded/ui/Typography.h for role mapping and scripts/generate-fonts.sh for font sizes. RPM text is 16 px; general labels are 14 px. The Mac preview uses linear filtering for Retina enlargement. Large numeric fonts contain a limited glyph set; the 46 px animation/secondary-speed font includes the letters required by R15 and DISPLAY OFF. Add required glyphs when changing text to avoid runtime missing-glyph warnings.
 
 To regenerate after a font-size/glyph change (Node/npm required):
 
@@ -98,7 +100,7 @@ The converter is installed using tools/fonts/package-lock.json when absent. Gene
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-This runs portable model/lifecycle/presentation checks, typography bounds/glyph coverage checks, and renders 44 deterministic scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
+This runs five suites: portable model/lifecycle and presentation/input checks, desktop key mappings, typography bounds/glyph coverage, and 44 deterministic render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
 
 To build and render without opening a window:
 
@@ -123,3 +125,7 @@ Track shows BEST LAP in the lower-left panel instead of ODO/trips, with no dista
 ## Icon assets
 
 Automotive/status symbols come from the pinned Pictogrammers MDI 7.4.47 source font. Only 12 glyphs are compiled into LVGL assets; original source/licenses and hashes are bundled under assets/icons/material-design. Typed roles and widget creation live in embedded/ui/Icons.h and Icons.cpp. Regenerate after changing the selection with bash scripts/generate-icons.sh. Press F2 to inspect all symbols in both themes/layouts. See [icon provenance](../assets/icons/material-design/README.md).
+
+## Resource audit and feature profile
+
+Run `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json` after building to inspect bitmap payload and host asset sections. See [resource budgets](resource-budgets.md) for limitations and required target measurements. The host includes embedded/ui/LvglFeatures.h, which enables only current dashboard widgets and reuses bundled Inter as the default font. Enable additional LVGL features explicitly when actual screens require them, then rebuild and verify. Numeric text now formats on changed input, and covered boot/shutdown instrumentation resumes from the latest snapshot. All existing keyboard controls remain unchanged.

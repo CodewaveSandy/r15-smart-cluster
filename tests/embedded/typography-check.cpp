@@ -33,6 +33,20 @@ int main() {
             if(!lv_font_get_glyph_dsc(font,&glyph,code,0)) { std::fprintf(stderr,"Missing text glyph U+%X\n",code); ++failed; }
         }
     }
+    const auto requiresGlyphs=[&](const lv_font_t* font,const char* ascii) {
+        for(const unsigned char* c=reinterpret_cast<const unsigned char*>(ascii);*c;++c) {
+            lv_font_glyph_dsc_t glyph{};
+            if(!lv_font_get_glyph_dsc(font,&glyph,*c,0)) { std::fprintf(stderr,"Missing required instrument glyph %c\n",*c); ++failed; }
+        }
+        lv_font_glyph_dsc_t dash{};
+        if(!lv_font_get_glyph_dsc(font,&dash,8212,0)) { std::fprintf(stderr,"Missing instrument unavailable dash\n"); ++failed; }
+    };
+    requiresGlyphs(fonts::gear,"123456N");
+    requiresGlyphs(fonts::speed,"0123456789");
+    requiresGlyphs(fonts::track,"0123456789:.");
+    requiresGlyphs(fonts::clock,"0123456789:");
+    requiresGlyphs(fonts::secondary,"0123456789RDISPLAY OF");
+    if(lv_font_default()!=fonts::label) { std::fprintf(stderr,"Default font does not reuse bundled Inter\n"); ++failed; }
     for(const auto& icon:iconDefinitions) {
         lv_font_glyph_dsc_t glyph{};
         if(!lv_font_get_glyph_dsc(iconFont(icon.kind),&glyph,icon.codepoint,0)||glyph.box_w==0||glyph.box_h==0||glyph.box_w>32||glyph.box_h>32) {
