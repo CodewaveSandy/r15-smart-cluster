@@ -114,7 +114,7 @@ Other harness signals require individual measured voltage/polarity, pull-up/load
 
 ## Requirements that need resolution
 
-Full Google Maps, Android Auto/CarPlay, calls and audio are product requirements with unresolved implementation feasibility. This two-ESP32 LVGL design establishes no projection receiver, decoder, rendering or licensing path. Wi-Fi/BLE support alone does not establish those capabilities. The user explicitly confirmed on 2026-10-18 that full Maps/projection should remain an unresolved requirement to investigate. Retain it pending a separate feasibility proof; do not silently replace full Maps with arrows or a fake map.
+On 2026-10-21 the user selected an Android-first Flutter companion app with future iOS support, retaining exactly two ESP32s. Android Auto/CarPlay and the existing Google Maps app are not requirements. A real moving road map, directions, notifications and music information remain requirements; embedded rendering, licensed map delivery and end-to-end bandwidth remain feasibility gates. Phone owns GPS/routing/map preparation; vehicle MCU owns radios and bounded forwarding; display MCU owns LVGL/map presentation. Audio stays phone-to-headset initially. See the [companion architecture](../mobile/docs/architecture.md), [journey](../mobile/docs/user-journey.md) and [implementation plan](../mobile/docs/implementation-plan.md). BLE plus Wi-Fi does not by itself prove map capability. Do not silently replace the moving map with arrows or a route on an empty background.
 
 The seven-inch board's physical envelope, viewing angle, brightness, weather exposure and OEM fit need measurement. Purchasing the board does not establish mechanical or environmental suitability.
 

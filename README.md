@@ -2,7 +2,7 @@
 
 A dual-ESP32 instrument cluster for the Yamaha R15 V4, with an 800 x 480 LVGL interface. The vehicle MCU acquires/validates observations and handles calculations/connectivity; the display MCU renders normalized state received over UART.
 
-The native macOS preview includes Street/Track dashboards, Midnight/Daylight themes, Settings, saved Appearance choices and simulated Bluetooth/Wi-Fi flows. Hardware firmware, UART integration and vehicle verification are pending. Full Maps/phone projection remains an unresolved requirement.
+The native macOS preview includes Street/Track dashboards, Midnight/Daylight themes, Settings, saved Appearance choices and simulated Bluetooth/Wi-Fi flows. Hardware firmware, UART integration and vehicle verification are pending. A custom moving map with an Android-first Flutter companion app and future iOS support is planned; embedded map feasibility remains pending.
 
 ## Run the preview
 
@@ -23,3 +23,7 @@ ctest --test-dir build/lvgl --output-on-failure
 ```
 
 Nine test suites check portable state/lifecycle/presentation, settings/radio flows and persistence, and render 294 deterministic scenarios, including the three-second boot / two-second shutdown R15 Light Signature timeline. Simulated output is not bike verification.
+
+## Mobile companion
+
+The independent Flutter app lives in [mobile](mobile/README.md). See its [documentation](mobile/docs/README.md) for the agreed journey, architecture and staged implementation. Mobile tooling is not required to build the cluster preview.

@@ -36,7 +36,7 @@ PreferenceFile performs host filesystem operations outside LVGL rendering, using
 
 ## Navigation and future services
 
-Navigation remains pending. Full Google Maps/Android Auto/CarPlay is an unresolved feasibility requirement; GPS position alone does not provide map rendering or projection. Clock editing and actual time-source/retention also remain pending. Submenus share Next/Previous/Select/Back; touch can be another input adapter, while physical-switch navigation remains a requirement. Text entry needs a separate provisioning decision.
+Navigation remains pending. The selected direction is a custom moving map with an Android-first Flutter companion app and future iOS support; Android Auto/CarPlay are not required. The planned unified Phone category replaces rider-facing Bluetooth/Wi-Fi setup after implementation and visual review; existing simulated pages below remain the current implementation. See the [phone journey](../mobile/docs/user-journey.md). GPS position alone does not provide map rendering. Clock editing and actual time-source/retention also remain pending. Submenus share Next/Previous/Select/Back; touch can be another input adapter, while physical-switch navigation remains a requirement. Text entry needs a separate provisioning decision.
 
 ## Verification
 

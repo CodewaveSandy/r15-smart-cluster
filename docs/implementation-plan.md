@@ -33,7 +33,7 @@ Host odometer, trips, laps, economy and average speed are fixed samples; TCS mut
 | E7 — Passive bike observation | Reviewed electrical interface and measured mappings | OEM retained; listen-only verification; compare logged observations to independent references; no speculative decode |
 | E8 — Replacement evaluation | Power/boot/reset/fault, independent tell-tales and mechanical/environmental assessment | Explicit reviewed evidence before replacement; software parity alone is insufficient |
 
-E2/E3 host work can proceed before delivery. E4 compile preparation can overlap, but board bring-up is a prerequisite to claiming display readiness. E5 can begin with synthetic UART data without Yamaha decoding. Full Maps/projection is a separate scope/feasibility gate; it is not hidden inside E6 BLE work.
+E2/E3 host work can proceed before delivery. E4 compile preparation can overlap, but board bring-up is a prerequisite to claiming display readiness. E5 can begin with synthetic UART data without Yamaha decoding. Custom moving-map navigation is a separate feasibility gate; it is not hidden inside E6 BLE work. The [companion implementation plan](../mobile/docs/implementation-plan.md) tracks the Android-first Flutter app, Mac bridge and future iOS work.
 
 ## Next implementation gates
 
@@ -66,7 +66,7 @@ Performance objectives are provisional in [architecture](architecture.md). Estab
 | Vehicle ESP32 model and available peripherals | CAN/input/radio task implementation |
 | User's measured harness inventory | Any bike adapter; record connector view, pin numbering, conditions, polarity, range and uncertainty |
 | CAN physical/protocol confirmation | Controller/transceiver choice; no guessed IDs/bitrate |
-| Full Maps/projection retained as unresolved by user; receiver feasibility and call/audio path still needed | Promising final feature coverage |
+| Custom moving map selected on 2026-10-21; embedded map/bandwidth/provider feasibility and phone-service capabilities still needed | Promising final feature coverage |
 | Physical control source and event semantics | Hardware navigation; touch remains optional |
 | Real versus calculated odometer, retention and calibration | Persistent vehicle values |
 | Clock source, retention and disconnected behavior | Hardware clock editor/restore action |
