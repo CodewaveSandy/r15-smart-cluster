@@ -6,6 +6,24 @@ Pinned Flutter **3.47.7**, framework revision **abaf9c5237**, engine revision **
 
 This scaffold was generated with `flutter create --platforms=android,ios --org dev.r15cluster --project-name r15_companion --no-pub mobile`. The generated Android project pins AGP 9.1.0, Kotlin 2.4.0 and Gradle wrapper distribution 9.3.1. Java compilation targets 17; validate the actual Gradle runtime JDK using doctor/Gradle requirements before native builds. Android SDK/NDK levels follow the pinned Flutter tooling until plugin selection establishes explicit OS support. Generated iOS deployment target is 15.0; future plugins may revise it. Generated launcher branding is provisional.
 
+## One-command Android preview
+
+Connect and unlock your phone, enable USB debugging and approve this computer. From the repository root:
+
+```sh
+bash scripts/preview-mobile.sh
+```
+
+The script checks Flutter against `.flutter-version`, detects a single authorized physical Android phone, restores the locked dependencies and runs the debug app. It works from any working directory when invoked by its path. Flutter and Python 3 must be on PATH. It does not start the Mac cluster preview or establish a phone-to-cluster connection.
+
+With multiple phones, pass the exact device ID reported by `flutter devices`:
+
+```sh
+bash scripts/preview-mobile.sh <android-device-id>
+```
+
+No connected phone or ambiguous selection produces instructions instead of launching a desktop/web target. Emulators are excluded. During the session press `r` for hot reload, `R` for restart and `q` to quit. First builds may download Gradle/Android dependencies; network access is required for uncached dependencies. SDK installation, USB authorization and licenses remain explicit setup steps.
+
 ## Commands
 
 Run from `mobile/` with the pinned SDK on PATH:
