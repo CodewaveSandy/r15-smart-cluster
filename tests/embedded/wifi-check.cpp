@@ -7,7 +7,7 @@ int main() {
     ClusterState s;s.speedKph={0,Quality::Available};
     Lifecycle life;life.key(true,0);life.advance(Lifecycle::bootMs);
     DisplayOptions o;o.settings=true;o.settingsFocus=2;
-    settingsAction(o,SettingsAction::Select,s,life);check(o.wifi,"Wi-Fi opens");
+    o.wifi=true; // Legacy adapter checks; no separate Wi-Fi page in rider navigation.
     check(wifiMenu(s.wifi,false).items[0]==WifiItem::Back,"Unavailable offers no commands");
     host::WifiDemo::populate(s.wifi);host::WifiDemo demo;
     auto e=settingsAction(o,SettingsAction::Select,s,life);

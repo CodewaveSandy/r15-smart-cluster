@@ -14,7 +14,7 @@ Connect and unlock your phone, enable USB debugging and approve this computer. F
 bash scripts/preview-mobile.sh
 ```
 
-The script checks Flutter against `.flutter-version`, detects a single authorized physical Android phone, restores the locked dependencies and runs the debug app. It works from any working directory when invoked by its path. Flutter and Python 3 must be on PATH. It does not start the Mac cluster preview or establish a phone-to-cluster connection.
+The script checks Flutter against `.flutter-version`, detects a single authorized physical Android phone, restores the locked dependencies and runs the debug app. It works from any working directory when invoked by its path. Flutter and Python 3 must be on PATH. For the opt-in phone-to-cluster Wi-Fi connection, use the two commands in [Mac preview connection](mac-preview-connection.md). The plain command does not start or connect the cluster preview.
 
 With multiple phones, pass the exact device ID reported by `flutter devices`:
 
@@ -57,16 +57,22 @@ C++ preview remains independent: run `bash scripts/preview.sh` from repository r
 - Updated startup/home Android debug APK built successfully with `flutter build apk --debug --no-pub`; the new UI has not yet been inspected on the physical phone.
 - Android tooling installed: Flutter doctor reports a valid Android toolchain and accepted licenses. User confirmed successful debug build, installation and launch on Samsung SM-M346B running Android 16 (API 36). This verifies foundation startup only.
 - iOS simulator build attempted: Flutter returned “Application not configured for iOS”; this Mac has no full Xcode and selects only CommandLineTools. The generated iOS shell is present, but native configuration/build must be verified after installing Xcode. No iOS native build/device claim.
-- No BLE, Wi-Fi session, Mac bridge, map provider, ESP32 or bike test has run. No changes to C++ source; cluster visual regression is outside this foundation change.
+- No physical phone/LAN bridge pairing, BLE, map provider, ESP32 or bike test has run. Host TLS/IPC and real Dart TLS integration are checked separately in the bridge guide. No changes to C++ source; cluster visual regression is outside this foundation change.
 
 Initial generation used a temporary SDK at `/private/tmp/r15-flutter-sdk`. The user subsequently installed the matching SDK durably at `/opt/homebrew/share/flutter`. Tool caches and generated machine-local paths are ignored. Template originals replaced during setup were preserved and checked under `/private/tmp/r15-mobile-template-backup`.
 
 ## Upcoming Mac/phone testing
 
-Implement M1/M2 in the [plan](implementation-plan.md) first; running the current app does not connect it to the simulator. Then use an opt-in authenticated host adapter on a shared LAN, development bootstrap with expiring trust, validated capabilities and recorded/live location. Device inputs flow through normalized models under the LVGL owner. Test source staleness, network loss, reboot, flood/oversize, old-route data and command duplication with bounded simulated UART bandwidth.
+The first M2 development slice is implemented; run both previews with the [Wi-Fi bridge flags](mac-preview-connection.md). Running without those flags does not connect the app to the simulator. Then use an opt-in authenticated host adapter on a shared LAN, development bootstrap with expiring trust, validated capabilities and recorded/live location. Device inputs flow through normalized models under the LVGL owner. Test source staleness, network loss, reboot, flood/oversize, old-route data and command duplication with bounded simulated UART bandwidth.
 
 Host rendering can prove geometry and behavior; it cannot establish board memory/render throughput, radio coexistence, UART capacity or safe vehicle operation. Real Android tests must cover background/locked screen/permission revocation and vendor battery restrictions. Future iOS tests use a separate capability matrix.
 
 ## Source and generated files
 
 Commit Dart/native source, manifests, Gradle configuration, Xcode project, assets, lockfile and Flutter metadata. Ignore build outputs, SDK caches, IDE state, `local.properties`, generated Flutter platform configuration, signing files, private environment values and screenshots. Flutter can regenerate ignored Gradle wrapper launchers/artifacts during tooling setup; retain the distribution properties in source.
+
+## Wi-Fi connection slice verification
+
+See [connection verification](mac-preview-connection.md#verification) for the current session/TLS/UI test evidence and exact two-terminal launch commands. The initial eleven UI tests now form part of an eighteen-test mobile suite; a separate smoke runner exercises live Dart TLS and the LVGL host. The new physical BLE discovery/approval/restart journey remains to be tried by the user; the previous Wi-Fi-only connection worked.
+
+Current discovery verification: native Mac BLE advertising reported active; a temporary-item Keychain round trip passed; Android BLE/Keystore native code compiled. Cluster render coverage is now 210 scenarios with three Settings categories and unified Phone. See the connection guide for the new search/select/approve/Pair workflow and saved restart behavior.

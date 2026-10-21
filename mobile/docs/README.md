@@ -12,3 +12,5 @@ Updated: 2026-10-21. Android first, iOS planned; Flutter/Dart in this monorepo. 
 | [Security and privacy](security.md) | Trust, authentication, secrets, sensitive content and release gates |
 
 Repository [RULES](../../RULES.md) and [system architecture](../../docs/architecture.md) remain authoritative for the cluster. Current cluster Bluetooth/Wi-Fi pages remain simulated until the unified Phone migration is implemented and visually verified. See [mobile README](../README.md) for exact scaffold status.
+
+[Wi-Fi Mac preview connection](mac-preview-connection.md) documents the implemented development connection and exact run commands.

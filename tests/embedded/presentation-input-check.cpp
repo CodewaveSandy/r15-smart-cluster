@@ -125,12 +125,10 @@ int main() {
     applyAction(menu,DashboardAction::NextTrip);
     check(menu.tripPage==savedTrip,"Settings suppresses hidden dashboard actions");
     settingsAction(menu,SettingsAction::Right,parked,running);
-    check(menu.settingsFocus==1,"Right selects Bluetooth");
+    check(menu.settingsFocus==1,"Right selects Phone");
     settingsAction(menu,SettingsAction::Down,parked,running);
-    check(menu.settingsFocus==2,"Down advances to Wi-Fi");
+    check(menu.settingsFocus==2,"Down advances to Navigation");
     settingsAction(menu,SettingsAction::Next,parked,running);
-    check(menu.settingsFocus==3,"Next advances to Navigation");
-    settingsAction(menu,SettingsAction::Right,parked,running);
     check(menu.settingsFocus==0,"Settings sequential navigation wraps");
     parked.speedKph={20,Quality::Available}; reconcileSettings(menu,parked,running);
     check(!menu.settings,"Limit closes settings");
@@ -148,9 +146,9 @@ int main() {
     parked.speedKph={0,Quality::Available};
     menu.settings=true; menu.settingsFocus=0;
     settingsAction(menu,SettingsAction::Left,parked,running);
-    check(menu.settingsFocus==3,"Left wraps to previous tile");
+    check(menu.settingsFocus==2,"Left wraps to previous tile");
     settingsAction(menu,SettingsAction::Up,parked,running);
-    check(menu.settingsFocus==2,"Up selects previous tile");
+    check(menu.settingsFocus==1,"Up selects previous tile");
     menu.settings=false;
     for(auto quality:{Quality::Unavailable,Quality::Stale,Quality::Invalid,Quality::Unsupported}) {
         parked.speedKph={0,quality}; settingsAction(menu,SettingsAction::Open,parked,running);

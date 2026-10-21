@@ -2,12 +2,28 @@ import 'package:flutter/material.dart';
 
 import '../../../app/widgets/brand_mark.dart';
 import '../domain/phone_status.dart';
+import '../application/preview_session.dart';
+import 'preview_pairing_sheet.dart';
 
 class PhonePage extends StatelessWidget {
-  const PhonePage({required this.status, super.key});
+  const PhonePage({required this.status, this.session, super.key});
   final PhoneStatus status;
+  final PreviewSession? session;
 
   void _connect(BuildContext context) {
+    if (session != null) {
+      if (session!.hasTrust) {
+        session!.reconnect();
+        return;
+      }
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (_) => PreviewPairingSheet(session: session!),
+      );
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -42,7 +58,9 @@ class PhonePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final connected = status.connection == ClusterConnection.connected;
-    final busy = status.connection == ClusterConnection.connecting;
+    final busy =
+        status.connection == ClusterConnection.connecting ||
+        (session?.busy ?? false);
     final unavailable = status.connection == ClusterConnection.unavailable;
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
@@ -101,6 +119,23 @@ class PhonePage extends StatelessWidget {
                               ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                         const SizedBox(height: 32),
+                        if (session != null) ...[
+                          if (session!.hasTrust)
+                            const Text(
+                              'PAIRED CLUSTER',
+                              textAlign: TextAlign.center,
+                            ),
+                          if (session!.error != null)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                session!.error!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: colors.error),
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                        ],
                         if (connected) ...[
                           Card.filled(
                             child: Padding(
@@ -154,6 +189,16 @@ class PhonePage extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (session != null) ...[
+                            TextButton(
+                              onPressed: busy ? null : session!.disconnect,
+                              child: const Text('Disconnect'),
+                            ),
+                            TextButton(
+                              onPressed: busy ? null : () => _forget(context),
+                              child: const Text('Forget preview'),
+                            ),
+                          ],
                         ] else ...[
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
@@ -172,6 +217,11 @@ class PhonePage extends StatelessWidget {
                                   : 'Connect cluster',
                             ),
                           ),
+                          if (session?.hasTrust == true)
+                            TextButton(
+                              onPressed: busy ? null : () => _forget(context),
+                              child: const Text('Forget preview'),
+                            ),
                           const SizedBox(height: 16),
                           Text(
                             'Keep your cluster switched on and nearby.',
@@ -190,6 +240,29 @@ class PhonePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _forget(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Forget Mac preview?'),
+        content: const Text(
+          'Remove this saved pairing? You can find and pair with your cluster again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Forget'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await session?.forget();
   }
 
   String get _navigationLabel => switch (status.navigation) {

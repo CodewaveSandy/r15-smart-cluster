@@ -21,7 +21,7 @@ Display ESP32: coherent state -> presenter -> one LVGL owner
 
 Phone owns location, search, routing/rerouting, map preparation/downloads and permitted notification/media access. Vehicle MCU owns radios and acquisition; navigation handling does not mean running a routing engine. Display owns map rendering/cache and presentation. Map data crosses both phone-to-vehicle and vehicle-to-display links. No pixels over the telemetry UART. Do not bypass vehicle radio ownership to hide a bottleneck.
 
-Mac development substitutes a host phone-service adapter for the vehicle service, delivering normalized messages to the existing simulator. Network callbacks never call LVGL. A bounded mailbox carries latest observations; commands use a bounded ordered queue. This adapter is planned, not scaffolded or connected yet.
+Mac development substitutes a host phone-service adapter for the vehicle service, delivering normalized messages to the existing simulator. Network callbacks never call LVGL. A bounded mailbox carries latest observations; commands use a bounded ordered queue. Native Android BLE scanning/GATT and protected trust storage, a Mac CoreBluetooth advertiser/Keychain helper, a TLS bridge and bounded host IPC adapter are now implemented; see [Wi-Fi Mac preview connection](mac-preview-connection.md). The physical phone/LAN run and ESP32 adapters remain separate evidence.
 
 ## Code organization and dependency rules
 

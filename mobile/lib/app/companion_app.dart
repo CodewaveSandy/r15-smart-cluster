@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../features/phone/domain/phone_status.dart';
+import '../features/phone/application/preview_session.dart';
 import '../features/phone/presentation/phone_page.dart';
 import 'widgets/brand_mark.dart';
 
 class CompanionApp extends StatelessWidget {
-  const CompanionApp({required this.phoneStatus, super.key});
+  const CompanionApp({required this.phoneStatus, this.session, super.key});
 
   final PhoneStatus phoneStatus;
+  final PreviewSession? session;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -17,7 +19,7 @@ class CompanionApp extends StatelessWidget {
     debugShowCheckedModeBanner: false,
     theme: _theme(Brightness.light),
     darkTheme: _theme(Brightness.dark),
-    home: _Startup(status: phoneStatus),
+    home: _Startup(status: phoneStatus, session: session),
   );
 
   ThemeData _theme(Brightness brightness) => ThemeData(
@@ -31,7 +33,8 @@ class CompanionApp extends StatelessWidget {
 }
 
 class _Startup extends StatefulWidget {
-  const _Startup({required this.status});
+  const _Startup({required this.status, this.session});
+  final PreviewSession? session;
   final PhoneStatus status;
 
   @override
@@ -59,7 +62,15 @@ class _StartupState extends State<_Startup> {
 
   @override
   Widget build(BuildContext context) => _showHome
-      ? PhonePage(status: widget.status)
+      ? widget.session == null
+            ? PhonePage(status: widget.status)
+            : AnimatedBuilder(
+                animation: widget.session!,
+                builder: (context, _) => PhonePage(
+                  status: widget.session!.status,
+                  session: widget.session,
+                ),
+              )
       : const Scaffold(
           body: SafeArea(child: Center(child: BrandMark())),
         );

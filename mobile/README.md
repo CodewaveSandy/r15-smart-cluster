@@ -9,7 +9,7 @@ Flutter application in the R15 Smart Cluster monorepo. Android first, future iOS
 - Light/dark system themes, scrollable text-scalable content, disconnected Connect cluster action and connected Navigation card.
 - No third-party runtime packages, requested phone permissions or fake pairing actions.
 
-BLE/Wi-Fi, Mac bridge, location/maps, notifications, media and native background services are **not implemented**. This foundation does not connect to the cluster preview yet. Map rendering and end-to-end performance still need actual-board validation.
+An opt-in [nearby Mac preview connection](docs/mac-preview-connection.md) is implemented for development. ESP32 Wi-Fi provisioning, location/maps, notifications, media and native background services are **not implemented**. Use the bridge launch flags to connect to the cluster preview; the plain launch remains disconnected. Map rendering and end-to-end performance still need actual-board validation.
 
 Start with [development](docs/development.md), then [architecture](docs/architecture.md), [implementation plan](docs/implementation-plan.md) and the [documentation index](docs/README.md).
 

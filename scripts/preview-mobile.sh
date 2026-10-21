@@ -3,13 +3,15 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: bash scripts/preview-mobile.sh [android-device-id]"
+  echo "Usage: bash scripts/preview-mobile.sh [--mac-preview] [android-device-id]"
   echo "Connect and unlock your phone, enable USB debugging, and approve this computer."
 }
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
   usage
   exit 0
 fi
+mac_preview=false
+if [[ "${1:-}" == --mac-preview ]]; then mac_preview=true; shift; fi
 if [[ $# -gt 1 || "${1:-}" == -* ]]; then
   usage >&2
   exit 2
@@ -68,7 +70,21 @@ else:
 PY
 )"
 
+preview_args=()
+if $mac_preview; then
+  bridge_config="$project_root/build/phone-bridge/bootstrap.json"
+  if [[ ! -f "$bridge_config" ]]; then
+    echo "Start the cluster with: bash scripts/preview.sh --phone-bridge" >&2
+    exit 1
+  fi
+  preview_args+=("--dart-define-from-file=$bridge_config")
+  echo "Wi-Fi preview enabled. Phone and Mac must be on the same LAN; USB only installs/debugs."
+fi
 printf 'Preparing dependencies…\n'
 flutter pub get --enforce-lockfile
 printf 'Launching R15 Companion. Press r to hot reload, R to restart, q to quit.\n'
-flutter run --debug --no-pub -d "$phone_id"
+if $mac_preview; then
+  flutter run --debug --no-pub -d "$phone_id" "${preview_args[@]}"
+else
+  flutter run --debug --no-pub -d "$phone_id"
+fi

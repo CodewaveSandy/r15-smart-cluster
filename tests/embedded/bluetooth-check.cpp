@@ -10,8 +10,7 @@ int main() {
     ClusterState state; state.speedKph={0,Quality::Available};
     Lifecycle life; life.key(true,0); life.advance(Lifecycle::bootMs);
     DisplayOptions options; options.settings=true; options.settingsFocus=1;
-    settingsAction(options,SettingsAction::Select,state,life);
-    check(options.bluetooth,"Bluetooth category opens");
+    options.bluetooth=true; // Legacy radio adapter checks; no rider-facing Bluetooth category.
     check(bluetoothMenu(state.bluetooth,false).items[0]==BluetoothItem::Back,"Unknown status offers no radio operation");
     check(std::strcmp(bluetoothPresentation(state.bluetooth,false).status,"Status unavailable")==0,"Unknown connection is not disconnected");
     state.bluetooth.quality=Quality::Available;

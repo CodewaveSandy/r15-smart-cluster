@@ -1,6 +1,6 @@
 # Phone protocol and transport plan
 
-Status: requirements only. No wire format, codec, UUIDs, ports or cryptographic handshake is implemented or frozen. Phone network framing and inter-MCU UART framing are separate contracts sharing normalized semantics; do not require identical envelopes.
+Status: production/firmware protocol requirements only. An isolated [Wi-Fi Mac preview contract](mac-preview-connection.md) is implemented for development; it is not the final BLE/Wi-Fi or UART wire format. No wire format, codec, UUIDs, ports or cryptographic handshake is implemented or frozen. Phone network framing and inter-MCU UART framing are separate contracts sharing normalized semantics; do not require identical envelopes.
 
 ## Transport policy
 

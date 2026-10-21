@@ -1,6 +1,6 @@
 # LVGL visual and implementation style guide
 
-Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and simulated radio screens implemented. Navigation/clock and hardware integration remain pending.
+Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation/clock and hardware integration remain pending.
 
 ## Visual authority
 
@@ -52,9 +52,9 @@ Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens
 
 ## Components and data flow
 
-Dashboard composes Header, TellTaleRow, Tachometer, PrimaryReadout, RideInfoPanel, FuelGauge, SettingsHome, AppearancePanel, BluetoothPanel, WifiPanel and LifecycleOverlay. Each exposes a small typed update API and owns its LVGL subtree; components apply changed values/styles only. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
+Dashboard composes Header, TellTaleRow, Tachometer, PrimaryReadout, RideInfoPanel, FuelGauge, SettingsHome, AppearancePanel, PhonePanel and LifecycleOverlay. Each exposes a small typed update API and owns its LVGL subtree; components apply changed values/styles only. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
 
-Implemented screens are Dashboard (Street/Track), Settings home, Appearance, Bluetooth and Wi-Fi. Navigation and clock editing remain pending. Developer help stays in Terminal. Hardware labels must describe actual available controls and time sources; touch is optional and cannot become required navigation.
+Implemented screens are Dashboard (Street/Track), Settings home, Appearance, Phone. Navigation and clock editing remain pending. Developer help stays in Terminal. Hardware labels must describe actual available controls and time sources; touch is optional and cannot become required navigation.
 
 Navigation actions: up/down/left/right/select/back/next/previous. Host keyboard and vehicle input adapters produce the same actions; no keycodes, GPIOs or CAN identifiers in widgets. Display settings/focus remain local. Remote trip/lap actions require the defined command contract and visible failures.
 
@@ -100,6 +100,6 @@ Bundle source version, hashes, Apache 2.0 license and notices. Only selected gly
 
 ## Settings presentation
 
-The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Four category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host saved preferences. Bluetooth and Wi-Fi UI/demos follow the same focus/back navigation; Navigation, real radio provisioning and firmware NVS remain pending.
+The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Three category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host saved preferences. Phone UI/demos follow the same focus/back navigation; Navigation, real radio provisioning and firmware NVS remain pending.
 
 Radio pages share the compact instrument strip, a status card and bounded context-sensitive action rows. Unknown service quality offers Back, and Forget confirmation defaults to Cancel. See [settings and connectivity](settings.md) for both radio flows and provisioning boundaries.

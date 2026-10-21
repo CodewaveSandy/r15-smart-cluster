@@ -61,7 +61,7 @@ struct SettingsLayout {
     static constexpr Rect bounds{0,140,800,340};
     static constexpr TextArea title{28,5,500}, back{690,12,82};
     static constexpr TextArea subtitle{28,38,600};
-    static constexpr Rect tile(int i) { return {28+(i%2)*382,76+(i/2)*120,362,106}; }
+    static constexpr Rect tile(int i) { return {28+(i%2)*382,76+(i/2)*120,i==2?744:362,106}; }
     static constexpr int speedCenter=200,speedY=22,unitY=43;
 };
 struct AppearanceLayout {
@@ -72,17 +72,11 @@ struct AppearanceLayout {
     static constexpr Rect cancel{484,278,136,44},apply{636,278,136,44};
     static constexpr TextArea status{28,292,440};
 };
-struct BluetoothLayout {
+struct PhoneLayout {
     static constexpr Rect bounds=SettingsLayout::bounds;
     static constexpr TextArea title{28,5,500},back{690,12,82},subtitle{28,36,700};
     static constexpr Rect device{28,58,744,78};
     static constexpr Rect row(unsigned i) { return {28,154+int(i)*56,744,48}; }
-};
-struct WifiLayout {
-    static constexpr Rect bounds=SettingsLayout::bounds;
-    static constexpr TextArea title{28,5,500},back{690,12,82},subtitle{28,36,700};
-    static constexpr Rect device{28,58,744,64};
-    static constexpr Rect row(unsigned i) {return {28,132+int(i)*40,744,36};}
 };
 struct LifecycleLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::height};

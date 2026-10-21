@@ -1,6 +1,6 @@
 # Implementation status and plan
 
-Updated: 2026-10-19. Status: native dashboard, Appearance preferences, Bluetooth and Wi-Fi UI/demos implemented; Navigation, hardware firmware and integrations pending.
+Updated: 2026-10-19. Status: native dashboard, Appearance preferences, unified Phone UI and native nearby-discovery development adapter implemented; Navigation, hardware firmware and integrations pending.
 
 ## Current implementation
 
@@ -9,12 +9,12 @@ Updated: 2026-10-19. Status: native dashboard, Appearance preferences, Bluetooth
 | Dashboard | Street centered speed; Track centered current/best lap with secondary speed; equal section heights; Midnight/Daylight |
 | Instruments/assets | Chakra Petch Bold Italic numerals, Inter labels/RPM, Barlow clock; 16 MDI symbols; fractional eight-piece fuel gauge and 16% reserve cue |
 | Ride pages | ODO/Trip 1/Trip 2; coolant, Track, real-time consumption, average consumption, average speed, TCS, unidentified placeholder |
-| Settings | Four-category home, reversible 280 ms compact-speed transition, sequential non-touch focus and access below valid 20 km/h |
+| Settings | Three-category home, reversible 280 ms compact-speed transition, sequential non-touch focus and access below valid 20 km/h |
 | Appearance | Theme preview/Apply/Cancel and versioned host restart persistence; one Instrument design |
-| Bluetooth | Simulated pairing/connect/cancel/disconnect/confirmed Forget and failed/unknown states |
-| Wi-Fi | Simulated bounded network list/search/connect/disconnect/confirmed Forget; explicit pending-credentials notice |
+| Phone | Unified page, first-pair approval/code, saved/disconnected/connected, confirmed forget and unavailable states; native Android/Mac BLE discovery and protected saved trust in development |
 | Lifecycle | R15 Light Signature; boot 3,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
 | Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation, persistent readout text buffers, dirty-driven SDL presentation and zero settled redraws |
+| Phone/Mac development connection | Native BLE discovery, cluster-approved pairing, protected saved trust, TLS session and bounded IPC; physical new discovery journey awaiting user test |
 | Pending | Navigation/Maps feasibility, clock editor/source, real trip/lap calculations, firmware NVS, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
 
 Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Only confirmed theme/design persist. UI warning thresholds and the Settings speed gate are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.
@@ -89,9 +89,9 @@ Performance objectives are provisional in [architecture](architecture.md). Estab
 
 ## Current verification
 
-Nine host suites pass: model/lifecycle, Light Signature, presentation/input, desktop input, Bluetooth, Wi-Fi, preferences, typography and LVGL rendering. The render suite captures 294 scenarios, including both layouts/themes, signal boundaries, warnings/unavailable states, settings transitions, radio progress/failures and interruption. It rejects LVGL warnings and redundant flushes for settled screens. Repeated construction/destruction, cached-versus-fresh rendering and exact dashboard restoration are checked.
+Eleven host suites pass: Phone menu, phone bridge IPC, model/lifecycle, Light Signature, presentation/input, desktop input, Bluetooth, Wi-Fi, preferences, typography and LVGL rendering. The render suite captures 210 scenarios, including both layouts/themes, signal boundaries, warnings/unavailable states, settings transitions, Phone pairing/confirmation and interruption. It rejects LVGL warnings and redundant flushes for settled screens. Repeated construction/destruction, cached-versus-fresh rendering and exact dashboard restoration are checked.
 
-No firmware has been flashed, and no UART, panel, retained-power or bike verification is claimed. Run the [preview and verification commands](getting-started.md) after changes; record actual hardware evidence separately.
+The separate [Mac bridge checks](../mobile/docs/mac-preview-connection.md#verification) exercise real Dart TLS and session behavior; they do not establish physical phone/LAN or ESP32 connectivity. No firmware has been flashed, and no UART, panel, retained-power or bike verification is claimed. Run the [preview and verification commands](getting-started.md) after changes; record actual hardware evidence separately.
 
 ## Hardware and release gates
 

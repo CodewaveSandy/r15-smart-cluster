@@ -3,9 +3,10 @@
 #include "Lifecycle.h"
 #include "BluetoothMenu.h"
 #include "WifiMenu.h"
+#include "PhoneMenu.h"
 namespace cluster {
 enum class SettingsAction { Open, Back, Next, Previous, Left, Right, Up, Down, Select };
-enum class SettingsEffect { None, SavePreferences, BluetoothPair, BluetoothConnect, BluetoothDisconnect, BluetoothForget, BluetoothCancel, WifiScan, WifiConnect, WifiDisconnect, WifiForget, WifiCancel };
+enum class SettingsEffect { PhoneApprove, PhoneReject, PhonePair, PhoneDisconnect, PhoneForget, None, SavePreferences, BluetoothPair, BluetoothConnect, BluetoothDisconnect, BluetoothForget, BluetoothCancel, WifiScan, WifiConnect, WifiDisconnect, WifiForget, WifiCancel };
 inline SettingsEffect closeWifi(DisplayOptions& o) { const bool open=o.wifi;o.wifi=false;o.wifiForgetConfirmation=false;o.wifiCredentialNotice=false;return open?SettingsEffect::WifiCancel:SettingsEffect::None; }
 inline SettingsEffect closeBluetooth(DisplayOptions& options) {
     const bool wasOpen=options.bluetooth;
@@ -28,6 +29,11 @@ inline bool canOpenSettings(const ClusterState& state,const Lifecycle& life) {
 }
 inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction action,const ClusterState& state,const Lifecycle& life) {
     if(action==SettingsAction::Back) {
+        if(options.phone){
+            if(options.phoneForgetConfirmation){options.phoneForgetConfirmation=false;options.phoneFocus=0;}
+            else {options.phone=false;if(state.phone.pairingRequested)return SettingsEffect::PhoneReject;}
+            return SettingsEffect::None;
+        }
         if(options.appearance) cancelAppearance(options);
         else if(options.wifi) {
             if(options.wifiForgetConfirmation||options.wifiCredentialNotice) {options.wifiForgetConfirmation=false;options.wifiCredentialNotice=false;options.wifiFocus=0;return SettingsEffect::None;}
@@ -42,8 +48,23 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
     }
     if(action==SettingsAction::Open) { if(canOpenSettings(state,life)) options.settings=true; return SettingsEffect::None; }
     if(!options.settings) return SettingsEffect::None;
-    if(!canOpenSettings(state,life)) { cancelAppearance(options); options.settings=false; return closeRadio(options); }
-    if(options.wifi) {
+    if(!canOpenSettings(state,life)) { options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect; }
+    if(options.phone){
+        const auto menu=phoneMenu(state.phone,options.phoneForgetConfirmation);
+        options.phoneFocus%=menu.count;
+        if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.phoneFocus=(options.phoneFocus+1)%menu.count;
+        else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.phoneFocus=(options.phoneFocus+menu.count-1)%menu.count;
+        else if(action==SettingsAction::Select){switch(menu.items[options.phoneFocus]){
+            case PhoneItem::Approve:if(state.speedKph.value==0)return SettingsEffect::PhoneApprove;break;
+            case PhoneItem::Reject:return SettingsEffect::PhoneReject;
+            case PhoneItem::Pair:if(state.speedKph.value==0)return SettingsEffect::PhonePair;break;
+            case PhoneItem::Disconnect:return SettingsEffect::PhoneDisconnect;
+            case PhoneItem::Forget:options.phoneForgetConfirmation=true;options.phoneFocus=0;break;
+            case PhoneItem::ConfirmForget:options.phoneForgetConfirmation=false;options.phoneFocus=0;return SettingsEffect::PhoneForget;
+            case PhoneItem::Cancel:options.phoneForgetConfirmation=false;options.phoneFocus=0;break;
+            case PhoneItem::Back:options.phone=false;break;
+        }}
+    } else if(options.wifi) {
         if(!state.wifi.available()||!valid(state.wifi)||options.wifiNetwork>=state.wifi.count||state.wifi.phase!=WifiPhase::Idle) options.wifiCredentialNotice=false;
         const auto menu=wifiMenu(state.wifi,options.wifiForgetConfirmation);
         options.wifiFocus%=options.wifiCredentialNotice?1u:menu.count;
@@ -104,16 +125,14 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
         }
     } else {
         switch(action) {
-        case SettingsAction::Next: case SettingsAction::Right: case SettingsAction::Down: options.settingsFocus=(options.settingsFocus+1)%4; break;
-        case SettingsAction::Previous: case SettingsAction::Left: case SettingsAction::Up: options.settingsFocus=(options.settingsFocus+3)%4; break;
+        case SettingsAction::Next: case SettingsAction::Right: case SettingsAction::Down: options.settingsFocus=(options.settingsFocus+1)%3; break;
+        case SettingsAction::Previous: case SettingsAction::Left: case SettingsAction::Up: options.settingsFocus=(options.settingsFocus+2)%3; break;
         case SettingsAction::Select:
             if(options.settingsFocus==0) {
                 options.appearance=true; options.appearanceOriginalLight=options.light;
                 options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false;
-            } else if(options.settingsFocus==2) {
-                options.wifi=true;options.wifiFocus=0;options.wifiForgetConfirmation=false;options.wifiCredentialNotice=false;
             } else if(options.settingsFocus==1) {
-                options.bluetooth=true; options.bluetoothFocus=0; options.bluetoothForgetConfirmation=false;
+                options.phone=true;options.phoneFocus=0;options.phoneForgetConfirmation=false;
             }
             break;
         default:break;
@@ -123,7 +142,11 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
 }
 inline SettingsEffect reconcileSettings(DisplayOptions& options,const ClusterState& state,const Lifecycle& life) {
     if(!canOpenSettings(state,life)) {
-        cancelAppearance(options); options.settings=false; return closeRadio(options);
+        options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect;
+    }
+    if(options.phone){
+        if(!state.phone.available()||!state.phone.paired)options.phoneForgetConfirmation=false;
+        options.phoneFocus%=phoneMenu(state.phone,options.phoneForgetConfirmation).count;
     }
     if(options.wifi) {
         if(!state.wifi.available()||!valid(state.wifi)||state.wifi.phase!=WifiPhase::Idle) {options.wifiForgetConfirmation=false;options.wifiCredentialNotice=false;}

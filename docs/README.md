@@ -1,13 +1,13 @@
 # Project documentation
 
-The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 480 dual-ESP32 Yamaha R15 V4 cluster. Dashboard, Appearance preferences, Bluetooth UI and Wi-Fi UI are implemented; radio behavior and vehicle observations are simulated. Hardware firmware and embedded moving-map feasibility remain pending. An Android-first Flutter companion foundation is documented separately, with future iOS support.
+The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 480 dual-ESP32 Yamaha R15 V4 cluster. Dashboard, Appearance preferences and unified Phone UI are implemented. The opt-in Mac bridge supports native BLE discovery and TLS Wi-Fi sessions; vehicle observations remain simulated. Hardware firmware and embedded moving-map feasibility remain pending. An Android-first Flutter companion foundation is documented separately, with future iOS support.
 
 | Guide | Responsibility |
 | --- | --- |
 | [Preview and development](getting-started.md) | Mac setup, controls, builds, captures and asset regeneration |
 | [Architecture](architecture.md) | MCU ownership, source structure, state/concurrency, proposed UART and hardware boundaries |
 | [UI style](lvgl-style-guide.md) | Approved layouts, typography, themes, instruments and warnings |
-| [Settings and connectivity](settings.md) | Appearance/persistence, navigation, Bluetooth and Wi-Fi behavior/integration gates |
+| [Settings and connectivity](settings.md) | Appearance/persistence, navigation, unified Phone behavior and integration gates |
 | [Power lifecycle](power-lifecycle.md) | Three-second boot, two-second shutdown, interruptions and retained-power contract |
 | [Implementation status and plan](implementation-plan.md) | Current feature/evidence matrix, next stages, OEM inventory and release gates |
 | [Companion app](../mobile/docs/README.md) | Flutter architecture, phone journey, protocol/security plan and implementation stages |

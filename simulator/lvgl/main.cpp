@@ -6,6 +6,8 @@
 #include "PreferenceFile.h"
 #include "BluetoothDemo.h"
 #include "WifiDemo.h"
+#include "PhoneBridge.h"
+#include <cstdlib>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -401,7 +403,7 @@ int main(int argc,char** argv) {
                     dashboard.update(parked,view,life,offset+6100);
                     dashboard.update(parked,view,life,offset+6240); capture(output/("settings-enter-"+suffix+".bmp"));
                     dashboard.update(parked,view,life,offset+6380); capture(output/("settings-home-"+suffix+".bmp"));
-                    for(unsigned focus=1;focus<4;++focus) {
+                    for(unsigned focus=1;focus<3;++focus) {
                         view.settingsFocus=focus; dashboard.update(parked,view,life,offset+6400+focus);
                         capture(output/("settings-focus-"+std::to_string(focus)+"-"+suffix+".bmp"));
                     }
@@ -440,74 +442,33 @@ int main(int argc,char** argv) {
                     if(before!=pixels) { throw std::runtime_error("Settings exit failed to restore dashboard exactly: "+suffix); }
                 }
                 for(bool track:{false,true}) for(bool light:{false,true}) {
-                    view={}; view.track=track; view.light=light; view.settings=true; view.bluetooth=true; view.bluetoothDemo=true;
-                    view.time="20:55"; view.date="18 Oct 2026";
+                    view={};view.track=track;view.light=light;view.settings=true;view.phone=true;
                     const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
                     const std::uint64_t base=50000+((track?2:0)+(light?1:0))*20000;
-                    const char* names[]={"connected","paired","unpaired","discoverable","pairing","connecting","disconnecting","forgetting","forget-confirmation","timeout","rejected","unavailable","stale","connected-error"};
-                    for(unsigned scene=0;scene<14;++scene) {
-                        auto sample=state; sample.speedKph={0,Quality::Available}; sample.gear={0,Quality::Available};
-                        auto& radio=sample.bluetooth;
-                        view.bluetoothForgetConfirmation=false; view.bluetoothFocus=0;
-                        switch(scene) {
-                        case 1:radio.connected=false;break;
-                        case 2:radio.connected=false;radio.paired=false;radio.deviceName.fill(0);break;
-                        case 3:radio.connected=false;radio.phase=BluetoothPhase::Discoverable;break;
-                        case 4:radio.connected=false;radio.phase=BluetoothPhase::Pairing;break;
-                        case 5:radio.connected=false;radio.phase=BluetoothPhase::Connecting;break;
-                        case 6:radio.phase=BluetoothPhase::Disconnecting;break;
-                        case 7:radio.phase=BluetoothPhase::Forgetting;break;
-                        case 8:view.bluetoothForgetConfirmation=true;break;
-                        case 9:radio.connected=false;radio.phase=BluetoothPhase::Failed;radio.failure=BluetoothFailure::Timeout;break;
-                        case 10:radio.connected=false;radio.paired=false;radio.phase=BluetoothPhase::Failed;radio.failure=BluetoothFailure::Rejected;break;
-                        case 11:radio.quality=Quality::Unavailable;break;
-                        case 12:radio.quality=Quality::Stale;break;
-                        case 13:radio.phase=BluetoothPhase::Failed;radio.failure=BluetoothFailure::Timeout;break;
-                        default:break;
-                        }
-                        sample.phoneConnected={radio.connected,radio.quality};
-                        dashboard.update(sample,view,life,base+scene*1000);
-                        dashboard.update(sample,view,life,base+scene*1000+280);
-                        capture(output/("bluetooth-"+std::string(names[scene])+"-"+suffix+".bmp"));
-                        flushMetrics={};
-                        for(int idle=0;idle<100;++idle) { dashboard.update(sample,view,life,base+scene*1000+300); lv_refr_now(nullptr); }
-                        if(flushMetrics.calls) throw std::runtime_error("Settled Bluetooth redraw without changes");
-                    }
-                    auto interrupt=state; interrupt.speedKph={0,Quality::Available}; interrupt.engineWarning={true,Quality::Available};
-                    if(reconcileSettings(view,interrupt,life)!=SettingsEffect::BluetoothCancel) throw std::runtime_error("Warning failed to cancel Bluetooth UI operation");
-                    dashboard.update(interrupt,view,life,base+14000); capture(output/("bluetooth-warning-"+suffix+".bmp"));
-                    view.settings=true;view.bluetooth=true;interrupt.engineWarning={false,Quality::Available};interrupt.speedKph.quality=Quality::Stale;
-                    reconcileSettings(view,interrupt,life);
-                    dashboard.update(interrupt,view,life,base+15000);capture(output/("bluetooth-speed-stale-"+suffix+".bmp"));
-                }
-                for(bool track:{false,true}) for(bool light:{false,true}) {
-                    view={};view.track=track;view.light=light;view.settings=true;view.wifi=true;
-                    const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
-                    const std::uint64_t base=140000+((track?2:0)+(light?1:0))*20000;
-                    const char* names[]={"networks","connected","scanning","connecting","disconnecting","forgetting","failed","unavailable","stale","forget-confirmation","credentials","empty"};
-                    for(unsigned scene=0;scene<12;++scene) {
+                    const char* names[]={"unpaired","saved","connected","forget-confirmation","unavailable","stale","pair-request","pair-approved"};
+                    for(unsigned scene=0;scene<8;++scene){
                         auto sample=state;sample.speedKph={0,Quality::Available};sample.gear={0,Quality::Available};
-                        auto& w=sample.wifi;view.wifiForgetConfirmation=false;view.wifiCredentialNotice=false;
-                        if(scene==1||scene==4||scene==5||scene==9) {w.connected=true;w.networkName=w.networks[0].name;}
-                        if(scene>=2&&scene<=6)w.phase=static_cast<WifiPhase>(scene-1);
-                        if(scene==7)w.quality=Quality::Unavailable;
-                        if(scene==8)w.quality=Quality::Stale;
-                        if(scene==9)view.wifiForgetConfirmation=true;
-                        if(scene==10)view.wifiCredentialNotice=true;
-                        if(scene==11)w.count=0;
+                        auto& phone=sample.phone;phone.quality=Quality::Available;
+                        phone.paired=scene>=1&&scene<=5;phone.connected=scene==2||scene==3;
+                        std::strcpy(phone.pairingCode.data(),"123456");
+                        if(scene>=6){phone.pairingRequested=true;phone.pairingApproved=scene==7;}
+                        if(scene==4)phone.quality=Quality::Unavailable;
+                        if(scene==5)phone.quality=Quality::Stale;
+                        view.phoneForgetConfirmation=scene==3;view.phoneFocus=0;
                         dashboard.update(sample,view,life,base+scene*1000);dashboard.update(sample,view,life,base+scene*1000+280);
-                        capture(output/("wifi-"+std::string(names[scene])+"-"+suffix+".bmp"));
-                        flushMetrics={};for(int i=0;i<100;++i){dashboard.update(sample,view,life,base+scene*1000+300);lv_refr_now(nullptr);}
-                        if(flushMetrics.calls)throw std::runtime_error("Settled Wi-Fi redraw without changes");
+                        capture(output/("phone-"+std::string(names[scene])+"-"+suffix+".bmp"));
+                        flushMetrics={};for(int idle=0;idle<100;++idle){dashboard.update(sample,view,life,base+scene*1000+300);lv_refr_now(nullptr);}
+                        if(flushMetrics.calls)throw std::runtime_error("Settled Phone redraw without changes");
                     }
                     auto interruption=state;interruption.speedKph={0,Quality::Available};interruption.engineWarning={true,Quality::Available};
-                    if(reconcileSettings(view,interruption,life)!=SettingsEffect::WifiCancel)throw std::runtime_error("Warning failed to cancel Wi-Fi");
-                    dashboard.update(interruption,view,life,base+13000);capture(output/("wifi-warning-"+suffix+".bmp"));
-                    view.settings=true;view.wifi=true;interruption.engineWarning={false,Quality::Available};interruption.speedKph.quality=Quality::Stale;
-                    reconcileSettings(view,interruption,life);dashboard.update(interruption,view,life,base+14000);capture(output/("wifi-speed-stale-"+suffix+".bmp"));
+                    reconcileSettings(view,interruption,life);
+                    if(view.settings||view.phone)throw std::runtime_error("Warning failed to close Phone");
+                    dashboard.update(interruption,view,life,base+9000);capture(output/("phone-warning-"+suffix+".bmp"));
+                    view.settings=true;view.phone=true;interruption.engineWarning={false,Quality::Available};interruption.speedKph.quality=Quality::Stale;
+                    reconcileSettings(view,interruption,life);dashboard.update(interruption,view,life,base+10000);capture(output/("phone-speed-stale-"+suffix+".bmp"));
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
-                std::printf("Rendered 294 scenarios to %s\n",output.string().c_str());
+                std::printf("Rendered dashboard, settings and Phone scenarios to %s\n",output.string().c_str());
             } else {
                 using Window=std::unique_ptr<SDL_Window,decltype(&SDL_DestroyWindow)>;
                 using Renderer=std::unique_ptr<SDL_Renderer,decltype(&SDL_DestroyRenderer)>;
@@ -524,21 +485,26 @@ int main(int argc,char** argv) {
                 if(!texture) throw std::runtime_error(SDL_GetError());
                 const auto start=std::chrono::steady_clock::now();
                 auto milliseconds=[&]{return std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count());};
+                cluster::host::PhoneBridge phoneBridge(std::getenv("R15_PHONE_BRIDGE_SOCKET"));
+                if(phoneBridge.enabled()) view.bluetoothDemo=false;
                 cluster::host::BluetoothDemo bluetoothDemo;
                 cluster::host::WifiDemo wifiDemo;
                 const auto dispatchEffect=[&](SettingsEffect effect,std::uint64_t now) {
-                    if(effect==SettingsEffect::SavePreferences) {
+                    if(effect==SettingsEffect::PhoneApprove||effect==SettingsEffect::PhoneReject||effect==SettingsEffect::PhonePair||effect==SettingsEffect::PhoneDisconnect||effect==SettingsEffect::PhoneForget){
+                        phoneBridge.command(effect==SettingsEffect::PhoneApprove?'A':effect==SettingsEffect::PhoneReject?'R':effect==SettingsEffect::PhonePair?'P':effect==SettingsEffect::PhoneDisconnect?'D':'F');
+                    } else if(effect==SettingsEffect::SavePreferences) {
                         const Preferences requested{view.light,DashboardDesign::Instrument};
                         const bool unchanged=requested.light==confirmedPreferences.light&&requested.design==confirmedPreferences.design;
                         const bool saved=unchanged||preferenceFile.save(requested);
                         if(saved) confirmedPreferences=requested;
                         appearanceSaveResult(view,saved);
-                    } else {bluetoothDemo.request(effect,state,now);wifiDemo.request(effect,state,view.wifiNetwork,now);}
+                    } else if(!phoneBridge.enabled()) {bluetoothDemo.request(effect,state,now);wifiDemo.request(effect,state,view.wifiNetwork,now);}
                 };
                 life.key(true,0); bool running=true,missing=false; help(); std::uint64_t last=0;
                 std::time_t previousMinute=-1;
                 char timeText[16]{},dateText[32]{};
                 bool repaint=true;
+                int bridgeWindowState=-1;bool previousPairOffer=false;
                 while(running) {
                     const auto now=milliseconds(); SDL_Event event;
                     while(SDL_PollEvent(&event)) {
@@ -608,8 +574,23 @@ int main(int argc,char** argv) {
                     }
                     view.time=timeText; view.date=dateText;
                     lv_tick_inc(static_cast<std::uint32_t>(now-last)); last=now;
-                    bluetoothDemo.update(state,now);
-                    wifiDemo.update(state,now);
+                    if(phoneBridge.enabled()) {
+                        const bool connected=phoneBridge.update(now);
+                        state.phone=phoneBridge.phone();
+                        if(state.phone.available()&&state.phone.pairingRequested&&!previousPairOffer&&state.speedKph.available()&&state.speedKph.value==0&&canOpenSettings(state,life)){
+                            view.settings=true;view.phone=true;view.settingsFocus=1;view.phoneFocus=0;
+                        }
+                        previousPairOffer=state.phone.available()&&state.phone.pairingRequested;
+                        state.phoneConnected={connected,phoneBridge.fresh()?Quality::Available:Quality::Unavailable};
+                        state.phoneBatteryPercent.quality=Quality::Unavailable;
+                        state.bluetooth.quality=Quality::Unavailable;
+                        state.wifi.quality=Quality::Unavailable;
+                        const int bridgePhase=phoneBridge.fresh()?int(connected):-2;
+                        if(bridgeWindowState!=bridgePhase) {
+                        bridgeWindowState=bridgePhase;
+                        SDL_SetWindowTitle(window.get(),!phoneBridge.fresh()?"R15 Preview - Phone bridge unavailable - SIMULATED VEHICLE":connected ? "R15 Preview - Wi-Fi phone connected - SIMULATED VEHICLE" : "R15 Preview - Wi-Fi phone disconnected - SIMULATED VEHICLE");
+                        }
+                    } else {bluetoothDemo.update(state,now);wifiDemo.update(state,now);}
                     auto observed=missing?ClusterState{}:state;
                     if(!valid(observed)) throw std::runtime_error("Simulator produced invalid normalized state");
                     dispatchEffect(reconcileSettings(view,observed,life),now);

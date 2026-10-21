@@ -8,6 +8,8 @@ struct DisplayOptions {
     unsigned settingsFocus=0;
     bool appearance=false, appearanceOriginalLight=false, appearanceSaveFailed=false;
     unsigned appearanceFocus=0;
+    bool phone=false,phoneForgetConfirmation=false;
+    unsigned phoneFocus=0;
     bool bluetooth=false, bluetoothForgetConfirmation=false;
     unsigned bluetoothFocus=0;
     bool wifi=false, wifiForgetConfirmation=false, wifiCredentialNotice=false;

@@ -19,8 +19,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/components/Header.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/SettingsHome.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/AppearancePanel.cpp"
- "${CLUSTER_ROOT}/embedded/ui/components/BluetoothPanel.cpp"
- "${CLUSTER_ROOT}/embedded/ui/components/WifiPanel.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/PhonePanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/TellTaleRow.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Tachometer.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/PrimaryReadout.cpp"
@@ -55,6 +54,13 @@ target_link_libraries(r15-preview PRIVATE cluster_ui SDL2::SDL2)
 target_compile_options(r15-preview PRIVATE -Wall -Wextra -Wpedantic)
 include(CTest)
 if(BUILD_TESTING)
+ add_executable(phone-check "${CLUSTER_ROOT}/tests/embedded/phone-check.cpp")
+ target_include_directories(phone-check PRIVATE "${CLUSTER_ROOT}")
+ add_test(NAME phone-menu COMMAND phone-check)
+ add_executable(phone-bridge-check "${CLUSTER_ROOT}/tests/embedded/phone-bridge-check.cpp")
+ target_include_directories(phone-bridge-check PRIVATE "${CLUSTER_ROOT}")
+ target_compile_options(phone-bridge-check PRIVATE -Wall -Wextra -Wpedantic)
+ add_test(NAME phone-bridge-ipc COMMAND phone-bridge-check)
  add_executable(model-check "${CLUSTER_ROOT}/tests/embedded/model-check.cpp")
  target_include_directories(model-check PRIVATE "${CLUSTER_ROOT}")
  add_test(NAME model-lifecycle COMMAND model-check)

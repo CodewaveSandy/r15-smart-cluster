@@ -1,13 +1,13 @@
 #pragma once
 #include "../ObjectOwner.h"
 #include "../Tokens.h"
-#include "shared/model/BluetoothState.h"
+#include "shared/model/PhoneState.h"
 #include <array>
 namespace cluster::ui {
-class BluetoothPanel {
+class PhonePanel {
 public:
-    explicit BluetoothPanel(lv_obj_t* parent);
-    void update(const BluetoothState&,const ViewOptions&,const Palette&,int progress);
+    explicit PhonePanel(lv_obj_t* parent);
+    void update(const PhoneState&,const ViewOptions&,const Palette&,int progress);
 private:
     ObjectOwner root_;
     lv_obj_t *title_,*subtitle_,*back_,*card_,*phone_,*name_,*status_;
