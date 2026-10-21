@@ -25,7 +25,7 @@ Mac development substitutes a host phone-service adapter for the vehicle service
 
 ## Code organization and dependency rules
 
-`lib/app/` is the composition root and app theme. `lib/features/phone/domain/` contains immutable capability/status values without Flutter imports. `presentation/` renders status. Add an application controller when there are actual asynchronous actions/state transitions to own. The initial read-only foundation uses explicit constructor composition. No global locator, generic event bus, generated dependency-injection framework, or repositories without a real data source.
+`lib/app/` is the composition root and app theme. `lib/features/phone/domain/` contains immutable capability/status values without Flutter imports. `presentation/` renders status. Add an application controller when there are actual asynchronous actions/state transitions to own. The home uses explicit constructor composition and immutable connection/feature snapshots. A widget-owned cancellable timer handles the brief startup branding only; it owns no phone service. Buttons open honest pending-feature explanations until adapters are implemented. No global locator, generic event bus, generated dependency-injection framework, or repositories without a real data source.
 
 Add navigation/media/notification feature folders when implemented. Introduce transport and protocol modules with the first specified executable contract, not empty placeholders. Platform plugins belong behind narrow typed adapters; domain/application logic must not import Bluetooth, location, map SDKs, or native method channels. Widgets never parse packets, own keys/storage, or call OS permissions directly.
 

@@ -5,8 +5,8 @@ Flutter application in the R15 Smart Cluster monorepo. Android first, future iOS
 ## Implemented foundation
 
 - Official Android/iOS Flutter project shells and pinned Flutter version.
-- Explicit composition root, immutable feature-status model and a read-only Phone screen.
-- Light/dark system themes, scrollable text-scalable content and widget checks.
+- Explicit composition root, immutable feature-status model and a centered startup wordmark and connection-aware home screen.
+- Light/dark system themes, scrollable text-scalable content, disconnected Connect cluster action and connected Navigation card.
 - No third-party runtime packages, requested phone permissions or fake pairing actions.
 
 BLE/Wi-Fi, Mac bridge, location/maps, notifications, media and native background services are **not implemented**. This foundation does not connect to the cluster preview yet. Map rendering and end-to-end performance still need actual-board validation.

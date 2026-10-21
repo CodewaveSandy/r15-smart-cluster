@@ -5,64 +5,104 @@ import 'package:r15_companion/features/phone/domain/phone_status.dart';
 import 'package:r15_companion/features/phone/presentation/phone_page.dart';
 
 void main() {
-  testWidgets('foundation never claims a working connection or feature', (
+  const connected = PhoneStatus(
+    connection: ClusterConnection.connected,
+    clusterName: 'Rider cluster',
+    navigation: FeatureReadiness.notImplemented,
+    notifications: FeatureReadiness.notImplemented,
+    music: FeatureReadiness.notImplemented,
+  );
+
+  testWidgets('startup leads to disconnected home without login', (
     tester,
   ) async {
     await tester.pumpWidget(
       const CompanionApp(phoneStatus: PhoneStatus.foundation()),
     );
-    expect(find.text('No cluster connected'), findsOneWidget);
-    expect(find.text('Not implemented'), findsNWidgets(3));
-    expect(find.text('Ready'), findsNothing);
-    expect(find.byType(ElevatedButton), findsNothing);
+    expect(find.text('R15'), findsOneWidget);
+    expect(find.text('Connect cluster'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(find.text('Connect cluster'), findsOneWidget);
+    expect(find.text('Navigation'), findsNothing);
+    await tester.tap(find.text('Connect cluster'));
+    await tester.pumpAndSettle();
+    expect(find.text('Connect your cluster'), findsOneWidget);
+    expect(find.textContaining('· Connected'), findsNothing);
+    await tester.tap(find.text('Got it'));
+    await tester.pumpAndSettle();
+    expect(find.text('Connect cluster'), findsOneWidget);
   });
 
-  testWidgets('permission failure stays independent of other features', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const CompanionApp(
-        phoneStatus: PhoneStatus(
-          navigation: FeatureReadiness.ready,
-          notifications: FeatureReadiness.permissionRequired,
-          music: FeatureReadiness.unsupported,
-        ),
-      ),
-    );
-    expect(find.text('Ready'), findsOneWidget);
-    expect(find.text('Permission needed'), findsOneWidget);
-    expect(find.text('Not supported on this device'), findsOneWidget);
-  });
-
-  for (final brightness in Brightness.values) {
-    testWidgets('small screen and large text: $brightness', (tester) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      tester.platformDispatcher.platformBrightnessTestValue = brightness;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  testWidgets(
+    'confirmed connection reveals gated navigation; loss restores empty state',
+    (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(brightness: brightness),
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: TextScaler.linear(2)),
-            child: child!,
-          ),
-          home: const PhonePage(status: PhoneStatus.foundation()),
-        ),
+        const MaterialApp(home: PhonePage(status: connected)),
       );
-      await tester.scrollUntilVisible(
-        find.text('No phone permissions are requested by this foundation.'),
-        200,
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      expect(find.text('Rider cluster · Connected'), findsOneWidget);
+      expect(find.text('Navigation'), findsOneWidget);
       expect(
-        find.text('No phone permissions are requested by this foundation.'),
-        findsOneWidget,
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull,
       );
-    });
+      await tester.pumpWidget(
+        const MaterialApp(home: PhonePage(status: PhoneStatus.foundation())),
+      );
+      expect(find.text('Connect cluster'), findsOneWidget);
+      expect(find.text('Navigation'), findsNothing);
+    },
+  );
+
+  testWidgets('disposing startup cancels delayed state update', (tester) async {
+    await tester.pumpWidget(
+      const CompanionApp(phoneStatus: PhoneStatus.foundation()),
+    );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 2));
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final connection in ClusterConnection.values) {
+    for (final brightness in Brightness.values) {
+      testWidgets('small screen large text: $connection $brightness', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(brightness: brightness),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: PhonePage(
+              status: PhoneStatus(
+                connection: connection,
+                navigation: FeatureReadiness.permissionRequired,
+                notifications: FeatureReadiness.unavailable,
+                music: FeatureReadiness.unsupported,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -1000),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        if (connection == ClusterConnection.connecting) {
+          expect(
+            tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+            isNull,
+          );
+        }
+      });
+    }
   }
 }

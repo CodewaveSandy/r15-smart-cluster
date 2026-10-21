@@ -1,5 +1,13 @@
 # Phone and riding journey
 
+## Mobile startup and home (implemented UI)
+
+No account or login. A centered typographic R15 Companion mark appears for 900 ms before home; this is branding, not a claim that services initialized, and is independent of the cluster's 3.00 s boot contract. The timer is cancelled when the app widget is disposed. The OS-native launch screen remains the generated platform default; this branded screen begins with Flutter's first frame.
+
+Home shows an empty state and Connect cluster button when disconnected. The current button opens a dismissible explanation that pairing is coming next; it never simulates discovery or success. Confirmed connected observations show the cluster name and Navigation card. Navigation availability is independent of connection: disabled with explicit readiness/permission text until available. The future-ready action currently opens a destination/maps placeholder. There is no fake map or route service.
+
+Connecting disables repeated attempts; unavailable shows Retry connection. A lost session must replace the connected observation and restore the empty state. Saved pairing alone never proves a live connection. Current runtime starts disconnected; connected states are exercised through injected test snapshots until the session adapter exists. Light/dark system appearance and scrollable large-text layouts are supported. Notifications/music are removed from the primary home until their services are implemented.
+
 ## First setup
 
 Cluster Settings will expose Appearance, Phone and Navigation rather than separate rider-facing Bluetooth/Wi-Fi setup. Do not invent a fourth tile to fill the old grid. Review geometry before migration. Phone opens Connect phone; discovery/pairing must be a deliberate, bounded setup action. Pairing access requires stationary valid vehicle state and a separately reviewed policy; the existing below-20-km/h Settings gate is not permission to pair while riding.

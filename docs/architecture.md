@@ -52,6 +52,23 @@ Vehicle MCU model is not yet specified. The vehicle MCU is not presumed safety c
 
 ESP-IDF is recommended for explicit task, memory, driver and diagnostic control. First reproduce the vendor's exact working example for the actual revision, even if it uses a different toolchain; then validate the proposed stack with a minimal panel test before implementing screens.
 
+## Independent build targets
+
+Decision recorded 2026-10-21: the product has **three independently built deployables**, plus one development-only host executable. These are build targets, not three unrelated build technologies or repositories.
+
+| Target | Destination and responsibility | Build tooling | Current evidence |
+| --- | --- | --- | --- |
+| Display firmware | Display ESP32: LVGL, instruments, map rendering and display-owned preferences | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Pending board bring-up; no board target or flash verification yet |
+| Vehicle firmware | Other ESP32: acquisition, validation, calculations, physical inputs, Wi-Fi/BLE and bounded phone-data forwarding | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Pending MCU identification and implementation |
+| Companion app | Android phone first; GPS, routing/map preparation, permitted notifications/media; future iOS | Flutter/Dart, Android Gradle for APK/AAB; future iOS Xcode tooling | Android debug foundation launched on user's phone; services pending |
+| Host cluster preview | Mac development simulation using shared display sources; no ESP32 flashing | Existing CMake/SDL2/LVGL target | Implemented; `bash scripts/preview.sh` |
+
+Mobile launcher: `bash scripts/preview-mobile.sh`. It runs only the phone app; it does not start or pair with the Mac preview. The future Mac phone-service bridge substitutes for the vehicle service during development and is not a fourth product firmware.
+
+Keep these targets in this repository with separate entry points, board configurations, dependency locks and output directories. Build/flash each ESP32 with its own image and verified chip/port; never reuse a display image for the vehicle MCU or assume both chips have identical configuration. A new app release need not reflash firmware when negotiated protocol versions/capabilities remain compatible. Protocol changes require compatibility tests across affected targets.
+
+Share portable C++ domain/protocol logic between firmware and host where appropriate. Never copy the dashboard into a separate competing firmware implementation. Dart and C++ share a normative contract/test vectors rather than assuming native structs or the same language runtime. Real board project directories and flash commands are added only after board identities and toolchains are verified; existing root CMake is the host build, not an ESP-IDF firmware build.
+
 ## Display concurrency and lifetime
 
 Proposed execution model: a bounded UART receive/parser task plus one UI task that owns all LVGL calls, state presentation and navigation. ISR callbacks only signal driver completion or queue bounded events using supported APIs. Settings storage runs through a separate service/task if writes can block. Avoid extra tasks until measured need exists; assign priorities/core affinity from profiling, not habit.

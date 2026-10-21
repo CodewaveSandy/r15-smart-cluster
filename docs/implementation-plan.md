@@ -47,6 +47,20 @@ The host baseline, dashboard, portable presentation/input, settings and applicab
 
 No empty firmware scaffolding, unused queues or speculative board pins substitute for these gates.
 
+## Display arrival: first bring-up session
+
+User reported on 2026-10-21 that the display is expected on **2026-10-22**. Arrival is expected, not evidence that a board has been received or identified. Read the [independent target map](architecture.md#independent-build-targets) before creating a firmware build.
+
+1. Record actual product/PCB revision, module markings, board photos, supplied example/version and matching schematic. Confirm flash/PSRAM and the intended supply/programming interface from that revision's documentation; previously reported N4R8 resources remain unverified.
+2. Preserve the supplied factory archive and a documented restore/recovery route before replacing factory firmware. Preserve necessary source/assets/configuration in a verified backup. Record serial port and chip identity; no guessed pins, RGB timings, reset sequence or flash offsets.
+3. Reproduce the revision-matched vendor example with its documented toolchain first. Record versions and prove build/flash/reset recovery. If it uses a different LVGL/framework version, treat it as a bring-up reference; do not mix LVGL 8 APIs into our LVGL 9.2.2 code.
+4. Establish the separate **display ESP-IDF/CMake target** only after that baseline. Validate the compatible toolchain/dependencies, power, RGB color/stride/rotation, backlight, PSRAM/DMA/VSYNC and console/UART availability. No vehicle MCU or phone is needed for the first panel proof.
+5. Port the existing shared dashboard incrementally using clearly labeled synthetic observations. Keep display-only preferences local and all LVGL access under one owner. Inspect both layouts/themes, warnings and unavailable readings on the actual 800 x 480 panel; measure flash/partition fit, memory, render timing and startup.
+6. Test the 3.00 s boot and 2.00 s shutdown behavior separately from total boot latency. Shutdown requires verified retained power; hard power removal cannot be solved by firmware alone. No bike harness connection is required for this desk bring-up.
+7. Record pass/fail evidence and unresolved issues before UART/radio/map integration. The **vehicle firmware** remains a separate future target pending MCU selection. Initial bike integration remains passive/read-only with OEM function retained.
+
+First-session success means a recoverable, revision-matched panel example and measured minimal display baseline. It does not mean complete navigation, working bike telemetry, vehicle readiness or production readiness. Until target gates pass, continue using the independent host and phone previews.
+
 ## Test strategy
 
 - Portable unit tests: numeric/quality validation, stale deadlines, unit conversion, formatting, calculations, action routing, schema migration.

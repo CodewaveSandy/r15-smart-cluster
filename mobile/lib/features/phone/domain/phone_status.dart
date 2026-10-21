@@ -8,20 +8,28 @@ enum FeatureReadiness {
   ready,
 }
 
+enum ClusterConnection { disconnected, connecting, connected, unavailable }
+
 /// An immutable presentation snapshot, not a wire encoding or OS permission.
-/// No connected state is supplied until a real session service is implemented.
+/// Only confirmed session observations may supply a connected state.
 final class PhoneStatus {
   const PhoneStatus({
+    this.connection = ClusterConnection.disconnected,
+    this.clusterName,
     required this.navigation,
     required this.notifications,
     required this.music,
   });
 
   const PhoneStatus.foundation()
-    : navigation = FeatureReadiness.notImplemented,
+    : connection = ClusterConnection.disconnected,
+      clusterName = null,
+      navigation = FeatureReadiness.notImplemented,
       notifications = FeatureReadiness.notImplemented,
       music = FeatureReadiness.notImplemented;
 
+  final ClusterConnection connection;
+  final String? clusterName;
   final FeatureReadiness navigation;
   final FeatureReadiness notifications;
   final FeatureReadiness music;

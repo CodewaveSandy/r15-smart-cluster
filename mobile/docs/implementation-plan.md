@@ -4,7 +4,7 @@ Updated: 2026-10-21. Designed for Android first and future iOS using Flutter. Ho
 
 ## Current scope
 
-This change establishes generated Android/iOS projects, a Flutter composition root, immutable feature-status values, a read-only Phone foundation screen, tests and documentation. All phone services are honestly marked not implemented. No BLE/Wi-Fi/protocol/map/plugin/backend integration is supplied. Existing cluster UI is unchanged. Exact executed verification belongs in [development](development.md).
+This change establishes generated Android/iOS projects, a Flutter composition root, immutable feature-status values, a branded startup and connection-aware home screen, tests and documentation. All phone services are honestly marked not implemented. No BLE/Wi-Fi/protocol/map/plugin/backend integration is supplied. Existing cluster UI is unchanged. Exact executed verification belongs in [development](development.md).
 
 ## Delivery stages
 

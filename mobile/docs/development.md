@@ -52,8 +52,9 @@ C++ preview remains independent: run `bash scripts/preview.sh` from repository r
 
 - Dependency resolution and lockfile generation succeeded with the pinned SDK.
 - Static analysis: no issues.
-- Four widget tests passed: honest unconnected foundation, independent feature/permission states, and small-screen large-text checks in light/dark themes.
-- Temporary 390 x 844 light/dark captures were rendered with real text/icon fonts and visually inspected; content is readable and unclipped. Captures and their helper remain ignored under `build/`. These are host renders, not device screenshots.
+- Eleven widget tests passed for branded startup, pending connection action, confirmed connection/loss, disabled unavailable navigation, timer disposal, and all four connection states at 320 x 568 with 2x text in light/dark themes.
+- Four temporary 390 x 844 connected/disconnected light/dark captures were rendered with real text/icon fonts and visually inspected; content is readable and unclipped. Captures and their helper remain ignored under `build/`. These are host renders, not device screenshots.
+- Updated startup/home Android debug APK built successfully with `flutter build apk --debug --no-pub`; the new UI has not yet been inspected on the physical phone.
 - Android tooling installed: Flutter doctor reports a valid Android toolchain and accepted licenses. User confirmed successful debug build, installation and launch on Samsung SM-M346B running Android 16 (API 36). This verifies foundation startup only.
 - iOS simulator build attempted: Flutter returned “Application not configured for iOS”; this Mac has no full Xcode and selects only CommandLineTools. The generated iOS shell is present, but native configuration/build must be verified after installing Xcode. No iOS native build/device claim.
 - No BLE, Wi-Fi session, Mac bridge, map provider, ESP32 or bike test has run. No changes to C++ source; cluster visual regression is outside this foundation change.
