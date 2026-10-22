@@ -224,18 +224,34 @@ int main(int argc,char** argv) {
                         sample.speedKph=value<0?Signal<int>{}:Signal<int>{value,Quality::Available};
                         if(track) sample.currentLapMs=value<0?Signal<std::uint32_t>{}:Signal<std::uint32_t>{static_cast<std::uint32_t>(value)*1000,Quality::Available};
                         dashboard.update(sample,view,life,1400); lv_refr_now(nullptr);
+                        // Units now intentionally share the instrument ink.
+                        // Exclude their object rectangle from digit-only bounds.
+                        const auto findUnit=[&](auto&& self,lv_obj_t* obj)->lv_obj_t* {
+                            if(lv_obj_check_type(obj,&lv_label_class)&&lv_obj_is_visible(obj)&&
+                               lv_obj_get_style_text_font(obj,0)==cluster::ui::fonts::unit) return obj;
+                            for(uint32_t i=0;i<lv_obj_get_child_count(obj);++i)
+                                if(auto* found=self(self,lv_obj_get_child(obj,i))) return found;
+                            return nullptr;
+                        };
+                        auto* unit=findUnit(findUnit,lv_screen_active());
+                        if(!unit) throw std::runtime_error("Visible speed unit missing");
+                        lv_area_t unitBounds; lv_obj_get_coords(unit,&unitBounds);
+                        const auto numericInk=[&](int x,int y) {
+                            const bool inUnit=x>=unitBounds.x1&&x<=unitBounds.x2&&y>=unitBounds.y1&&y<=unitBounds.y2;
+                            return !inUnit&&pixels[y*800+x]==target;
+                        };
                         int left=800,right=-1;
                         const auto* font=track?cluster::ui::fonts::track:cluster::ui::fonts::speed;
                         const int primaryY=track?cluster::ui::Metrics::trackLapY:240;
                         for(int y=primaryY;y<primaryY+font->line_height;++y)
                             for(int x=cluster::ui::Metrics::speedX;x<cluster::ui::Metrics::speedX+cluster::ui::Metrics::speedWidth;++x)
-                                if(pixels[y*800+x]==target) { left=std::min(left,x); right=std::max(right,x); }
+                                if(numericInk(x,y)) { left=std::min(left,x); right=std::max(right,x); }
                         if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Primary instrument glyphs are not centered on the viewport");
                         if(track) {
                             left=800; right=-1;
                             for(int y=269;y<269+cluster::ui::fonts::secondary->line_height;++y)
                                 for(int x=560;x<772;++x)
-                                    if(pixels[y*800+x]==target) { left=std::min(left,x); right=std::max(right,x); }
+                                    if(numericInk(x,y)) { left=std::min(left,x); right=std::max(right,x); }
                             if(right<left||std::abs(left+right-1331)>4) throw std::runtime_error("Track speed is not centered in its secondary position: value="+std::to_string(value)+" left="+std::to_string(left)+" right="+std::to_string(right));
                         }
                     }

@@ -21,7 +21,7 @@ Header::Header(lv_obj_t* parent) {
 void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,int settingsProgress) {
     for(auto* label:{mode_,subtitle_,qs_,vva_}) fade(label,255-settingsProgress*255/1000);
     for(const auto& r:rules_) paint(r.get(),p.line);
-    ink(date_,p.muted);
+    ink(date_,p.ink);
     const bool gearChanged=lastGear_.update(s.gear);
     const bool batteryChanged=lastPhoneBattery_.update(s.phoneBatteryPercent);
     const bool connectionChanged=lastPhoneConnection_.update(s.phoneConnected);
@@ -31,12 +31,12 @@ void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,
     if(gearChanged) gearText_.update(gear_,presentation::gearText(s.gear).value);
     ink(gear_,presentation.neutral?p.accent:p.ink);
     text(mode_,presentation.mode); text(subtitle_,presentation.subtitle);
-    ink(subtitle_,presentation.unavailable?p.amber:p.muted);
+    ink(subtitle_,presentation.unavailable?p.amber:p.ink);
     text(clock_,v.time); text(date_,v.date);
     show(qs_,presentation.quickShifter); ink(qs_,p.accent);
     show(vva_,presentation.vva); ink(vva_,p.amber);
     statusLamp(phone_,s.phoneConnected,true,p.accent,p,v.iconTest);
     if(batteryChanged||connectionChanged) batteryText_.update(phoneBattery_,presentation::phoneBatteryText(s.phoneConnected,s.phoneBatteryPercent).value);
-    ink(phoneBattery_,p.muted);
+    ink(phoneBattery_,p.ink);
 }
 } // namespace cluster::ui

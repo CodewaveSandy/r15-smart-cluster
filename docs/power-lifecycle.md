@@ -67,3 +67,7 @@ Key-on during shutdown cancels power-off and returns to Running if state is vali
 ## Verification
 
 Host tests use injected monotonic timing for lifecycle boundaries, repeated key events, key-on during shutdown and urgent-warning presentation; deterministic captures include missing observations and black endpoints. Firmware fault tests must additionally verify animation/driver failure fallback and that UART loss never becomes key-off. Bench tests must measure first visible frame, total startup, retained shutdown supply, persistence completion, brownout/hard cut, independent MCU resets and rapid off/on cycles. Final animation readiness requires actual-panel inspection and power-path verification.
+
+## USB-powered display bench preview
+
+The native V3.0 desk-test target exposes shutdown through serial `o` or a lower-right fuel-area tap. It freezes the synthetic snapshot and clears only test urgent-warning overrides before requesting the shared lifecycle transition. The 2,000 ms controller sequence finishes black without cutting USB power. Once black, any tap (or serial `b`) starts the 3,000 ms bench boot and clears synthetic observations. Auto-demo input is paused during shutdown; real-warning handling in the shared dashboard is unchanged. This control exercises artwork, not an ignition adapter or retained-power circuit. Removing USB still removes the supply immediately.

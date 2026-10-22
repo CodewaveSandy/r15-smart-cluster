@@ -23,7 +23,8 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
     const int settingsProgress=settingsTransition_.update(v.settings&&allowed,now,!allowed);
     const bool shift=shiftLit(s.engineRpm,now);
     auto p=v.light?daylight:midnight;
-    if(shift) { p.ink=midnight.ink; p.muted=0xf0d5d0; p.panel=0x352730; p.accent=midnight.accent; }
+    if(shift) { p.ink=midnight.ink; p.muted=0xf0d5d0; p.panel=0x352730; p.accent=midnight.accent;
+        p.rpmBed=midnight.rpmBed; p.rpmGreen=midnight.rpmGreen; p.rpmAmber=midnight.rpmAmber; p.rpmRed=midnight.rpmRed; }
     if(!initialized_ || previousLight_!=v.light || previousShift_!=shift) {
         paint(root_.get(),shift?0x492731:p.background);
         lv_obj_set_style_bg_grad(root_.get(),shift?&shiftGradient_:nullptr,0);

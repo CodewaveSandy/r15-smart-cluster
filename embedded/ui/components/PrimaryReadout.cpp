@@ -44,7 +44,7 @@ PrimaryReadout::PrimaryReadout(lv_obj_t* parent) {
     lv_obj_set_style_text_align(speedTitle_.get(),LV_TEXT_ALIGN_CENTER,0);
 }
 void PrimaryReadout::update(const ClusterState& s,const ViewOptions& v,const Palette& p,int settingsProgress) {
-    ink(unit_.get(),p.muted);
+    ink(unit_.get(),p.ink);
     const bool speedChanged=lastSpeed_.update(s.speedKph);
     const bool lapChanged=lastLap_.update(s.currentLapMs);
     if(!initialized_ || speedChanged || (v.track&&lapChanged) || previousImperial_!=v.imperial || previousTrack_!=v.track) {
@@ -80,7 +80,7 @@ void PrimaryReadout::update(const ClusterState& s,const ViewOptions& v,const Pal
 
     for(auto* label:{lap_.get(),lapHint_.get(),speedTitle_.get()}) fade(label,255-settingsProgress*255/1000);
     show(lap_.get(),v.track&&settingsProgress==0); show(lapHint_.get(),v.track&&settingsProgress==0); show(speedTitle_.get(),v.track&&settingsProgress==0);
-    ink(lapHint_.get(),p.accent); ink(speedTitle_.get(),p.muted);
+    ink(lapHint_.get(),p.ink); ink(speedTitle_.get(),p.ink);
     initialized_=true; previousTrack_=v.track; previousImperial_=v.imperial; previousProgress_=settingsProgress;
 }
 } // namespace cluster::ui

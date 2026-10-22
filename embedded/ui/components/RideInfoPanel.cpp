@@ -15,7 +15,7 @@ RideInfoPanel::RideInfoPanel(lv_obj_t* parent) {
     infoValue_.reset(label(parent,RideInfoLayout::infoValue,"—°C",fonts::heading));
 }
 void RideInfoPanel::update(const ClusterState& s,const ViewOptions& v,const Palette& p) {
-    ink(tripUnit_.get(),p.muted); ink(infoTitle_.get(),p.muted); ink(tripTitle_.get(),p.accent);
+    for(auto* label:{tripUnit_.get(),infoTitle_.get(),tripTitle_.get(),tripValue_.get(),infoValue_.get()}) ink(label,p.ink);
     paint(lowerRule_.get(),p.line);
     bool changed=lastDistance_.update(v.track?Signal<double>{}:tripReading(s,v.tripPage));
     changed=lastBestLap_.update(v.track?s.bestLapMs:Signal<std::uint32_t>{})||changed;

@@ -46,3 +46,5 @@ echo "Flashing R15 desk-test image. Keep USB connected until hash verification f
   write_flash --flash_size 4MB 0x0 "$build/r15-display.factory.bin"
 echo "R15 flash finished. Check the 3-second artwork, dashboard, touch and reset."
 echo "Touch top-left: layout; top-right: theme; lower-left: trip; lower-middle: info."
+echo "Tap the center to start/stop the labelled speed/RPM sweep and shift-warning test."
+echo "The demo also cycles fuel and tell-tales. Tap the fuel area for shutdown; after black, tap anywhere to boot."

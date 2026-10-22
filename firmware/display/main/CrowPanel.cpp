@@ -21,8 +21,10 @@ i2c_master_dev_handle_t expander=nullptr, touch=nullptr;
 StaticSemaphore_t syncStorage;
 SemaphoreHandle_t sync=nullptr;
 unsigned flushes=0, longestFlush=0;
+portMUX_TYPE frameMux=portMUX_INITIALIZER_UNLOCKED;
+void* frameBuffers[2]{};
 
-bool vsync(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t*, void*) {
+bool frameComplete(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t*, void*) {
     BaseType_t wake=pdFALSE;
     xSemaphoreGiveFromISR(sync,&wake);
     return wake==pdTRUE;
@@ -45,18 +47,29 @@ bool touchRead(uint16_t reg,uint8_t* data,size_t length) {
     return i2c_master_transmit_receive(touch,address,2,data,length,10)==ESP_OK;
 }
 void flush(lv_display_t* display,const lv_area_t*,uint8_t* pixels) {
+    // DIRECT mode can flush several dirty rectangles into the same off-screen
+    // framebuffer. Present only once all those rectangles have been drawn.
+    if(!lv_display_flush_is_last(display)) { lv_display_flush_ready(display); return; }
+    if(pixels!=frameBuffers[0] && pixels!=frameBuffers[1]) abort();
     const auto started=esp_timer_get_time();
-    // Discard an idle notification. Two subsequent VSYNCs conservatively
-    // cover a swap requested near the current VSYNC and release the old buffer.
+    // app_main is pinned to CPU0 and allocates the RGB DMA interrupt there.
+    // With interrupts disabled on that core, discard the old completion and
+    // select the new driver-owned framebuffer atomically relative to EOF.
+    // In pinned IDF 5.5.4 with bounce buffers this API path only selects an
+    // existing buffer; it does no copy, allocation, cache sync or blocking I/O.
+    // No on_color_trans_done callback is registered.
+    portENTER_CRITICAL(&frameMux);
     xSemaphoreTake(sync,0);
-    ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel,0,0,width,height,pixels));
-    for(unsigned frame=0;frame<2;++frame) {
-        if(xSemaphoreTake(sync,pdMS_TO_TICKS(100))!=pdTRUE) {
-            // Do not hand an in-use buffer back to LVGL after a failed swap.
-            ESP_LOGE(tag,"RGB VSYNC timeout; stopping rather than reusing scanout memory");
-            backlight(false);
-            abort();
-        }
+    const auto result=esp_lcd_panel_draw_bitmap(panel,0,0,width,height,pixels);
+    portEXIT_CRITICAL(&frameMux);
+    ESP_ERROR_CHECK(result);
+    // IDF's bounce EOF handler first finishes copying the old full frame,
+    // then latches cur_fb_index for the next frame, then invokes this event.
+    // It is now safe for LVGL DIRECT mode to synchronize/reuse the old buffer.
+    if(xSemaphoreTake(sync,pdMS_TO_TICKS(100))!=pdTRUE) {
+        ESP_LOGE(tag,"RGB frame-complete timeout; refusing to reuse scanout memory");
+        backlight(false);
+        abort();
     }
     ++flushes;
     longestFlush=std::max(longestFlush,unsigned(esp_timer_get_time()-started));
@@ -67,6 +80,8 @@ uint32_t tick() { return uint32_t(esp_timer_get_time()/1000); }
 
 void backlight(bool enabled) { ESP_ERROR_CHECK(gpio_set_level(backlightPin,enabled)); }
 void initialize() {
+    static_assert(CONFIG_ESP_MAIN_TASK_AFFINITY==0,"RGB EOF handoff requires app_main pinned to CPU0");
+    if(xPortGetCoreID()!=0) abort();
     gpio_config_t light{};
     light.pin_bit_mask=1ULL<<backlightPin; light.mode=GPIO_MODE_OUTPUT;
     ESP_ERROR_CHECK(gpio_config(&light)); backlight(false);
@@ -103,7 +118,7 @@ void initialize() {
     cfg.flags.fb_in_psram=true;
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&cfg,&panel));
     esp_lcd_rgb_panel_event_callbacks_t callbacks{};
-    callbacks.on_vsync=vsync;
+    callbacks.on_frame_buf_complete=frameComplete;
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel,&callbacks,nullptr));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
@@ -118,6 +133,7 @@ void initialize() {
 
     void* first=nullptr; void* second=nullptr;
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_get_frame_buffer(panel,2,&first,&second));
+    frameBuffers[0]=first; frameBuffers[1]=second;
     ESP_LOGI(tag,"RGB buffers %p %p; 24MHz, RGB565, 2x768000 bytes PSRAM",first,second);
     if(!first||!second) abort();
     std::memset(first,0,width*height*2); std::memset(second,0,width*height*2);
@@ -126,7 +142,7 @@ void initialize() {
     if(!display) abort();
     lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
     lv_display_set_flush_cb(display,flush);
-    lv_display_set_buffers(display,first,second,width*height*2,LV_DISPLAY_RENDER_MODE_FULL);
+    lv_display_set_buffers(display,first,second,width*height*2,LV_DISPLAY_RENDER_MODE_DIRECT);
 }
 
 bool releasedTouch(int& x,int& y) {

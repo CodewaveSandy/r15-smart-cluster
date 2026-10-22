@@ -37,13 +37,15 @@ Use bundled Inter Medium/SemiBold, Barlow Semi Condensed SemiBold and Chakra Pet
 | Amber | #f5d45b | #946000 |
 | Red | #ff7980 | #bf263a |
 | High beam | #77baff | #246bb0 |
+| RPM bed | #14202c | #c2cfd6 |
+| RPM green / amber / red | #4cdb88 / #f5d45b / #f06464 | #00774b / #946000 / #bf263a |
 
 Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens. Portable display thresholds are in embedded/presentation/PresentationPolicy.h; rendering Metrics reference them. Shared widget constructors use tokens; screens compose widgets rather than copying style logic. Theme changes never change telemetry or riding behavior. Preserve the specified red shift background gradient (#492731 -> #b34c48 -> #64303b) and readable warning palette; profile its redraw cost.
 
 ## Instrument behavior
 
 - Scale labels 11, 12 and 13 use the theme red as a user-selected redline cue. This does not change fill colors, shift thresholds or establish a verified vehicle limit.
-- Continuous RPM gradient anchored to the entire 0–13,000 scale; clip fill, do not stretch colors with the current RPM. Green #4cdb88 through 3,500; blend to #f5d45b at 4,500; hold through 7,500; blend to #f06464 at 8,500, then hold.
+- Continuous RPM gradient anchored to the entire 0–13,000 scale; clip fill, do not stretch colors with the current RPM. Midnight uses green #4cdb88 through 3,500; blends to #f5d45b at 4,500; holds through 7,500; blends to #f06464 at 8,500, then holds. Daylight uses the same fixed stops with darker green #00774b, amber #946000 and red #bf263a over a distinct #c2cfd6 bed, improving visible fill contrast on the delivered panel. Shift-background frames retain the bright Midnight ramp for contrast on red/dark artwork. This shared theme treatment applies to actual observations, host and bench demo alike.
 - Shift background steady from 10,500 RPM; alternate red/normal every 300 ms from 11,400. Stop immediately below thresholds; unavailable RPM must not trigger it.
 - Eight forward-slanted fuel pieces with a 4 px top/bottom offset. Each piece supports partial coverage: clamp(percent × 8 − pieceIndex × 100, 0, 100) coverage units, rather than rounding to a whole piece. Valid integer-percent observations move the fill in 1% steps; no invented intermediate measurements. Yellow at 10–20% inclusive, red below 10%; blink pump and filled segments every 500 ms below 20%. Exactly 20% is steady yellow; percentage stays readable; zero still blinks the pump.
 - Tell-tales and phone pictogram: 12% inactive, 100% active, no fades. Specified simulated turn blink is 450 ms. A future already-flashing vehicle signal must not be blinked a second time: distinguish source phase from steady intent in the contract.
