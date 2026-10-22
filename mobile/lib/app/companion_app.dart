@@ -24,6 +24,7 @@ class CompanionApp extends StatelessWidget {
 
   ThemeData _theme(Brightness brightness) => ThemeData(
     brightness: brightness,
+    fontFamily: 'Inter',
     colorSchemeSeed: const Color(0xff007757),
     scaffoldBackgroundColor: brightness == Brightness.dark
         ? const Color(0xff090e14)

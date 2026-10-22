@@ -14,7 +14,8 @@ class BrandMark extends StatelessWidget {
           Text(
             'R15',
             style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontWeight: FontWeight.w900,
+              fontFamily: 'ChakraPetch',
+              fontWeight: FontWeight.w700,
               fontStyle: FontStyle.italic,
               letterSpacing: -3,
               color: Theme.of(context).colorScheme.primary,

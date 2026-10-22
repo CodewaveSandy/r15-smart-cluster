@@ -46,3 +46,7 @@ No backend/account is required for the local companion connection. Provider API 
 ## References
 
 Reviewed 2026-10-21: [Flutter architecture](https://docs.flutter.dev/app-architecture/guide), [platform channels](https://docs.flutter.dev/platform-integration/platform-channels), [Android media sessions](https://developer.android.com/reference/android/media/session/MediaSessionManager), [Apple ANCS](https://developer.apple.com/library/archive/documentation/CoreBluetooth/Reference/AppleNotificationCenterServiceSpecification/Introduction/Introduction.html). Recheck mutable APIs when selecting pinned dependencies.
+
+## Typography
+
+The app uses the cluster’s Inter Medium/SemiBold for interface text and Chakra Petch Bold Italic for the R15 brand mark. Mobile bundles matching copies under `mobile/assets/fonts/`, including SIL OFL licenses. Font paths must stay inside the Flutter project: parent-directory font references can appear in the manifest while being omitted from the Android APK. The authoritative provenance and source files remain under root `assets/fonts/`; synchronize mobile copies when updating those sources. No runtime font download is required. Mobile sizes follow Material text roles rather than the cluster’s fixed pixel sizes.

@@ -103,7 +103,7 @@ class PhonePage extends StatelessWidget {
                               : 'Your ride. Connected.',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 16),
                         Text(
