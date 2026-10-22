@@ -1,8 +1,8 @@
 # System architecture
 
-Updated: 2026-10-19. The shared native LVGL host application is implemented. Firmware, UART and vehicle adapters are pending. [Implementation status and gates](implementation-plan.md) distinguish host evidence from hardware readiness.
+Updated: 2026-10-22. The shared native LVGL host application is implemented. The display desk-test firmware builds; its first R15 panel validation, UART and vehicle adapters are pending. [Implementation status and gates](implementation-plan.md) distinguish host evidence from hardware readiness.
 
-The project is a personal Yamaha R15 V4 instrument cluster using an Elecrow 7-inch 800 x 480 HMI. The reported display module is ESP32-S3-WROOM-1-N4R8 with 4 MB flash and 8 MB PSRAM. Exact delivered PCB revision, vehicle MCU and mechanical/environmental suitability remain unconfirmed. Commercialization, additional bikes and accessories are outside the immediate prototype scope.
+The project is a personal Yamaha R15 V4 instrument cluster using an Elecrow 7-inch 800 x 480 HMI. The reported display module is ESP32-S3-WROOM-1-N4R8 with 4 MB flash and 8 MB PSRAM. Delivered PCB V3.0 is confirmed from user photos (2026-10-22). Esptool reports ESP32-S3 revision v0.2, 4 MB flash and embedded 8 MB PSRAM. Vehicle MCU and mechanical/environmental suitability remain unconfirmed. Commercialization, additional bikes and accessories are outside the immediate prototype scope.
 
 ## System boundaries
 
@@ -58,7 +58,7 @@ Decision recorded 2026-10-21: the product has **three independently built deploy
 
 | Target | Destination and responsibility | Build tooling | Current evidence |
 | --- | --- | --- | --- |
-| Display firmware | Display ESP32: LVGL, instruments, map rendering and display-owned preferences | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Pending board bring-up; no board target or flash verification yet |
+| Display firmware | Display ESP32: LVGL, instruments, map rendering and display-owned preferences | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Vendor V3.0 baseline flashed by user; R15 ESP-IDF target under `firmware/display`, pending its first panel verification |
 | Vehicle firmware | Other ESP32: acquisition, validation, calculations, physical inputs, Wi-Fi/BLE and bounded phone-data forwarding | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Pending MCU identification and implementation |
 | Companion app | Android phone first; GPS, routing/map preparation, permitted notifications/media; future iOS | Flutter/Dart, Android Gradle for APK/AAB; future iOS Xcode tooling | Android debug foundation launched on user's phone; services pending |
 | Host cluster preview | Mac development simulation using shared display sources; no ESP32 flashing | Existing CMake/SDL2/LVGL target | Implemented; `bash scripts/preview.sh` |
@@ -99,7 +99,7 @@ Brightness/backlight fault handling, watchdog coverage, acquisition overrun and 
 | `tests/embedded/` | Portable checks and deterministic LVGL verification |
 | `assets/`, `scripts/`, `tools/fonts/` | Licensed bundled assets, reproducible conversion and preview/audit tools |
 
-Firmware board/platform adapters and shared UART codec will be introduced when their contracts are reviewed. No empty firmware or protocol folders imply an implementation. Shared model and application/presentation logic stay independent of LVGL, FreeRTOS and device SDKs.
+The `firmware/display` board adapter uses ESP-IDF RGB/I2C APIs with pins, timings and touch reset derived from the user-tested Elecrow V3.0 example. PlatformIO orchestrates this separate ESP-IDF/CMake target; it does not use Arduino. Shared UART codec remains pending. No empty firmware or protocol folders imply an implementation. Shared model and application/presentation logic stay independent of LVGL, FreeRTOS and device SDKs.
 
 ## Current UI composition
 

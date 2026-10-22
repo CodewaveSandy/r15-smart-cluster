@@ -1,7 +1,15 @@
 /build/
 .DS_Store
+__pycache__/
 
 
 /tools/fonts/node_modules/
 
 /.vscode/
+
+# ESP-IDF/PlatformIO outputs; source defaults and dependency lock are tracked.
+/firmware/display/.pio/
+/firmware/display/managed_components/
+/firmware/display/sdkconfig
+/firmware/display/sdkconfig.old
+/firmware/display/sdkconfig.crowpanel-v3

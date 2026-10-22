@@ -1,6 +1,6 @@
 # Resource accounting and target verification
 
-Updated: 2026-10-19. The selected display module is reported as ESP32-S3-WROOM-1-N4R8: 4 MB flash and 8 MB PSRAM. Verify the delivered revision and memory configuration before using these as target facts. Internal SRAM is a separate budget.
+Updated: 2026-10-19. The selected display module is reported as ESP32-S3-WROOM-1-N4R8: 4 MB flash and 8 MB PSRAM. Delivered PCB V3.0 and esptool-reported 4 MB flash/8 MB PSRAM were confirmed on 2026-10-22; R15 runtime allocation/performance still need panel measurements. Internal SRAM is a separate budget.
 
 ## Repeatable host reports
 
@@ -55,3 +55,7 @@ The renderer uses a constant number of line/triangle draws and one small A8 word
 Eight changing instrument labels (speed, current/best lap or distance, RPM, gear, phone battery, ride information and fuel) use component-owned 32-byte buffers with LVGL static text binding. After initial binding, these text replacements do not allocate label text storage. This does not claim all LVGL layout/render work is allocation-free. Buffers outlive their labels and are never moved. A host check exercises repeated length/quality changes and stable buffer addresses.
 
 The SDL preview uploads its framebuffer only after an LVGL flush, and presents only after an upload or window repaint event. Exposure, resize and restore reuse the texture; renderer device reset recreates it and forces an upload. The render suite checks initial/changed uploads, 100 idle calls, and repaint without upload using a software SDL renderer. The event/UI service loop continues at its existing cadence. Target rendering and hardware memory measurements remain pending.
+
+## First native display build (2026-10-22)
+
+ESP-IDF 5.5.4, LVGL 9.2.2, Xtensa GCC 14.2.0, C++17. The R15 build and `flash-display.sh --build-only` pass. The packaged bootloader/table/application image is 669,472 bytes; application binary 603,936 bytes, within the 3,145,728-byte app partition. Section reporting shows 16,872 bytes static data/BSS (excludes runtime allocations and stacks). These are build results, not a hardware heap budget or measured frame rate. Runtime diagnostics, PSRAM buffers, two-VSYNC flush behavior and artwork timing still require the user's first R15 flash and panel inspection. The working vendor example is the only panel baseline currently tested.

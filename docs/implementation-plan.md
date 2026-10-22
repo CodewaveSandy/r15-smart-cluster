@@ -1,6 +1,6 @@
 # Implementation status and plan
 
-Updated: 2026-10-19. Status: native dashboard, Appearance preferences, unified Phone UI and native nearby-discovery development adapter implemented; Navigation, hardware firmware and integrations pending.
+Updated: 2026-10-22. Status: native dashboard, Appearance preferences, unified Phone UI and native nearby-discovery development adapter implemented; Navigation, hardware firmware and integrations pending.
 
 ## Current implementation
 
@@ -39,8 +39,8 @@ E2/E3 host work can proceed before delivery. E4 compile preparation can overlap,
 
 The host baseline, dashboard, portable presentation/input, settings and applicable host optimizations are implemented. See [resource accounting](resource-budgets.md) for current measurements and [settings](settings.md) for service boundaries.
 
-1. Confirm delivered board revision, schematic/factory example, UART/programming conflicts and vehicle MCU.
-2. Reproduce the matching vendor example and establish a minimal panel target with compatible pinned dependencies.
+1. Board revision and vendor example are bench confirmed; finish schematic/UART conflict review and identify the vehicle MCU.
+2. Build and user-flash the R15 ESP-IDF target, then validate panel behavior with pinned dependencies.
 3. Measure actual flash/partition fit, internal SRAM/PSRAM, driver buffers, timing and scanout behavior before claiming display readiness.
 4. Plan Navigation and clock controls after their service/time-source contracts are reviewed; preserve the approved dashboard and lifecycle visuals.
 5. Review the versioned UART contract and vehicle/radio persistence ownership, then implement and fault-test real adapters. Host theme/design persistence is already implemented; ESP32 NVS is pending.
@@ -49,7 +49,7 @@ No empty firmware scaffolding, unused queues or speculative board pins substitut
 
 ## Display arrival: first bring-up session
 
-User reported on 2026-10-21 that the display is expected on **2026-10-22**. Arrival is expected, not evidence that a board has been received or identified. Read the [independent target map](architecture.md#independent-build-targets) before creating a firmware build.
+Received and bench tested on **2026-10-22**: DIS08070H PCB **V3.0** (user photos), ESP32-S3 revision v0.2, 4 MB flash and 8 MB embedded PSRAM (esptool output). Read the [independent target map](architecture.md#independent-build-targets) before creating a firmware build.
 
 1. Record actual product/PCB revision, module markings, board photos, supplied example/version and matching schematic. Confirm flash/PSRAM and the intended supply/programming interface from that revision's documentation; previously reported N4R8 resources remain unverified.
 2. Preserve the supplied factory archive and a documented restore/recovery route before replacing factory firmware. Preserve necessary source/assets/configuration in a verified backup. Record serial port and chip identity; no guessed pins, RGB timings, reset sequence or flash offsets.
@@ -60,6 +60,18 @@ User reported on 2026-10-21 that the display is expected on **2026-10-22**. Arri
 7. Record pass/fail evidence and unresolved issues before UART/radio/map integration. The **vehicle firmware** remains a separate future target pending MCU selection. Initial bike integration remains passive/read-only with OEM function retained.
 
 First-session success means a recoverable, revision-matched panel example and measured minimal display baseline. It does not mean complete navigation, working bike telemetry, vehicle readiness or production readiness. Until target gates pass, continue using the independent host and phone previews.
+
+
+### Recorded vendor baseline and R15 target
+
+- Vendor source: `Elecrow-RD/CrowPanel-7.0-HMI-ESP32-Display-800x480`, `example/V3.0/PlatformIO70`. User built with pioarduino 55.03.38, Arduino 3.3.8, LVGL 9.1.0 and LovyanGFX 1.2.25. R15 keeps its own LVGL 9.2.2 and uses ESP-IDF 5.5.4 without Arduino/LovyanGFX.
+- Factory read: complete 4,194,304-byte image; `verify_flash` digest matched. SHA-256: `babb6b68f22ddaf221760a6321a655405cc0b74abfebab1912491a17e48a50ff`. Saved outside Git at `~/Desktop/R15-factory-backup/crowpanel-v3-factory-rom.bin`. Restore has not been exercised.
+- Delivered board MAC: `b8:f8:62:7f:2c:68`; observed Mac port `/dev/cu.usbserial-110` (may change). Stub-based reads failed; ROM `--no-stub`, 115200 baud read and vendor flash succeeded. This does not establish the underlying transfer fault.
+- Vendor merged image: 1,937,408 bytes written at zero, hash verified. User confirms UI, touch, reset and stable picture. External DHT20/GPIO output untested.
+- R15 target: `firmware/display`, C++17, ESP-IDF/CMake orchestrated by the existing PlatformIO installation, exact LVGL component lock. Reuses `embedded/ui`/application/presentation/assets. Default observations unavailable; serial-selected synthetic values/test warnings labelled BENCH. No real odometer, radios, vehicle UART or persistence.
+- Run `bash scripts/flash-display.sh --build-only` to build/validate/package without device access. `bash scripts/flash-display.sh` additionally checks this board/backup and writes the combined image via esptool 4.8.1, ROM loader at 115200. The agent prepares software; the user runs flashing.
+- Build verification (2026-10-22): native display target builds successfully; final script passes `--build-only` without device access. Six partition-boundary checks pass. All eleven existing host suites pass (IPC test rerun outside sandbox after a sandbox socket-bind denial); representative 800 x 480 layouts/themes with warning/unavailable states visually inspected. R15 image has not been flashed by the agent. The user subsequently flashed it successfully and supplied a photo/video showing Light Signature followed by Street with unavailable readings. The user confirms layout/theme switching and reset/touch operation. Exact timing, frame rate and heap measurements remain pending.
+- Panel measurements still required: R15 boot artwork duration/total startup, both layouts/themes, warning/unavailable states, touch/serial actions, internal heap/stack/PSRAM and VSYNC/scanout behavior. Shutdown is bench-triggered only and cannot survive unplugging USB.
 
 ## Test strategy
 
@@ -76,7 +88,7 @@ Performance objectives are provisional in [architecture](architecture.md). Estab
 
 | Item | Needed before |
 | --- | --- |
-| Elecrow product-family URL supplied; delivered PCB revision, schematic and matching factory archive still needed | Board pin/timing/UART selection |
+| V3.0 photos, chip identity, checked factory backup and flashed vendor example recorded; matching schematic review and UART/programming conflicts still needed | Board pin/timing/UART selection |
 | Vehicle ESP32 model and available peripherals | CAN/input/radio task implementation |
 | User's measured harness inventory | Any bike adapter; record connector view, pin numbering, conditions, polarity, range and uncertainty |
 | CAN physical/protocol confirmation | Controller/transceiver choice; no guessed IDs/bitrate |
@@ -91,7 +103,7 @@ Performance objectives are provisional in [architecture](architecture.md). Estab
 
 Eleven host suites pass: Phone menu, phone bridge IPC, model/lifecycle, Light Signature, presentation/input, desktop input, Bluetooth, Wi-Fi, preferences, typography and LVGL rendering. The render suite captures 210 scenarios, including both layouts/themes, signal boundaries, warnings/unavailable states, settings transitions, Phone pairing/confirmation and interruption. It rejects LVGL warnings and redundant flushes for settled screens. Repeated construction/destruction, cached-versus-fresh rendering and exact dashboard restoration are checked.
 
-The separate [Mac bridge checks](../mobile/docs/mac-preview-connection.md#verification) exercise real Dart TLS and session behavior; they do not establish physical phone/LAN or ESP32 connectivity. No firmware has been flashed, and no UART, panel, retained-power or bike verification is claimed. Run the [preview and verification commands](getting-started.md) after changes; record actual hardware evidence separately.
+The separate [Mac bridge checks](../mobile/docs/mac-preview-connection.md#verification) exercise real Dart TLS and session behavior; they do not establish physical phone/LAN or ESP32 connectivity. The user built and flashed the official V3.0 PlatformIO example with successful write-hash verification, then confirmed working touch after reset and a stable picture without flicker. This is vendor baseline evidence, not R15 panel readiness. R15 firmware, UART, retained-power and bike verification remain pending. Run the [preview and verification commands](getting-started.md) after changes; record actual hardware evidence separately.
 
 ## Hardware and release gates
 
