@@ -73,6 +73,10 @@ First-session success means a recoverable, revision-matched panel example and me
 - Build verification (2026-10-22): native display target builds successfully; final script passes `--build-only` without device access. Six partition-boundary checks pass. All eleven existing host suites pass (IPC test rerun outside sandbox after a sandbox socket-bind denial); representative 800 x 480 layouts/themes with warning/unavailable states visually inspected. R15 image has not been flashed by the agent. The user subsequently flashed it successfully and supplied a photo/video showing Light Signature followed by Street with unavailable readings. The user confirms layout/theme switching and reset/touch operation. Exact timing, frame rate and heap measurements remain pending.
 - Panel measurements still required: R15 boot artwork duration/total startup, both layouts/themes, warning/unavailable states, touch/serial actions, internal heap/stack/PSRAM and VSYNC/scanout behavior. Shutdown is bench-triggered only and cannot survive unplugging USB.
 
+### Engine-off bike power-on (2026-10-24)
+
+The user reports successful display power-on using bike socket power cables (reported 12 V) directly into a buck converter set to 5 V, then from the converter to the display. The engine was off. The [hardware connection reference](hardware-connections.md) records this path and the details needed for a complete wiring guide. Engine-start/running, supply protection, retained shutdown power and vehicle telemetry remain unverified.
+
 ## Test strategy
 
 - Portable unit tests: numeric/quality validation, stale deadlines, unit conversion, formatting, calculations, action routing, schema migration.
