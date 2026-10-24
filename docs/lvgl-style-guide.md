@@ -29,7 +29,7 @@ Use bundled Inter Medium/SemiBold, Barlow Semi Condensed SemiBold and Chakra Pet
 | Token | Midnight | Daylight |
 | --- | --- | --- |
 | Background | #090e14 | #eff3f5 |
-| Foreground | #edf4fb | #122333 |
+| Foreground | #ffffff | #000000 |
 | Muted | #91a4b7 | #4d6577 |
 | Panel | #14202c | #e0e8ec |
 | Divider | #253544 | #c7d3db |
@@ -40,7 +40,7 @@ Use bundled Inter Medium/SemiBold, Barlow Semi Condensed SemiBold and Chakra Pet
 | RPM bed | #14202c | #c2cfd6 |
 | RPM green / amber / red | #4cdb88 / #f5d45b / #f06464 | #00774b / #946000 / #bf263a |
 
-Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens. Portable display thresholds are in embedded/presentation/PresentationPolicy.h; rendering Metrics reference them. Shared widget constructors use tokens; screens compose widgets rather than copying style logic. Theme changes never change telemetry or riding behavior. Preserve the specified red shift background gradient (#492731 -> #b34c48 -> #64303b) and readable warning palette; profile its redraw cost.
+Information text (ODO/trip/best lap, coolant/consumption/average-speed captions, FUEL/RESERVE, normal fuel percentage, units, RPM ticks below 11, header date/phone text and lap/speed captions) uses pure white in Midnight and pure black in Daylight. Warning/unknown status, redline ticks, active indicators and low-fuel severity retain their semantic colors. Shift-background frames use white instrument text in both themes. Centralize palette, spacing, geometry, opacity, fonts and timing in typed tokens. Portable display thresholds are in embedded/presentation/PresentationPolicy.h; rendering Metrics reference them. Shared widget constructors use tokens; screens compose widgets rather than copying style logic. Theme changes never change telemetry or riding behavior. Preserve the specified red shift background gradient (#492731 -> #b34c48 -> #64303b) and readable warning palette; profile its redraw cost.
 
 ## Instrument behavior
 
