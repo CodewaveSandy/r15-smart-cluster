@@ -115,6 +115,8 @@ Render coverage includes both layouts/themes, fuel blink phases, warnings, missi
 
 ## Current limits
 
+For the opt-in discrete-input hardware experiment, use `bash scripts/preview.sh --vehicle-serial /dev/cu.YOUR_VEHICLE_PORT`. See the [vehicle USB input test](../firmware/vehicle/README.md) for wiring, firmware and per-channel pin/polarity configuration. Gear N–6, left/right and high beam come from configured USB inputs; other vehicle readings remain unavailable. The ordinary preview remains simulated.
+
 This host slice implements the dashboard foundation and R15 Light Signature (3 s boot / 2 s shutdown). Icons use bundled automotive glyphs; Navigation/clock editing, functional laps/trips, firmware NVS persistence, automatic live reload, UART, display drivers and firmware flashing remain pending. Appearance and host saved preferences are implemented; Phone is a unified page; real discovery/session behavior requires the opt-in connection preview. The window title and terminal identify all observations as simulated. ODO/trip values are fixed host samples and never vehicle-owned persistence. A successful Mac preview is not ESP32 performance or bike verification.
 
 If SDL2 is not found, confirm brew list sdl2 and pass its installation prefix through CMAKE_PREFIX_PATH when configuring manually. If the first dependency download fails, restore network access and rerun. Do not change board pins or flash parameters to solve host build issues.

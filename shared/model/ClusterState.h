@@ -14,6 +14,7 @@ template<class T> struct Signal {
     bool available() const { return quality == Quality::Available; }
 };
 struct ClusterState {
+    bool turnSignalsArePhase=false; // True: observed lamp phase; do not synthesize blinking.
     PhoneState phone;
     BluetoothState bluetooth;
     WifiState wifi;

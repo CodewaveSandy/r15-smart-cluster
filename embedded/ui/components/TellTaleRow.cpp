@@ -20,7 +20,7 @@ TellTaleRow::TellTaleRow(lv_obj_t* parent) {
     lamps_[Right].reset(createIcon(parent,TellTaleLayout::x[Right],TellTaleLayout::y,Icon::Right));
 }
 void TellTaleRow::update(const ClusterState& s,const Palette& p,std::uint64_t now,bool iconTest) {
-    const bool turn=(now/Metrics::turnPeriod)%2==0;
+    const bool turn=s.turnSignalsArePhase||(now/Metrics::turnPeriod)%2==0;
     statusLamp(lamps_[Left].get(),s.left,turn,p.accent,p,iconTest); statusLamp(lamps_[Right].get(),s.right,turn,p.accent,p,iconTest);
     statusLamp(lamps_[Neutral].get(),Signal<bool>{s.gear.value==0,s.gear.quality},true,p.accent,p,iconTest);
     statusLamp(lamps_[HighBeam].get(),s.highBeam,true,p.beam,p,iconTest); statusLamp(lamps_[Abs].get(),s.absWarning,true,p.amber,p,iconTest);

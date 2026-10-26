@@ -13,3 +13,9 @@ __pycache__/
 /firmware/display/sdkconfig
 /firmware/display/sdkconfig.old
 /firmware/display/sdkconfig.crowpanel-v3
+/firmware/vehicle/.pio/
+/firmware/vehicle/managed_components/
+/firmware/vehicle/sdkconfig
+/firmware/vehicle/sdkconfig.old
+/firmware/vehicle/sdkconfig.sevensemi-s3
+/firmware/vehicle/sdkconfig.sevensemi-s3.old

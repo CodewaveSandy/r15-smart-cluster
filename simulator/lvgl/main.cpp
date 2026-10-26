@@ -7,6 +7,7 @@
 #include "BluetoothDemo.h"
 #include "WifiDemo.h"
 #include "PhoneBridge.h"
+#include "VehicleSerial.h"
 #include <cstdlib>
 #include <algorithm>
 #include <array>
@@ -127,8 +128,10 @@ void help() {
 int main(int argc,char** argv) {
     try {
         bool render=false,animationSequence=false; std::filesystem::path output;
+        const char* vehiclePort=nullptr;
         if(argc==3&&(std::string(argv[1])=="--render"||std::string(argv[1])=="--animate")) { render=true; animationSequence=std::string(argv[1])=="--animate"; output=argv[2]; }
-        else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--render directory | --animate directory]\n"); return 2; }
+        else if(argc==3&&std::string(argv[1])=="--vehicle-serial") vehiclePort=argv[2];
+        else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--render directory | --animate directory | --vehicle-serial port]\n"); return 2; }
         cluster::host::PreferenceFile preferenceFile(render?std::filesystem::path{}:cluster::host::preferencePath());
         Preferences confirmedPreferences;
         if(!render) preferenceFile.load(confirmedPreferences);
@@ -179,6 +182,17 @@ int main(int argc,char** argv) {
                         }
                     }
                     ClusterState missing; dashboard.update(missing,view,life,1400); capture(output/(suffix+"-unavailable.bmp"));
+                    const auto oldDate=view.date;view.date="USB INPUT TEST";
+                    for(int gear:{0,1,2,3,4,5,6}) {
+                        ClusterState usb;usb.gear={gear,Quality::Available};
+                        usb.turnSignalsArePhase=true;usb.left=usb.right=usb.highBeam={true,Quality::Available};
+                        dashboard.update(usb,view,life,1400);capture(output/(suffix+"-usb-gear-"+std::to_string(gear)+".bmp"));
+                    }
+                    ClusterState conflict;conflict.gear.quality=Quality::Invalid;
+                    dashboard.update(conflict,view,life,1400);capture(output/(suffix+"-usb-conflict.bmp"));
+                    conflict.gear.quality=Quality::Stale;
+                    dashboard.update(conflict,view,life,1400);capture(output/(suffix+"-usb-stale.bmp"));
+                    view.date=oldDate;
                     auto warning=state; warning.engineRpm.value=11400; warning.engineWarning.value=true; warning.absWarning.value=true;
                     dashboard.update(warning,view,life,1200); capture(output/(suffix+"-warning.bmp"));
                 }
@@ -502,6 +516,11 @@ int main(int argc,char** argv) {
                 const auto start=std::chrono::steady_clock::now();
                 auto milliseconds=[&]{return std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count());};
                 cluster::host::PhoneBridge phoneBridge(std::getenv("R15_PHONE_BRIDGE_SOCKET"));
+                cluster::host::VehicleSerial vehicleSerial(vehiclePort);
+                if(vehiclePort) {
+                    state=ClusterState{};
+                    std::fprintf(stderr,"USB input test: OUT1=left, OUT2=right; gear/high beam configurable.\n");
+                }
                 if(phoneBridge.enabled()) view.bluetoothDemo=false;
                 cluster::host::BluetoothDemo bluetoothDemo;
                 cluster::host::WifiDemo wifiDemo;
@@ -607,6 +626,17 @@ int main(int argc,char** argv) {
                         SDL_SetWindowTitle(window.get(),!phoneBridge.fresh()?"R15 Preview - Phone bridge unavailable - SIMULATED VEHICLE":connected ? "R15 Preview - Wi-Fi phone connected - SIMULATED VEHICLE" : "R15 Preview - Wi-Fi phone disconnected - SIMULATED VEHICLE");
                         }
                     } else {bluetoothDemo.update(state,now);wifiDemo.update(state,now);}
+                    if(vehiclePort) {
+                        // Replace demo mutations before presentation. Only received discrete inputs are presented.
+                        state=ClusterState{};
+                        state=vehicleSerial.updateState(now);
+                        const auto clicks=vehicleSerial.takeClicks();
+                        for(unsigned i=0;i<clicks.trip;++i)applyAction(view,DashboardAction::NextTrip);
+                        for(unsigned i=0;i<clicks.info;++i)applyAction(view,DashboardAction::NextInfo);
+                        missing=false;view.iconTest=false;view.bluetoothDemo=false;
+                        view.date="USB INPUT TEST";
+                        SDL_SetWindowTitle(window.get(),"R15 Preview - USB discrete input test");
+                    }
                     auto observed=missing?ClusterState{}:state;
                     if(!valid(observed)) throw std::runtime_error("Simulator produced invalid normalized state");
                     dispatchEffect(reconcileSettings(view,observed,life),now);

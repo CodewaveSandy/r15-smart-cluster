@@ -79,6 +79,8 @@ The user reports successful display power-on using bike socket power cables (rep
 
 ## Test strategy
 
+The 2026-10-24 [discrete-input experiment](../firmware/vehicle/README.md) assigns GPIO4/5 to left/right with configurable N–6 and high beam, version 3 USB packets with debounced Trip/Info counters on GPIO14/15 and a Mac serial adapter. Latest reported polarity is active HIGH; the reported 2 V lower active level is below guaranteed HIGH at 3.3 V. All twelve bench inputs are enabled with weak pull-downs for one-at-a-time rewiring; `scripts/flash-vehicle.sh` provides build, port listing and guarded backup/flash. Full display UART integration, electrical validation and physical flashing/tests remain pending.
+
 - Portable unit tests: numeric/quality validation, stale deadlines, unit conversion, formatting, calculations, action routing, schema migration.
 - Codec tests: all split points, multiple frames/read, garbage and boot logs, max lengths, CRC corruption, missing fields, versions/enums/ranges, sequence wrap, duplicate/out-of-order frames, reboot/session and source age.
 - Host LVGL tests: important widget state and navigation, deterministic render scenarios at 800 x 480. Use the specified behavior and meaningful boundary cases.
