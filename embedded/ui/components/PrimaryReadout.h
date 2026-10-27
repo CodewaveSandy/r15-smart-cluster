@@ -20,7 +20,7 @@ private:
     presentation::SignalChange<int> lastSpeed_;
     presentation::SignalChange<std::uint32_t> lastLap_;
     bool previousImperial_=false;
-    ObjectOwner speed_, unit_, lap_, lapHint_, speedTitle_;
+    ObjectOwner speed_, leadingZeros_, unit_, lap_, lapHint_, speedTitle_;
     bool initialized_=false, previousTrack_=false;
     int previousProgress_=0;
 };

@@ -4,6 +4,8 @@
 #include "embedded/presentation/PresentationPolicy.h"
 namespace cluster::ui {
 struct Metrics {
+    static constexpr unsigned speedPlaceholderOpacity=40; // 16% leading-zero ink.
+    static constexpr std::uint32_t shiftTop=0xa51c30, shiftMiddle=0xf04444, shiftBottom=0xc52636;
     static constexpr int width=800, height=480, margin=28, content=744;
     static constexpr int headerRule=85, tellTaleY=98, rpmY=164;
     static constexpr int speedX=240, speedWidth=320, fuelX=583, fuelWidth=189;

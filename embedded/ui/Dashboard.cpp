@@ -13,7 +13,7 @@ Dashboard::Dashboard(lv_obj_t* parent)
       header_(root_.get()), tellTales_(root_.get()), tachometer_(instruments_.get()), settings_(root_.get()), appearance_(root_.get()), phone_(root_.get()), primary_(root_.get()),
       rideInfo_(instruments_.get()), fuel_(instruments_.get()), overlay_(root_.get()) {
     shiftGradient_.dir=LV_GRAD_DIR_VER; shiftGradient_.stops_count=3;
-    const std::uint32_t shiftColors[]={0x492731,0xb34c48,0x64303b};
+    const std::uint32_t shiftColors[]={Metrics::shiftTop,Metrics::shiftMiddle,Metrics::shiftBottom};
     for(int i=0;i<3;++i) { shiftGradient_.stops[i].color=color(shiftColors[i]); shiftGradient_.stops[i].opa=255; shiftGradient_.stops[i].frac=i*127; }
 }
 Dashboard::~Dashboard()=default;
@@ -26,7 +26,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
     if(shift) { p.ink=midnight.ink; p.muted=0xf0d5d0; p.panel=0x352730; p.accent=midnight.accent;
         p.rpmBed=midnight.rpmBed; p.rpmGreen=midnight.rpmGreen; p.rpmAmber=midnight.rpmAmber; p.rpmRed=midnight.rpmRed; }
     if(!initialized_ || previousLight_!=v.light || previousShift_!=shift) {
-        paint(root_.get(),shift?0x492731:p.background);
+        paint(root_.get(),shift?Metrics::shiftTop:p.background);
         lv_obj_set_style_bg_grad(root_.get(),shift?&shiftGradient_:nullptr,0);
         ink(root_.get(),p.ink);
     }

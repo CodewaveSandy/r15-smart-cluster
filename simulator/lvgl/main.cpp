@@ -227,13 +227,12 @@ int main(int argc,char** argv) {
                         view.tripPage=next(view.tripPage); view.infoPage=next(view.infoPage);
                     }
                 }
-                // Check the actual rendered digit bounds, not just the label's position.
+                // Include dim placeholder ink when checking the centered three-position speed group.
                 view.iconTest=false;
                 for(bool track:{false,true}) for(bool light:{false,true}) {
                     view.track=track; view.light=light;
                     const auto palette=light?cluster::ui::daylight:cluster::ui::midnight;
-                    const auto target=lv_color_to_u16(lv_color_hex(palette.ink));
-                    for(int value:{-1,0,1,60,180}) {
+                    for(int value:{-1,0,1,9,10,60,99,100,180,400}) {
                         auto sample=state;
                         sample.speedKph=value<0?Signal<int>{}:Signal<int>{value,Quality::Available};
                         if(track) sample.currentLapMs=value<0?Signal<std::uint32_t>{}:Signal<std::uint32_t>{static_cast<std::uint32_t>(value)*1000,Quality::Available};
@@ -250,9 +249,10 @@ int main(int argc,char** argv) {
                         auto* unit=findUnit(findUnit,lv_screen_active());
                         if(!unit) throw std::runtime_error("Visible speed unit missing");
                         lv_area_t unitBounds; lv_obj_get_coords(unit,&unitBounds);
+                        const auto background=lv_color_to_u16(lv_color_hex(palette.background));
                         const auto numericInk=[&](int x,int y) {
                             const bool inUnit=x>=unitBounds.x1&&x<=unitBounds.x2&&y>=unitBounds.y1&&y<=unitBounds.y2;
-                            return !inUnit&&pixels[y*800+x]==target;
+                            return !inUnit&&pixels[y*800+x]!=background;
                         };
                         int left=800,right=-1;
                         const auto* font=track?cluster::ui::fonts::track:cluster::ui::fonts::speed;
@@ -260,7 +260,7 @@ int main(int argc,char** argv) {
                         for(int y=primaryY;y<primaryY+font->line_height;++y)
                             for(int x=cluster::ui::Metrics::speedX;x<cluster::ui::Metrics::speedX+cluster::ui::Metrics::speedWidth;++x)
                                 if(numericInk(x,y)) { left=std::min(left,x); right=std::max(right,x); }
-                        if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Primary instrument glyphs are not centered on the viewport");
+                        if(right<left||std::abs(left+right-799)>4) throw std::runtime_error("Primary instrument glyphs are not centered on the viewport: value="+std::to_string(value)+" light="+std::to_string(light)+" left="+std::to_string(left)+" right="+std::to_string(right));
                         if(track) {
                             left=800; right=-1;
                             for(int y=269;y<269+cluster::ui::fonts::secondary->line_height;++y)
