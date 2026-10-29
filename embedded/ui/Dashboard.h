@@ -7,6 +7,7 @@
 #include "components/SettingsHome.h"
 #include "components/AppearancePanel.h"
 #include "components/PhonePanel.h"
+#include "components/ClockPanel.h"
 #include "embedded/presentation/SettingsTransition.h"
 #include "components/TellTaleRow.h"
 #include "components/Tachometer.h"
@@ -45,6 +46,7 @@ private:
     SettingsHome settings_;
     AppearancePanel appearance_;
     PhonePanel phone_;
+    ClockPanel clock_;
     PrimaryReadout primary_;
     RideInfoPanel rideInfo_;
     FuelGauge fuel_;

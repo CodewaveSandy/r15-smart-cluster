@@ -62,7 +62,7 @@ struct SettingsLayout {
     static constexpr Rect bounds{0,140,800,340};
     static constexpr TextArea title{28,5,500}, back{690,12,82};
     static constexpr TextArea subtitle{28,38,600};
-    static constexpr Rect tile(int i) { return {28+(i%2)*382,76+(i/2)*120,i==2?744:362,106}; }
+    static constexpr Rect tile(int i) { return {28+(i%2)*382,76+(i/2)*120,362,106}; }
     static constexpr int speedCenter=200,speedY=22,unitY=43;
 };
 struct AppearanceLayout {
@@ -72,6 +72,10 @@ struct AppearanceLayout {
     static constexpr Rect design{264,60,508,216};
     static constexpr Rect cancel{484,278,136,44},apply{636,278,136,44};
     static constexpr TextArea status{28,292,440};
+};
+struct ClockLayout {
+    static constexpr Rect bounds=SettingsLayout::bounds;
+    static constexpr Rect row(unsigned i){return {28,48+int(i)*46,744,40};}
 };
 struct PhoneLayout {
     static constexpr Rect bounds=SettingsLayout::bounds;

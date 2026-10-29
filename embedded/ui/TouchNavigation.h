@@ -18,7 +18,12 @@ inline std::optional<SettingsEffect> settingsTouch(DisplayOptions& view,const Cl
     y-=SettingsLayout::bounds.y;
     if(inside({680,0,100,44})) return settingsAction(view,SettingsAction::Back,state,life);
     int focus=-1;
-    if(view.appearance) {
+    if(view.clock) {
+        for(unsigned i=0;i<5;++i)if(inside(ClockLayout::row(i)))focus=int(i);
+        if(inside(AppearanceLayout::cancel))focus=5;
+        if(inside(AppearanceLayout::apply))focus=6;
+        if(focus>=0)view.clockFocus=unsigned(focus);
+    } else if(view.appearance) {
         for(int i=0;i<2;++i) if(inside(AppearanceLayout::theme(i))) focus=i;
         if(inside(AppearanceLayout::design)) focus=2;
         if(inside(AppearanceLayout::cancel)) focus=3;
@@ -29,7 +34,7 @@ inline std::optional<SettingsEffect> settingsTouch(DisplayOptions& view,const Cl
         for(unsigned i=0;i<menu.count;++i) if(inside(PhoneLayout::row(i))) focus=int(i);
         if(focus>=0) view.phoneFocus=unsigned(focus);
     } else {
-        for(int i=0;i<3;++i) if(inside(SettingsLayout::tile(i))) focus=i;
+        for(int i=0;i<4;++i) if(inside(SettingsLayout::tile(i))) focus=i;
         if(focus>=0) view.settingsFocus=unsigned(focus);
     }
     return focus>=0?settingsAction(view,SettingsAction::Select,state,life):SettingsEffect::None;

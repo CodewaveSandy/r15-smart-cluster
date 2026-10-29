@@ -20,9 +20,9 @@ int main(int argc,char** argv) {
     Preferences value;
     const auto valid=encodePreferences({true,DashboardDesign::Instrument});
     check(decodePreferences(valid,value)&&value.light,"Preference codec round trip");
-    for(unsigned field:{0u,4u,5u,6u,7u}) {
-        auto corrupt=valid; corrupt[field]^=2;
-        if(field!=7) { corrupt[7]=0; for(unsigned i=0;i<7;++i) corrupt[7]^=corrupt[i]; }
+    for(unsigned field:{0u,4u,5u,6u,7u,8u,9u,12u,15u}) {
+        auto corrupt=valid; corrupt[field]^=field==8?3:2;
+        if(field!=15) { corrupt[15]=0; for(unsigned i=0;i<15;++i) corrupt[15]^=corrupt[i]; }
         check(!decodePreferences(corrupt,value),"Reject invalid magic/version/theme/design/checksum");
     }
     if(argc!=2) return 1;
@@ -31,6 +31,15 @@ int main(int argc,char** argv) {
     host::PreferenceFile file(path);
     value.light=true;
     check(!file.load(value)&&!value.light,"Missing file uses defaults");
+    {
+        std::filesystem::create_directories(root);
+        std::array<std::uint8_t,8> legacy{{'R','1','5','P',1,1,0,0}};
+        for(unsigned i=0;i<7;++i)legacy[7]^=legacy[i];
+        std::ofstream output(path,std::ios::binary);output.write(reinterpret_cast<const char*>(legacy.data()),legacy.size());output.close();
+        check(file.load(value)&&value.light&&value.clock==ClockPreferences{},"Legacy preference file retains theme and defaults clock");
+    }
+    Preferences clockSaved;clockSaved.light=true;clockSaved.clock={true,false,DateFormat::YearMonthDay,-240};
+    check(file.save(clockSaved)&&file.load(value)&&value==clockSaved,"Clock formats/timezone round trip with theme");
     check(file.save({true,DashboardDesign::Instrument}),"Save confirmed Daylight");
     host::PreferenceFile restarted(path);
     check(restarted.load(value)&&value.light,"Restart restores theme");

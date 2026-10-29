@@ -105,6 +105,12 @@
       "name": "cog",
       "codepoint": "F0493",
       "size": 32
+    },
+    {
+      "role": "clock",
+      "name": "clock-outline",
+      "codepoint": "F0150",
+      "size": 32
     }
   ]
 }

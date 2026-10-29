@@ -4,9 +4,9 @@
 #include <cstdint>
 extern "C" { LV_FONT_DECLARE(cluster_icons_32); LV_FONT_DECLARE(cluster_icons_30); }
 namespace cluster::ui {
-enum class Icon { Left, Right, HighBeam, TractionControl, Abs, Engine, Coolant, Message, Call, Hazard, Phone, Fuel, Appearance, Bluetooth, Wifi, Navigation, Settings };
+enum class Icon { Left, Right, HighBeam, TractionControl, Abs, Engine, Coolant, Message, Call, Hazard, Phone, Fuel, Appearance, Bluetooth, Wifi, Navigation, Settings, Clock };
 struct IconDefinition { Icon kind; std::uint32_t codepoint; const char* glyph; };
-inline constexpr std::array<IconDefinition,17> iconDefinitions{{
+inline constexpr std::array<IconDefinition,18> iconDefinitions{{
     {Icon::Left,0xF0731,u8"\U000F0731"},
     {Icon::Right,0xF0734,u8"\U000F0734"},
     {Icon::HighBeam,0xF0C4C,u8"\U000F0C4C"},
@@ -23,7 +23,8 @@ inline constexpr std::array<IconDefinition,17> iconDefinitions{{
     {Icon::Bluetooth,0xF00AF,u8"\U000F00AF"},
     {Icon::Wifi,0xF05A9,u8"\U000F05A9"},
     {Icon::Navigation,0xF07D9,u8"\U000F07D9"},
-    {Icon::Settings,0xF0493,u8"\U000F0493"}
+    {Icon::Settings,0xF0493,u8"\U000F0493"},
+    {Icon::Clock,0xF0150,u8"\U000F0150"}
 }};
 inline const lv_font_t* iconFont(Icon kind) { return kind==Icon::Abs?&cluster_icons_30:&cluster_icons_32; }
 // Persistent 32px glyph widget; recolor/opacity without rebuilding or decoding assets.

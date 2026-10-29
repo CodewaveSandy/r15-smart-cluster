@@ -21,7 +21,7 @@ private:
     presentation::SignalChange<int> lastGear_,lastPhoneBattery_;
     presentation::SignalChange<bool> lastPhoneConnection_;
     ObjectOwner header_;
-    lv_obj_t *gear_, *mode_, *subtitle_, *clock_, *date_, *phone_, *qs_, *vva_, *phoneBattery_, *settings_;
+    lv_obj_t *gear_, *mode_, *subtitle_, *clock_, *date_, *phone_, *qs_, *vva_, *phoneBattery_, *settings_, *period_, *source_;
     std::array<ObjectOwner,2> rules_{};
 };
 } // namespace cluster::ui

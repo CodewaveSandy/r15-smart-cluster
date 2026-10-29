@@ -129,36 +129,38 @@ int main() {
     settingsAction(menu,SettingsAction::Down,parked,running);
     check(menu.settingsFocus==2,"Down advances to Navigation");
     settingsAction(menu,SettingsAction::Next,parked,running);
+    check(menu.settingsFocus==3,"Settings advances to Clock");
+    settingsAction(menu,SettingsAction::Next,parked,running);
     check(menu.settingsFocus==0,"Settings sequential navigation wraps");
     parked.speedKph={20,Quality::Available}; reconcileSettings(menu,parked,running);
-    check(!menu.settings,"Limit closes settings");
+    check(menu.settings,"Telemetry does not close prototype Settings");
     settingsAction(menu,SettingsAction::Open,parked,running);
-    check(!menu.settings,"Limit blocks entry");
+    check(menu.settings,"Moving Settings entry allowed for prototype");
     for(int speed:{-1,0,1,19,20,21,400}) {
         menu.settings=false; parked.speedKph={speed,Quality::Available};
         settingsAction(menu,SettingsAction::Open,parked,running);
-        check(menu.settings==(speed>=0&&speed<20),"Settings speed boundary");
+        check(menu.settings,"Settings is independent of speed");
     }
     menu.settings=true; parked.speedKph={19,Quality::Available}; reconcileSettings(menu,parked,running);
     check(menu.settings,"Settings stays open below limit");
     parked.speedKph.value=20; reconcileSettings(menu,parked,running);
-    check(!menu.settings,"Crossing 20 km/h closes settings");
+    check(menu.settings,"Crossing 20 does not close prototype Settings");
     parked.speedKph={0,Quality::Available};
     menu.settings=true; menu.settingsFocus=0;
     settingsAction(menu,SettingsAction::Left,parked,running);
-    check(menu.settingsFocus==2,"Left wraps to previous tile");
+    check(menu.settingsFocus==3,"Left wraps to Clock tile");
     settingsAction(menu,SettingsAction::Up,parked,running);
-    check(menu.settingsFocus==1,"Up selects previous tile");
+    check(menu.settingsFocus==2,"Up selects Navigation tile");
     menu.settings=false;
     for(auto quality:{Quality::Unavailable,Quality::Stale,Quality::Invalid,Quality::Unsupported}) {
         parked.speedKph={0,quality}; settingsAction(menu,SettingsAction::Open,parked,running);
-        check(!menu.settings,"Unknown speed blocks entry");
+        check(menu.settings,"Unknown speed permits prototype Settings");
     }
     parked.speedKph={0,Quality::Available}; parked.engineWarning={true,Quality::Available};
     settingsAction(menu,SettingsAction::Open,parked,running);
-    check(!menu.settings,"Urgent warning blocks settings");
+    check(menu.settings,"Warnings remain visible while Settings stays open");
     parked.engineWarning={false,Quality::Available};
-    Lifecycle off; settingsAction(menu,SettingsAction::Open,parked,off);
+    menu.settings=false;Lifecycle off; settingsAction(menu,SettingsAction::Open,parked,off);
     check(!menu.settings,"Power-off blocks settings");
     menu={}; parked.speedKph={0,Quality::Available};
     settingsAction(menu,SettingsAction::Open,parked,running);
@@ -179,7 +181,8 @@ int main() {
     settingsAction(menu,SettingsAction::Select,parked,running);
     menu.appearanceFocus=0; settingsAction(menu,SettingsAction::Select,parked,running);
     parked.speedKph.quality=Quality::Stale; reconcileSettings(menu,parked,running);
-    check(!menu.settings&&!menu.appearance&&menu.light,"Interruption restores confirmed theme");
+    check(menu.settings&&menu.appearance&&!menu.light,"Stale speed does not cancel prototype preview");
+    settingsAction(menu,SettingsAction::Back,parked,running);
     parked.speedKph={0,Quality::Available}; settingsAction(menu,SettingsAction::Open,parked,running);
     settingsAction(menu,SettingsAction::Select,parked,running);
     menu.appearanceFocus=0; settingsAction(menu,SettingsAction::Select,parked,running);

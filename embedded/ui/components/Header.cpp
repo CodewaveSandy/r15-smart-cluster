@@ -15,6 +15,8 @@ Header::Header(lv_obj_t* parent) {
     phoneBattery_=label(header_.get(),HeaderLayout::phoneBattery,"PHONE  —");
     qs_=label(header_.get(),HeaderLayout::qs,"QS"); vva_=label(header_.get(),HeaderLayout::vva,"VVA");
     clock_=label(header_.get(),HeaderLayout::clock,"—:—",fonts::clock); alignRight(clock_);
+    source_=label(header_.get(),288,56,132,"BENCH DEMO",fonts::caption);
+    period_=label(header_.get(),690,34,30,"",fonts::caption);alignRight(period_);
     date_=label(header_.get(),HeaderLayout::date,"CLOCK UNAVAILABLE",fonts::caption); alignRight(date_);
     settings_=createIcon(header_.get(),HeaderLayout::settings.x+6,HeaderLayout::settings.y+10,Icon::Settings);
     rules_[0].reset(box(parent,HeaderLayout::divider)); rules_[1].reset(box(parent,HeaderLayout::gearDivider));
@@ -23,7 +25,12 @@ void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,
     for(auto* label:{mode_,subtitle_,qs_,vva_}) fade(label,255-settingsProgress*255/1000);
     for(const auto& r:rules_) paint(r.get(),p.line);
     ink(date_,p.ink);
-    ink(settings_,p.ink);
+    show(source_,v.simulated);ink(source_,p.amber);
+    ink(settings_,v.vehicleLink==VehicleLink::Connected?p.ink:v.vehicleLink==VehicleLink::Stale?p.red:p.amber);
+    text(period_,v.period);ink(period_,p.ink);
+    const bool twelve=v.period&&v.period[0];
+    lv_obj_set_x(clock_,twelve?578:HeaderLayout::clock.x);
+    lv_obj_set_width(clock_,twelve?106:HeaderLayout::clock.width);
     const bool gearChanged=lastGear_.update(s.gear);
     const bool batteryChanged=lastPhoneBattery_.update(s.phoneBatteryPercent);
     const bool connectionChanged=lastPhoneConnection_.update(s.phoneConnected);

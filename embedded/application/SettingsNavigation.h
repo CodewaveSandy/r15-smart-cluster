@@ -6,7 +6,7 @@
 #include "PhoneMenu.h"
 namespace cluster {
 enum class SettingsAction { Open, Back, Next, Previous, Left, Right, Up, Down, Select };
-enum class SettingsEffect { PhoneApprove, PhoneReject, PhonePair, PhoneDisconnect, PhoneForget, None, SavePreferences, BluetoothPair, BluetoothConnect, BluetoothDisconnect, BluetoothForget, BluetoothCancel, WifiScan, WifiConnect, WifiDisconnect, WifiForget, WifiCancel };
+enum class SettingsEffect { PhoneApprove, PhoneReject, PhonePair, PhoneDisconnect, PhoneForget, None, SavePreferences, SaveClockPreferences, BluetoothPair, BluetoothConnect, BluetoothDisconnect, BluetoothForget, BluetoothCancel, WifiScan, WifiConnect, WifiDisconnect, WifiForget, WifiCancel };
 inline SettingsEffect closeWifi(DisplayOptions& o) { const bool open=o.wifi;o.wifi=false;o.wifiForgetConfirmation=false;o.wifiCredentialNotice=false;return open?SettingsEffect::WifiCancel:SettingsEffect::None; }
 inline SettingsEffect closeBluetooth(DisplayOptions& options) {
     const bool wasOpen=options.bluetooth;
@@ -23,13 +23,20 @@ inline void appearanceSaveResult(DisplayOptions& options,bool saved) {
     options.appearanceSaveFailed=!saved;
     if(saved) { options.appearanceOriginalLight=options.light; options.appearance=false; }
 }
-// User-selected UI access threshold, not a verified vehicle safety limit.
-inline constexpr int settingsSpeedLimitKph=20;
-inline bool canOpenSettings(const ClusterState& state,const Lifecycle& life) {
-    return life.phase()==Phase::Running && state.speedKph.available() && state.speedKph.value>=0 && state.speedKph.value<settingsSpeedLimitKph && !urgent(state);
+inline void cancelClock(DisplayOptions& options) {
+    if(options.clock) options.clockPreferences=options.clockOriginal;
+    options.clock=false;options.clockSaving=false;options.clockSaveFailed=false;
 }
+inline void clockSaveResult(DisplayOptions& options,bool saved) {
+    options.clockSaving=false;options.clockSaveFailed=!saved;
+    if(saved){options.clockOriginal=options.clockPreferences;options.clock=false;}
+}
+// Prototype access is unrestricted by telemetry/warnings at the user's request.
+// Lifecycle still controls whether an application screen is visible/powered.
+inline bool canOpenSettings(const ClusterState&,const Lifecycle& life) {return life.phase()==Phase::Running;}
 inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction action,const ClusterState& state,const Lifecycle& life) {
     if(action==SettingsAction::Back) {
+        if(options.clock){cancelClock(options);return SettingsEffect::None;}
         if(options.phone){
             if(options.phoneForgetConfirmation){options.phoneForgetConfirmation=false;options.phoneFocus=0;}
             else {options.phone=false;if(state.phone.pairingRequested)return SettingsEffect::PhoneReject;}
@@ -49,16 +56,32 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
     }
     if(action==SettingsAction::Open) { if(canOpenSettings(state,life)) options.settings=true; return SettingsEffect::None; }
     if(!options.settings) return SettingsEffect::None;
-    if(!canOpenSettings(state,life)) { options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect; }
-    if(options.phone){
+    if(!canOpenSettings(state,life)) { options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect; }
+    if(options.clock) {
+        if(options.clockSaving)return SettingsEffect::None;
+        if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.clockFocus=(options.clockFocus+1)%7;
+        else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.clockFocus=(options.clockFocus+6)%7;
+        else if(action==SettingsAction::Select) {
+            auto& prefs=options.clockPreferences;
+            switch(options.clockFocus) {
+            case 0:prefs.twelveHour=!prefs.twelveHour;break;
+            case 1:prefs.dateFormat=DateFormat((unsigned(prefs.dateFormat)+1)%3);break;
+            case 2:if(prefs.automaticTimezone)prefs.utcOffsetMinutes=std::int16_t(options.clockSourceOffset);prefs.automaticTimezone=!prefs.automaticTimezone;break;
+            case 3:if(prefs.automaticTimezone)prefs.utcOffsetMinutes=std::int16_t(options.clockSourceOffset);prefs.automaticTimezone=false;prefs.utcOffsetMinutes=std::int16_t(prefs.utcOffsetMinutes<=-720?-720:prefs.utcOffsetMinutes-15);break;
+            case 4:if(prefs.automaticTimezone)prefs.utcOffsetMinutes=std::int16_t(options.clockSourceOffset);prefs.automaticTimezone=false;prefs.utcOffsetMinutes=std::int16_t(prefs.utcOffsetMinutes>=840?840:prefs.utcOffsetMinutes+15);break;
+            case 5:cancelClock(options);break;
+            case 6:return SettingsEffect::SaveClockPreferences;
+            }
+        }
+    } else if(options.phone){
         const auto menu=phoneMenu(state.phone,options.phoneForgetConfirmation);
         options.phoneFocus%=menu.count;
         if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.phoneFocus=(options.phoneFocus+1)%menu.count;
         else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.phoneFocus=(options.phoneFocus+menu.count-1)%menu.count;
         else if(action==SettingsAction::Select){switch(menu.items[options.phoneFocus]){
-            case PhoneItem::Approve:if(state.speedKph.value==0)return SettingsEffect::PhoneApprove;break;
+            case PhoneItem::Approve:return SettingsEffect::PhoneApprove;
             case PhoneItem::Reject:return SettingsEffect::PhoneReject;
-            case PhoneItem::Pair:if(state.speedKph.value==0)return SettingsEffect::PhonePair;break;
+            case PhoneItem::Pair:return SettingsEffect::PhonePair;
             case PhoneItem::Disconnect:return SettingsEffect::PhoneDisconnect;
             case PhoneItem::Forget:options.phoneForgetConfirmation=true;options.phoneFocus=0;break;
             case PhoneItem::ConfirmForget:options.phoneForgetConfirmation=false;options.phoneFocus=0;return SettingsEffect::PhoneForget;
@@ -127,14 +150,17 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
         }
     } else {
         switch(action) {
-        case SettingsAction::Next: case SettingsAction::Right: case SettingsAction::Down: options.settingsFocus=(options.settingsFocus+1)%3; break;
-        case SettingsAction::Previous: case SettingsAction::Left: case SettingsAction::Up: options.settingsFocus=(options.settingsFocus+2)%3; break;
+        case SettingsAction::Next: case SettingsAction::Right: case SettingsAction::Down: options.settingsFocus=(options.settingsFocus+1)%4; break;
+        case SettingsAction::Previous: case SettingsAction::Left: case SettingsAction::Up: options.settingsFocus=(options.settingsFocus+3)%4; break;
         case SettingsAction::Select:
             if(options.settingsFocus==0) {
                 options.appearance=true; options.appearanceOriginalLight=options.light;
                 options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false; options.appearanceSaving=false;
             } else if(options.settingsFocus==1) {
                 options.phone=true;options.phoneFocus=0;options.phoneForgetConfirmation=false;
+            } else if(options.settingsFocus==3) {
+                options.clock=true;options.clockOriginal=options.clockPreferences;options.clockFocus=0;
+                options.clockSaveFailed=false;options.clockSaving=false;
             }
             break;
         default:break;
@@ -144,7 +170,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
 }
 inline SettingsEffect reconcileSettings(DisplayOptions& options,const ClusterState& state,const Lifecycle& life) {
     if(!canOpenSettings(state,life)) {
-        options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect;
+        options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect;
     }
     if(options.phone){
         if(!state.phone.available()||!state.phone.paired)options.phoneForgetConfirmation=false;

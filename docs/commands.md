@@ -20,13 +20,15 @@ This builds the current source, packages/checks the display image, checks the sa
 
 | Command | What it does |
 | --- | --- |
+| `bash scripts/sync-clock.sh /dev/cu.usbserial-10` | Keeps display time/date synced to the Mac and its current local timezone over USB; leave running, Ctrl+C stops. Replace the port if changed. Stop before flashing or another serial console. |
+| `bash scripts/sync-clock.sh --help` | Shows clock-sync helper usage. |
 | `bash scripts/flash-display.sh --build-only` | Builds and validates/packages the latest display firmware without accessing hardware. |
 | `screen /dev/cu.usbserial-110 115200` | Opens the display USB serial console for `v` live UART, `p` parked Settings, and diagnostics. Change the port if needed; quit with Ctrl+A, then backslash, then `y` before flashing. |
 | `ls /dev/cu.*` | Lists Mac serial-device paths. Compare before/after plugging in the display to identify its port. |
 | `R15_DISPLAY_PORT=/dev/cu.YOUR_DISPLAY_PORT bash scripts/flash-display.sh` | Builds and flashes the display using a different port. |
 | `R15_FACTORY_BACKUP="/absolute/path/crowpanel-v3-factory-rom.bin" bash scripts/flash-display.sh` | Uses a moved factory backup; the script still checks its expected size/hash before flashing. |
 
-After flashing: top-left tap changes layout, top-right outside the gear changes theme, center starts/stops the synthetic demo, lower-left cycles trips, lower-middle cycles info, and the fuel area previews shutdown. Tap after black to boot. The gear opens Settings when its existing speed/quality/warning gates allow it. Serial `p` selects a stationary synthetic fixture for bench Settings testing; `s` opens, `q` goes Back, `[`/`]` moves focus and Enter selects. Boot and shutdown artwork each last 2 seconds. Full serial controls and recovery instructions: [display firmware guide](../firmware/display/README.md). Factory restoration writes an older image and is documented there separately.
+After flashing: top-left tap changes layout, top-right outside the gear changes theme, center starts/stops the synthetic demo, lower-left cycles trips, lower-middle cycles info, and the fuel area previews shutdown. Tap after black to boot. The gear opens prototype Settings without speed/quality/warning restrictions. Serial `p` selects a stationary synthetic fixture for bench Settings testing; `s` opens, `q` goes Back, `[`/`]` moves focus and Enter selects. Boot and shutdown artwork each last 2 seconds. Full serial controls and recovery instructions: [display firmware guide](../firmware/display/README.md). Factory restoration writes an older image and is documented there separately.
 
 ## Host dashboard preview and captures
 
@@ -81,9 +83,10 @@ Run from repository root:
 | --- | --- |
 | `cmake -S . -B build/lvgl -G Ninja -DCMAKE_BUILD_TYPE=Debug` | Configures the host build, including the hash-pinned LVGL dependency and tests. |
 | `cmake --build build/lvgl --parallel 4` | Builds host UI and test executables without launching a window. Configure first. |
-| `ctest --test-dir build/lvgl --output-on-failure` | Runs all 14 registered host suites, including rendering and local-socket IPC. Build first. |
+| `ctest --test-dir build/lvgl --output-on-failure` | Runs all 15 registered host suites, including rendering and local-socket IPC. Build first. |
 | `ctest --test-dir build/lvgl -N` | Lists registered test names without running them. |
 | `ctest --test-dir build/lvgl -R '^gear-usb-link$' --output-on-failure` | Runs just the USB input/codec suite. Replace the expression with another listed test name to select it. |
+| `~/.platformio/penv/bin/python tests/host/clock-sync-check.py` | Tests real clock-helper serial framing/acknowledgement on a pseudo-terminal, without a board; requires pyserial. |
 | `python3 tests/embedded/vehicle-uart-check.py` | Tests the actual GPIO38 receive adapter with fake drivers: nonblocking receive, CRC/duplicates, stale data, clicks, overflow/errors and reset; no device. |
 | `python3 tests/embedded/preference-store-check.py` | Compiles/runs the actual firmware preference adapter with fake NVS/RTOS APIs to check restart, invalid data, bounded queues and storage failures; no hardware. |
 | `python3 tests/embedded/display-image-check.py` | Tests partition/image packager bounds without hardware access. |
@@ -121,6 +124,7 @@ Return to repository root before using these. Generation commands rewrite tracke
 | `python3 scripts/generate-animation-assets.py` | Rebuilds the A8 R15 wordmark and associated asset metadata from the approved source; requires Pillow. |
 | `python3 scripts/embolden-font.py /absolute/path/generated-font.c` | Internal font-generation helper: rewrites a generated font's coverage. Normally invoked by `generate-fonts.sh`; do not apply repeatedly by hand. |
 | `python3 tools/display/prepare_image.py build/display/crowpanel-v3` | Internal packaging helper: validates IDF outputs and creates the combined display image/manifest. Normally invoked by the display build/flash script. Requires the matching esptool environment; the script uses `build/display-tools/bin/python`. |
+| `~/.platformio/penv/bin/python tools/clock/sync_clock.py --help` | Internal clock helper CLI; normally use `bash scripts/sync-clock.sh PORT`. |
 | `python3 tools/phone_bridge/bridge.py --help` | Lists low-level bridge arguments. Use `preview.sh --phone-bridge` for normal launch, native helper setup and cleanup. `--test-no-approval` is an isolated test fixture only. |
 
 ## Setup and path overrides
@@ -134,6 +138,6 @@ Return to repository root before using these. Generation commands rewrite tracke
 
 For target recovery, toolchain details and wiring, use the linked authoritative guides rather than substituting flash offsets, board pins or images. Update this reference whenever adding/changing a public script or command option.
 
-In native desk-test firmware, tapping the gear (or serial `s`) from the idle no-vehicle state explicitly selects a parked synthetic fixture and opens Settings. The header switches to `BENCH / SYNTHETIC DATA`; this is not a received zero-speed observation. Moving demo/test warnings are never replaced to grant access. Serial `b` returns to boot with unavailable observations. Real/host data-quality gates remain unchanged.
+Tapping the gear or serial `s` opens Settings without substituting demo observations; live UART remains live. Serial `p` is an optional explicitly labelled bench fixture.
 
-For the connected two-board test, follow the [UART flashing and acceptance sequence](../firmware/display/README.md#flash-and-verify). Display serial `v` selects live UART; `p` explicitly selects parked Settings demo; no automatic stationary observation is created in live mode.
+For the connected two-board test, follow the [UART flashing and acceptance sequence](../firmware/display/README.md#flash-and-verify). Display serial `v` selects live UART; `p` explicitly selects parked Settings demo; Settings is accessible directly in live mode; the gear color indicates connection and the header date remains the local date.

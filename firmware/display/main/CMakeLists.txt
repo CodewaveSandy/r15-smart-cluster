@@ -1,5 +1,8 @@
 get_filename_component(CLUSTER_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
-file(GLOB CLUSTER_COMPONENTS "${CLUSTER_ROOT}/embedded/ui/components/*.cpp")
+set(CLUSTER_COMPONENTS)
+foreach(name Header TellTaleRow Tachometer PrimaryReadout RideInfoPanel FuelGauge SettingsHome AppearancePanel PhonePanel ClockPanel LifecycleOverlay)
+ list(APPEND CLUSTER_COMPONENTS "${CLUSTER_ROOT}/embedded/ui/components/${name}.cpp")
+endforeach()
 file(GLOB CLUSTER_FONTS "${CLUSTER_ROOT}/assets/fonts/lvgl/*.c")
 idf_component_register(
  SRCS main.cpp CrowPanel.cpp

@@ -9,15 +9,15 @@ Updated: 2026-10-22. Status: native dashboard, Appearance preferences, unified P
 | Dashboard | Street centered speed; Track centered current/best lap with secondary speed; equal section heights; Midnight/Daylight |
 | Instruments/assets | Chakra Petch Bold Italic numerals, Inter labels/RPM, Barlow clock; 17 MDI symbols; fractional eight-piece fuel gauge and 16% reserve cue |
 | Ride pages | ODO/Trip 1/Trip 2; coolant, Track, real-time consumption, average consumption, average speed, TCS, unidentified placeholder |
-| Settings | Three-category home, reversible 280 ms compact-speed transition, sequential non-touch focus and access below valid 20 km/h |
+| Settings | Four-category home, reversible 280 ms compact-speed transition, sequential non-touch focus and unrestricted prototype access |
 | Appearance | Theme preview/Apply/Cancel and versioned host/native NVS restart persistence; one Instrument design |
 | Phone | Unified page, first-pair approval/code, saved/disconnected/connected, confirmed forget and unavailable states; native Android/Mac BLE discovery and protected saved trust in development |
 | Lifecycle | R15 Light Signature; boot 2,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
 | Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation, persistent readout text buffers, dirty-driven SDL presentation and zero settled redraws |
 | Phone/Mac development connection | Native BLE discovery, cluster-approved pairing, protected saved trust, TLS session and bounded IPC; physical new discovery journey awaiting user test |
-| Pending | Navigation/Maps feasibility, clock editor/source, real trip/lap calculations, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
+| Pending | Navigation/Maps feasibility, retained/phone/network clock source, real trip/lap calculations, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
 
-Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Only confirmed theme/design persist. UI warning thresholds and the Settings speed gate are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.
+Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Confirmed theme/design and clock formats/timezone persist. UI warning thresholds are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.
 
 ## Sequence
 
@@ -187,3 +187,11 @@ User panel feedback (2026-10-29): after flashing this follow-up, the user report
 Implemented vehicle UART1 TX GPIO17 → display UART1 RX GPIO38 via GPIO_D/GND, with both boards separately USB powered and no power conductor joined. Reuses the v3 discrete-input codec/USB stream, adds bounded nonblocking display RX, visible waiting/live/stale status, overflow diagnostics and Trip/Info routing. Bench/demo selection remains explicit and isolated from live observations. Both build-only packages pass without device access. All fourteen host suites pass (IPC with local socket permission), along with receive-adapter/flash-guard fault checks. Representative UART live/stale frames were visually inspected at 800 × 480 in both layout/theme combinations; actual cable/inputs/reset/staleness still require user bench acceptance. Full E5 hello/capabilities/source-age/telemetry/return-command contract, radios and map transfer remain pending. This does not establish bike or production readiness.
 
 User bench result (2026-10-29): both updated images were user-flashed. Initial UART WAITING was traced by the user to a loose connection; reseating it produced UART / LIVE. This confirms receipt of valid packets over the reported vehicle GPIO17 → display GPIO_D IO38/GND link with separate Mac USB power. Individual input stimulus, cable-loss/stale recovery, independent resets, soak and vehicle use remain separate pending tests.
+
+## Clock and unrestricted Settings (2026-10-29)
+
+User requested no speed/data-quality/warning menu restrictions during current prototype work. Settings opens directly without creating a stationary sample; warnings remain live and lifecycle still owns power/visibility. Gear color now indicates UART connected/waiting/stale, leaving clock/date available. Clock & Date offers persisted 12/24-hour, AM/PM, date formats and Mac/manual UTC offset; v2 preferences migrate v1 theme/design. A bounded USB command and persistent Mac helper provide actual time and resync after reset. Cold power requires a live source again; no invented RTC retention or firmware-only always-correct time claim. GPIO6/8/4/5/7 and debounced GPIO14/15 acquisition/UART routing already exist and remain covered by discrete-input tests; actual input stimuli still need user bench results.
+
+Clock follow-up software verification: all fifteen registered host suites pass (IPC with local socket permission), plus NVS-adapter migration/fault tests, receive-adapter fault checks and real clock-helper pseudo-terminal acknowledgement/shutdown tests. A fresh deterministic render produced 298 BMP scenarios; representative header/link colors, AM/PM and Clock settings were visually inspected in both layouts/themes. Settled redraw count remains zero. The native display build/package passes without device access. Updated panel behavior, clock-helper sync after reset and actual GPIO stimuli still require user verification; the vehicle firmware is unchanged for this follow-up.
+
+User bench acceptance (2026-10-29): the user reports the display follow-up working and confirms the described jumper-input tests working over the physical UART link. This covers the tested neutral/gear, left/right/high-beam and Trip/Info behavior, plus functional acceptance of the current display changes. This is user-reported desk evidence, not instrumented timing, electrical-margin, power-loss/RTC, soak or bike verification. Mac USB clock synchronization remains the selected time source; no RTC hardware change is planned in this phase.

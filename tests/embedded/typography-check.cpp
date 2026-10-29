@@ -12,6 +12,7 @@ int main() {
         using namespace cluster;
         Lifecycle life; life.key(true,0); life.advance(2000);
         ClusterState state; DisplayOptions view;
+        settingsTouch(view,state,life,750,40,true); assert(view.settings);
         settingsTouch(view,state,life,750,40,true); assert(!view.settings);
         state.speedKph={0,Quality::Available};
         settingsTouch(view,state,life,750,40,true); assert(view.settings);
@@ -21,9 +22,10 @@ int main() {
         settingsTouch(view,state,life,500,440,true); assert(!view.appearance&&!view.light);
         settingsTouch(view,state,life,750,155,true); assert(!view.settings);
         state.speedKph={20,Quality::Available};
+        settingsTouch(view,state,life,750,40,true); assert(view.settings);
         settingsTouch(view,state,life,750,40,true); assert(!view.settings);
         state.speedKph={0,Quality::Available}; state.engineWarning={true,Quality::Available};
-        settingsTouch(view,state,life,750,40,true); assert(!view.settings);
+        settingsTouch(view,state,life,750,40,true); assert(view.settings);
         assert(!settingsTouch(view,state,life,800,40,true));
     }
     lv_init();

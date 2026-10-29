@@ -17,8 +17,8 @@ public:
         nvs_handle_t handle=0;
         if(nvs_open("display",NVS_READONLY,&handle)==ESP_OK) {
             PreferenceBytes bytes{};size_t size=bytes.size();
-            if(nvs_get_blob(handle,"appearance",bytes.data(),&size)==ESP_OK&&size==bytes.size())
-                decodePreferences(bytes,confirmed);
+            if(nvs_get_blob(handle,"appearance",bytes.data(),&size)==ESP_OK)
+                decodePreferences(bytes.data(),size,confirmed);
             nvs_close(handle);
         }
         requests_=xQueueCreateStatic(1,sizeof(PreferenceBytes),requestBytes_,&requestQueue_);
@@ -27,7 +27,8 @@ public:
         ready_=requests_&&results_&&worker_;
     }
     bool request(const Preferences& value) {
-        const auto bytes=encodePreferences(value);
+        const auto bytes=encodePreferences(value);Preferences validated;
+        if(!decodePreferences(bytes,validated))return false;
         return ready_&&xQueueSend(requests_,&bytes,0)==pdTRUE;
     }
     bool result(bool& success) {return results_&&xQueueReceive(results_,&success,0)==pdTRUE;}

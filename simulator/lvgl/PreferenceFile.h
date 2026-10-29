@@ -24,8 +24,10 @@ public:
         value={};
         std::ifstream input(path_,std::ios::binary);
         PreferenceBytes bytes{};
-        if(!input.read(reinterpret_cast<char*>(bytes.data()),bytes.size()) || input.peek()!=std::char_traits<char>::eof()) return false;
-        return decodePreferences(bytes,value);
+        input.read(reinterpret_cast<char*>(bytes.data()),bytes.size());
+        const auto size=std::size_t(input.gcount());
+        if(!input.eof()&&input.peek()!=std::char_traits<char>::eof())return false;
+        return decodePreferences(bytes.data(),size,value);
     }
     bool save(const Preferences& value) const {
         Preferences validated;

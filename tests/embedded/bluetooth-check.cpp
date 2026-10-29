@@ -54,7 +54,9 @@ int main() {
     demo.failNext();demo.request(SettingsEffect::BluetoothDisconnect,state,22000);demo.update(state,22450);
     check(state.bluetooth.connected&&state.bluetooth.paired&&bluetoothPresentation(state.bluetooth,false).active,"Failed disconnect preserves confirmed live connection");
     state.speedKph.quality=Quality::Stale;
-    check(reconcileSettings(options,state,life)==SettingsEffect::BluetoothCancel&&!options.settings&&!options.bluetooth,"Access interruption closes Bluetooth and requests cancellation");
+    check(reconcileSettings(options,state,life)==SettingsEffect::None&&options.settings&&options.bluetooth,"Stale speed does not close prototype Bluetooth UI");
+    life.key(false,25000);
+    check(reconcileSettings(options,state,life)==SettingsEffect::BluetoothCancel&&!options.settings&&!options.bluetooth,"Lifecycle interruption closes Bluetooth and requests cancellation");
     for(auto quality:{Quality::Unavailable,Quality::Unsupported,Quality::Invalid,Quality::Stale}) {
         state.bluetooth.quality=quality;
         check(bluetoothMenu(state.bluetooth,true).items[0]==BluetoothItem::Back,"Non-current status cannot Forget or Connect");

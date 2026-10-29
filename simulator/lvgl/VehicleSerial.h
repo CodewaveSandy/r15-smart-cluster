@@ -24,6 +24,8 @@ public:
         if(tcsetattr(fd_,TCSANOW,&options)!=0){close(fd_);fd_=-1;throw std::runtime_error("Cannot configure serial port");}
         tcflush(fd_,TCIFLUSH);
     }
+    bool fresh(std::uint64_t now)const{return receiver_.fresh(now);}
+    bool received()const{return receiver_.received();}
     gearlink::ButtonClicks takeClicks(){return receiver_.takeClicks();}
     Signal<int> update(std::uint64_t now) {return updateState(now).gear;}
     ~VehicleSerial(){if(fd_>=0)close(fd_);}

@@ -1,6 +1,6 @@
 # LVGL visual and implementation style guide
 
-Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation/clock and hardware integration remain pending.
+Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation, retained clock sources and full hardware integration remain pending; USB bench clock/format settings are implemented.
 
 ## Visual authority
 
@@ -56,7 +56,7 @@ Information text (ODO/trip/best lap, coolant/consumption/average-speed captions,
 
 Dashboard composes Header, TellTaleRow, Tachometer, PrimaryReadout, RideInfoPanel, FuelGauge, SettingsHome, AppearancePanel, PhonePanel and LifecycleOverlay. Each exposes a small typed update API and owns its LVGL subtree; components apply changed values/styles only. Screens compose them; a presenter maps normalized state and quality to display values. Keep formatting testable without a display.
 
-Implemented screens are Dashboard (Street/Track), Settings home, Appearance, Phone. Navigation and clock editing remain pending. Developer help stays in Terminal. Hardware labels must describe actual available controls and time sources; touch is optional and cannot become required navigation.
+Implemented screens are Dashboard (Street/Track), Settings home, Appearance, Phone. Navigation remains pending; Clock & Date offers persisted formats/timezone and USB time sync. Developer help stays in Terminal. Hardware labels must describe actual available controls and time sources; touch is optional and cannot become required navigation.
 
 Navigation actions: up/down/left/right/select/back/next/previous. Host keyboard and vehicle input adapters produce the same actions; no keycodes, GPIOs or CAN identifiers in widgets. Display settings/focus remain local. Remote trip/lap actions require the defined command contract and visible failures.
 
@@ -104,6 +104,8 @@ Bundle source version, hashes, Apache 2.0 license and notices. Only selected gly
 
 ## Settings presentation
 
-The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Three category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host/native NVS saved preferences. Appearance stacks theme choices on the left with an actual-component live preview spanning the right two columns. Phone UI/demos follow the same focus/back navigation; Navigation and real radio provisioning remain pending; NVS power-loss/render coexistence still requires target testing.
+The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Three category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Prototype Settings has no speed/quality/warning access restriction per the user; warnings remain live and lifecycle transitions still own screen visibility. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host/native NVS saved preferences. Appearance stacks theme choices on the left with an actual-component live preview spanning the right two columns. Phone UI/demos follow the same focus/back navigation; Navigation and real radio provisioning remain pending; NVS power-loss/render coexistence still requires target testing.
 
 Radio pages share the compact instrument strip, a status card and bounded context-sensitive action rows. Unknown service quality offers Back, and Forget confirmation defaults to Cancel. See [settings and connectivity](settings.md) for both radio flows and provisioning boundaries.
+
+Clock & Date is the fourth Settings tile. Keep real time/date in the header, with a separate AM/PM caption in 12-hour mode. Color the top-right gear foreground/amber/red for connected/waiting/stale UART; do not replace the date with UART text. See [Settings](settings.md#clock-date-and-connection-indicator) for source quality, supported formats and cold-power limitations.

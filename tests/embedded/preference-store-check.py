@@ -13,7 +13,7 @@ platform = r'''
 #include <cstdint>
 using StackType_t=uint32_t;
 struct StaticTask_t {};
-struct StaticQueue_t {std::array<uint8_t,8> bytes{};size_t size=0;bool full=false;};
+struct StaticQueue_t {std::array<uint8_t,16> bytes{};size_t size=0;bool full=false;};
 using QueueHandle_t=StaticQueue_t*;
 using TaskHandle_t=void*;
 constexpr int pdTRUE=1,ESP_OK=0,NVS_READONLY=0,NVS_READWRITE=1;
@@ -64,7 +64,11 @@ int main(){
   assert(restart.request({false}));drain();assert(restart.result(saved)&&!saved);assert(committed==previous);
  }
  openFail=writeFail=commitFail=false;
- committed[7]^=1;Preferences invalid;PreferenceStore bad;bad.initialize(invalid);assert(!invalid.light);
+ std::array<uint8_t,8> legacy{{'R','1','5','P',1,1,0,0}};
+ for(unsigned i=0;i<7;++i)legacy[7]^=legacy[i];
+ committed.assign(legacy.begin(),legacy.end());Preferences migrated;PreferenceStore legacyStore;legacyStore.initialize(migrated);assert(migrated.light&&!migrated.clock.twelveHour);
+ committed=previous;
+ committed[15]^=1;Preferences invalid;PreferenceStore bad;bad.initialize(invalid);assert(!invalid.light);
  committed.resize(3);Preferences shortValue;PreferenceStore shortStore;shortStore.initialize(shortValue);assert(!shortValue.light);
  initFail=true;PreferenceStore unavailable;unavailable.initialize(value);assert(!unavailable.request({true}));
 }

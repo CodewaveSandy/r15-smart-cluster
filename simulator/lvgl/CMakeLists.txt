@@ -19,6 +19,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/components/Header.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/SettingsHome.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/AppearancePanel.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/ClockPanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/PhonePanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/TellTaleRow.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/Tachometer.cpp"
@@ -54,6 +55,10 @@ target_link_libraries(r15-preview PRIVATE cluster_ui SDL2::SDL2)
 target_compile_options(r15-preview PRIVATE -Wall -Wextra -Wpedantic)
 include(CTest)
 if(BUILD_TESTING)
+ add_executable(clock-check "${CLUSTER_ROOT}/tests/embedded/clock-check.cpp")
+ target_include_directories(clock-check PRIVATE "${CLUSTER_ROOT}")
+ target_compile_options(clock-check PRIVATE -Wall -Wextra -Wpedantic)
+ add_test(NAME clock-settings COMMAND clock-check)
  add_executable(gear-link-check "${CLUSTER_ROOT}/tests/embedded/gear-link-check.cpp")
  target_include_directories(gear-link-check PRIVATE "${CLUSTER_ROOT}")
  target_compile_options(gear-link-check PRIVATE -Wall -Wextra -Wpedantic)

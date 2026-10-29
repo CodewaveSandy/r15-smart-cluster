@@ -8,6 +8,7 @@
 #include "WifiDemo.h"
 #include "PhoneBridge.h"
 #include "VehicleSerial.h"
+#include "embedded/presentation/ClockPresentation.h"
 #include <cstdlib>
 #include <algorithm>
 #include <array>
@@ -147,7 +148,7 @@ int main(int argc,char** argv) {
         {
             cluster::ui::Dashboard dashboard(lv_screen_active());
             ClusterState state=demo(); cluster::ui::ViewOptions view; Lifecycle life;
-            view.light=confirmedPreferences.light; view.bluetoothDemo=true;
+            view.light=confirmedPreferences.light; view.clockPreferences=confirmedPreferences.clock; view.bluetoothDemo=true;view.simulated=true;
             if(render) {
                 checkPresentation();
                 std::filesystem::create_directories(output);
@@ -182,7 +183,7 @@ int main(int argc,char** argv) {
                         }
                     }
                     ClusterState missing; dashboard.update(missing,view,life,1400); capture(output/(suffix+"-unavailable.bmp"));
-                    const auto oldDate=view.date;view.date="USB INPUT TEST";
+                    const auto oldDate=view.date;const auto oldLink=view.vehicleLink;view.vehicleLink=cluster::ui::VehicleLink::Connected;
                     for(int gear:{0,1,2,3,4,5,6}) {
                         ClusterState usb;usb.gear={gear,Quality::Available};
                         usb.turnSignalsArePhase=true;usb.left=usb.right=usb.highBeam={true,Quality::Available};
@@ -190,11 +191,10 @@ int main(int argc,char** argv) {
                     }
                     ClusterState conflict;conflict.gear.quality=Quality::Invalid;
                     dashboard.update(conflict,view,life,1400);capture(output/(suffix+"-usb-conflict.bmp"));
-                    conflict.gear.quality=Quality::Stale;
+                    conflict.gear.quality=Quality::Stale;view.vehicleLink=cluster::ui::VehicleLink::Stale;
                     dashboard.update(conflict,view,life,1400);capture(output/(suffix+"-usb-stale.bmp"));
                     for(const char* status:{"WAITING","LIVE","STALE"}) {
-                        char uartDate[24];std::snprintf(uartDate,sizeof uartDate,"UART / %s",status);
-                        view.date=uartDate;
+                        view.vehicleLink=std::strcmp(status,"LIVE")==0?cluster::ui::VehicleLink::Connected:std::strcmp(status,"STALE")==0?cluster::ui::VehicleLink::Stale:cluster::ui::VehicleLink::Waiting;
                         ClusterState uart;uart.turnSignalsArePhase=true;
                         if(std::strcmp(status,"LIVE")==0) {
                             uart.gear={2,Quality::Available};uart.left={true,Quality::Available};
@@ -203,7 +203,7 @@ int main(int argc,char** argv) {
                             uart.gear.quality=uart.left.quality=uart.right.quality=uart.highBeam.quality=Quality::Stale;
                         dashboard.update(uart,view,life,1400);capture(output/(suffix+"-uart-"+status+".bmp"));
                     }
-                    view.date=oldDate;
+                    view.date=oldDate;view.vehicleLink=oldLink;
                     auto warning=state; warning.engineRpm.value=11400; warning.engineWarning.value=true; warning.absWarning.value=true;
                     dashboard.update(warning,view,life,1200); capture(output/(suffix+"-warning.bmp"));
                 }
@@ -445,7 +445,7 @@ int main(int argc,char** argv) {
                     dashboard.update(parked,view,life,offset+6100);
                     dashboard.update(parked,view,life,offset+6240); capture(output/("settings-enter-"+suffix+".bmp"));
                     dashboard.update(parked,view,life,offset+6380); capture(output/("settings-home-"+suffix+".bmp"));
-                    for(unsigned focus=1;focus<3;++focus) {
+                    for(unsigned focus=1;focus<4;++focus) {
                         view.settingsFocus=focus; dashboard.update(parked,view,life,offset+6400+focus);
                         capture(output/("settings-focus-"+std::to_string(focus)+"-"+suffix+".bmp"));
                     }
@@ -506,10 +506,40 @@ int main(int argc,char** argv) {
                     }
                     auto interruption=state;interruption.speedKph={0,Quality::Available};interruption.engineWarning={true,Quality::Available};
                     reconcileSettings(view,interruption,life);
-                    if(view.settings||view.phone)throw std::runtime_error("Warning failed to close Phone");
+                    if(!view.settings||!view.phone)throw std::runtime_error("Prototype warning unexpectedly closed Phone");
                     dashboard.update(interruption,view,life,base+9000);capture(output/("phone-warning-"+suffix+".bmp"));
                     view.settings=true;view.phone=true;interruption.engineWarning={false,Quality::Available};interruption.speedKph.quality=Quality::Stale;
                     reconcileSettings(view,interruption,life);dashboard.update(interruption,view,life,base+10000);capture(output/("phone-speed-stale-"+suffix+".bmp"));
+                }
+                for(bool track:{false,true})for(bool light:{false,true}) {
+                    view={};view.track=track;view.light=light;
+                    auto sample=state;sample.speedKph.quality=Quality::Unavailable;
+                    const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
+                    const std::uint64_t clockBase=300000+((track?2:0)+(light?1:0))*20000;
+                    dashboard.update(sample,view,life,clockBase-1000);dashboard.update(sample,view,life,clockBase-720);
+                    const auto palette=light?cluster::ui::daylight:cluster::ui::midnight;
+                    for(unsigned status=0;status<3;++status)for(bool twelve:{false,true}) {
+                        view.vehicleLink=static_cast<cluster::ui::VehicleLink>(status);
+                        view.time=twelve?"12:05":"00:05";view.period=twelve?"AM":"";view.date="29/10/2026";
+                        dashboard.update(sample,view,life,clockBase+status*1000);
+                        capture(output/("clock-header-"+suffix+"-"+std::to_string(status)+(twelve?"-12":"-24")+".bmp"));
+                        const auto expected=lv_color_to_u16(lv_color_hex(status==1?palette.ink:status==2?palette.red:palette.amber));
+                        unsigned inkCount=0;for(int y=30;y<62;++y)for(int x=734;x<766;++x)if(pixels[y*800+x]==expected)++inkCount;
+                        if(inkCount<10)throw std::runtime_error("Settings gear lost connection-status color");
+                    }
+                    view.time="12:05";view.period="PM";view.vehicleLink=cluster::ui::VehicleLink::Connected;
+                    dashboard.update(sample,view,life,clockBase+3000);capture(output/("clock-header-pm-"+suffix+".bmp"));
+                    if(!dashboard.touch(view,sample,life,750,40)||!view.settings)throw std::runtime_error("Unknown speed still blocks Settings");
+                    dashboard.update(sample,view,life,clockBase+4000);dashboard.update(sample,view,life,clockBase+4280);
+                    if(!dashboard.touch(view,sample,life,600,380)||!view.clock)throw std::runtime_error("Clock tile touch failed");
+                    auto clockSample=cluster::presentation::clockText(1793212500,330,view.clockPreferences);
+                    view.time=clockSample.time;view.date=clockSample.date;view.period=clockSample.period;
+                    dashboard.update(sample,view,life,clockBase+4300);capture(output/("clock-settings-"+suffix+".bmp"));
+                    dashboard.touch(view,sample,life,400,208);if(!view.clockPreferences.twelveHour)throw std::runtime_error("12-hour touch choice failed");
+                    clockSample=cluster::presentation::clockText(1793212500,330,view.clockPreferences);
+                    view.clockSaveFailed=true;dashboard.update(sample,view,life,clockBase+4320);capture(output/("clock-save-error-"+suffix+".bmp"));
+                    flushMetrics={};for(int i=0;i<100;++i){dashboard.update(sample,view,life,clockBase+4320);lv_refr_now(nullptr);}
+                    if(flushMetrics.calls)throw std::runtime_error("Settled clock page redraw without changes");
                 }
                 if(warnings) throw std::runtime_error("LVGL render diagnostics reported warnings");
                 std::printf("Rendered dashboard, settings and Phone scenarios to %s\n",output.string().c_str());
@@ -541,17 +571,16 @@ int main(int argc,char** argv) {
                 const auto dispatchEffect=[&](SettingsEffect effect,std::uint64_t now) {
                     if(effect==SettingsEffect::PhoneApprove||effect==SettingsEffect::PhoneReject||effect==SettingsEffect::PhonePair||effect==SettingsEffect::PhoneDisconnect||effect==SettingsEffect::PhoneForget){
                         phoneBridge.command(effect==SettingsEffect::PhoneApprove?'A':effect==SettingsEffect::PhoneReject?'R':effect==SettingsEffect::PhonePair?'P':effect==SettingsEffect::PhoneDisconnect?'D':'F');
-                    } else if(effect==SettingsEffect::SavePreferences) {
-                        const Preferences requested{view.light,DashboardDesign::Instrument};
-                        const bool unchanged=requested.light==confirmedPreferences.light&&requested.design==confirmedPreferences.design;
-                        const bool saved=unchanged||preferenceFile.save(requested);
-                        if(saved) confirmedPreferences=requested;
-                        appearanceSaveResult(view,saved);
+                    } else if(effect==SettingsEffect::SavePreferences||effect==SettingsEffect::SaveClockPreferences) {
+                        auto requested=confirmedPreferences;
+                        if(effect==SettingsEffect::SaveClockPreferences)requested.clock=view.clockPreferences;else requested.light=view.light;
+                        const bool saved=requested==confirmedPreferences||preferenceFile.save(requested);
+                        if(saved)confirmedPreferences=requested;
+                        if(effect==SettingsEffect::SaveClockPreferences)clockSaveResult(view,saved);else appearanceSaveResult(view,saved);
                     } else if(!phoneBridge.enabled()) {bluetoothDemo.request(effect,state,now);wifiDemo.request(effect,state,view.wifiNetwork,now);}
                 };
                 life.key(true,0); bool running=true,missing=false; help(); std::uint64_t last=0;
-                std::time_t previousMinute=-1;
-                char timeText[16]{},dateText[32]{};
+                cluster::presentation::ClockText clockLabels;
                 bool repaint=true;
                 int bridgeWindowState=-1;bool previousPairOffer=false;
                 while(running) {
@@ -621,13 +650,10 @@ int main(int argc,char** argv) {
                     life.advance(now);
                     state.vva.value=state.engineRpm.value>7500; // Simulator-only display demonstration.
                     const auto wall=std::time(nullptr);
-                    if(wall/60!=previousMinute) {
-                        std::tm local{}; localtime_r(&wall,&local);
-                        std::strftime(timeText,sizeof timeText,"%H:%M",&local);
-                        std::strftime(dateText,sizeof dateText,"%d %b %Y",&local);
-                        previousMinute=wall/60;
-                    }
-                    view.time=timeText; view.date=dateText;
+                    std::tm local{};localtime_r(&wall,&local);
+                    view.clockSourceOffset=int(local.tm_gmtoff/60);
+                    clockLabels=cluster::presentation::clockText(std::uint64_t(wall),view.clockSourceOffset,view.clockPreferences);
+                    view.time=clockLabels.time;view.date=clockLabels.date;view.period=clockLabels.period;
                     lv_tick_inc(static_cast<std::uint32_t>(now-last)); last=now;
                     if(phoneBridge.enabled()) {
                         const bool connected=phoneBridge.update(now);
@@ -653,8 +679,8 @@ int main(int argc,char** argv) {
                         const auto clicks=vehicleSerial.takeClicks();
                         for(unsigned i=0;i<clicks.trip;++i)applyAction(view,DashboardAction::NextTrip);
                         for(unsigned i=0;i<clicks.info;++i)applyAction(view,DashboardAction::NextInfo);
-                        missing=false;view.iconTest=false;view.bluetoothDemo=false;
-                        view.date="USB INPUT TEST";
+                        missing=false;view.iconTest=false;view.bluetoothDemo=false;view.simulated=false;
+                        view.vehicleLink=vehicleSerial.fresh(now)?cluster::ui::VehicleLink::Connected:vehicleSerial.received()?cluster::ui::VehicleLink::Stale:cluster::ui::VehicleLink::Waiting;
                         SDL_SetWindowTitle(window.get(),"R15 Preview - USB discrete input test");
                     }
                     auto observed=missing?ClusterState{}:state;

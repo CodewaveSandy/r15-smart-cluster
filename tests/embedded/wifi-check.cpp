@@ -22,7 +22,8 @@ int main() {
     demo.request(SettingsEffect::WifiForget,s,0,4300);demo.update(s,5300);check(!s.wifi.connected&&!s.wifi.networks[0].saved,"Forget clears saved demo network");
     o.wifiFocus=1;s.wifi.phase=WifiPhase::Idle;
     check(settingsAction(o,SettingsAction::Select,s,life)==SettingsEffect::None&&o.wifiCredentialNotice,"Protected unsaved network has explicit pending credentials step");
-    s.speedKph.value=20;check(reconcileSettings(o,s,life)==SettingsEffect::WifiCancel&&!o.wifi&&!o.settings&&!o.wifiCredentialNotice,"Threshold cancels Wi-Fi UI");
+    s.speedKph.value=20;check(reconcileSettings(o,s,life)==SettingsEffect::None&&o.wifi&&o.settings,"Moving speed permits prototype Wi-Fi UI");
+    life.key(false,6000);check(reconcileSettings(o,s,life)==SettingsEffect::WifiCancel&&!o.wifi&&!o.settings&&!o.wifiCredentialNotice,"Lifecycle cancels Wi-Fi UI");
     s.wifi.count=4;check(!valid(s.wifi),"Reject oversized list");s.wifi.count=3;
     s.wifi.networks[0].name.fill('X');check(!valid(s.wifi),"Reject unterminated SSID");
     s.wifi.quality=Quality::Stale;check(valid(s.wifi)&&wifiMenu(s.wifi,false).count==1,"Ignore stale payload and disable operations");
