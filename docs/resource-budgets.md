@@ -14,9 +14,9 @@ python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/pr
 
 `resource-audit.json` reports each generated asset's exact bitmap payload and allocated host object sections (code/constants/data/BSS as recognized by the platform size tool), excluding debug sections. Host metadata and alignment differ from ESP32. Host executable allocated sections include the simulated framebuffer in BSS and must never be labeled firmware flash usage. The report requires compiled asset objects; raw C file length is not used as a flash estimate. Source TTFs are converter inputs and are not included in the CMake runtime asset list.
 
-Current font/icon bitmap payload is 90,564 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **102,852 payload bytes** and **113,130 compiled host asset section bytes** in total. The source PNG is not linked into firmware.
+Current font/icon bitmap payload is 90,928 bytes with the angular numeral subsets. The R15 Light Signature adds one 192 × 64 A8 mask (12,288 bytes), giving **103,216 payload bytes** and **113,504 compiled host asset section bytes** in total. The source PNG is not linked into firmware.
 
-The object tree now contains 138 objects, including Settings home, Appearance and Phone status/action rows and the instrument visibility group. The Dashboard wrapper is 1,648 bytes on the current Mac ABI, including input tracking, animation state and 256 bytes of persistent readout text. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
+The object tree now contains 195 objects, including Settings home, the live Appearance instrument preview, Phone status/action rows and the instrument visibility group. The Dashboard wrapper is 1,672 bytes on the current Mac ABI, including input tracking, animation state and 256 bytes of persistent readout text. Host buffers remain 768,000 bytes for the simulated RGB565 framebuffer and 64,000 bytes for the partial draw buffer. Measure actual target sizes independently.
 
 ## Buffer arithmetic, not an allocation prescription
 
@@ -44,7 +44,7 @@ Record build revisions/toolchain, configuration, measurement method and load wit
 
 ## Scope boundary
 
-The shared feature profile is host-verified against LVGL 9.2.2. It is not a complete ESP-IDF configuration or a board driver. Host settings/persistence and simulated radio menus are implemented. UART, real radio services and firmware NVS require reviewed contracts and platform adapters; see [implementation gates](implementation-plan.md). Avoid unused abstractions or queues.
+The shared feature profile is host-verified against LVGL 9.2.2. It is not a complete ESP-IDF configuration or a board driver. Host settings/persistence and simulated radio menus are implemented. UART and real radio services require reviewed contracts and platform adapters; display Appearance NVS now uses a bounded storage worker, with hardware durability/render coexistence testing pending; see [implementation gates](implementation-plan.md). Avoid unused abstractions or queues.
 
 ## Light Signature rendering cost
 
@@ -58,7 +58,7 @@ The SDL preview uploads its framebuffer only after an LVGL flush, and presents o
 
 ## First native display build (2026-10-22)
 
-ESP-IDF 5.5.4, LVGL 9.2.2, Xtensa GCC 14.2.0, C++17. The R15 build and `flash-display.sh --build-only` pass. The packaged bootloader/table/application image is 669,472 bytes; application binary 603,936 bytes, within the 3,145,728-byte app partition. Section reporting shows 16,872 bytes static data/BSS (excludes runtime allocations and stacks). These are build results, not a hardware heap budget or measured frame rate. Runtime diagnostics, PSRAM buffers, frame-completion handoff behavior and artwork timing still require the user's first R15 flash and panel inspection. The working vendor example is the only panel baseline currently tested.
+ESP-IDF 5.5.4, LVGL 9.2.2, Xtensa GCC 14.2.0, C++17. The R15 build and `flash-display.sh --build-only` pass. The packaged bootloader/table/application image is 669,472 bytes; application binary 603,936 bytes, within the 3,145,728-byte app partition. Section reporting shows 16,872 bytes static data/BSS (excludes runtime allocations and stacks). These are build results, not a hardware heap budget or measured frame rate. The user subsequently flashed the initial R15 target and confirmed artwork, layout/theme switching and touch/reset. Runtime diagnostics, current frame-completion behavior and exact artwork timing still require measurements on the updated image.
 
 ## Changed-area rendering checks (2026-10-23)
 

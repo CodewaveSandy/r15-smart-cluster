@@ -10,6 +10,6 @@ idf_component_register(
  "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_30.c"
  "${CLUSTER_ROOT}/assets/animations/lvgl/r15_signature.c"
  INCLUDE_DIRS "${CLUSTER_ROOT}" "../include"
- REQUIRES lvgl esp_lcd esp_driver_gpio esp_driver_i2c esp_timer esp_psram)
+ REQUIRES lvgl esp_lcd esp_driver_gpio esp_driver_i2c esp_timer esp_psram nvs_flash)
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_17)
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wall -Wextra)

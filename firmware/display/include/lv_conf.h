@@ -1,6 +1,9 @@
 #pragma once
 #define LV_CONF_H
 #define LV_COLOR_DEPTH 16
+// Service moving dirty areas at a 16 ms cadence instead of LVGL's 33 ms
+// default. Scanout/frame-complete waits still bound actual rendered updates.
+#define LV_DEF_REFR_PERIOD 16
 #define LV_USE_OS LV_OS_NONE
 #define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
 #define LV_USE_STDLIB_STRING LV_STDLIB_CLIB

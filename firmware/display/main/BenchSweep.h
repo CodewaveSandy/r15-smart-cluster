@@ -39,4 +39,11 @@ inline ClusterState benchSweep(std::uint64_t elapsedMs) {
 }
 inline bool benchLampTest(std::uint64_t elapsedMs) { return elapsedMs%24000>=21000; }
 inline bool benchLampTestLit(std::uint64_t elapsedMs) { return benchLampTest(elapsedMs)&&(elapsedMs/450)%2==0; }
+inline ClusterState parkedSettingsFixture() {
+    ClusterState s;
+    // Only stationary speed is synthesized to exercise the menu gate. No
+    // connected gear/neutral, turn phase or other vehicle reading is invented.
+    s.speedKph={0,Quality::Available};
+    return s;
+}
 }

@@ -26,7 +26,7 @@ See the [step-by-step preview guide](docs/getting-started.md), [project document
 ctest --test-dir build/lvgl --output-on-failure
 ```
 
-Eleven test suites check portable state/lifecycle/presentation, settings/radio flows, phone bridge IPC and persistence, and render 210 deterministic scenarios, including the three-second boot / two-second shutdown R15 Light Signature timeline. Simulated output is not bike verification.
+Fourteen test suites check portable state/lifecycle/presentation, settings/radio flows, phone bridge IPC and persistence, and render 210 deterministic scenarios, including the two-second boot / two-second shutdown R15 Light Signature timeline. Simulated output is not bike verification.
 
 ## Mobile companion
 

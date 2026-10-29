@@ -7,15 +7,15 @@ Updated: 2026-10-22. Status: native dashboard, Appearance preferences, unified P
 | Feature | Current state |
 | --- | --- |
 | Dashboard | Street centered speed; Track centered current/best lap with secondary speed; equal section heights; Midnight/Daylight |
-| Instruments/assets | Chakra Petch Bold Italic numerals, Inter labels/RPM, Barlow clock; 16 MDI symbols; fractional eight-piece fuel gauge and 16% reserve cue |
+| Instruments/assets | Chakra Petch Bold Italic numerals, Inter labels/RPM, Barlow clock; 17 MDI symbols; fractional eight-piece fuel gauge and 16% reserve cue |
 | Ride pages | ODO/Trip 1/Trip 2; coolant, Track, real-time consumption, average consumption, average speed, TCS, unidentified placeholder |
 | Settings | Three-category home, reversible 280 ms compact-speed transition, sequential non-touch focus and access below valid 20 km/h |
-| Appearance | Theme preview/Apply/Cancel and versioned host restart persistence; one Instrument design |
+| Appearance | Theme preview/Apply/Cancel and versioned host/native NVS restart persistence; one Instrument design |
 | Phone | Unified page, first-pair approval/code, saved/disconnected/connected, confirmed forget and unavailable states; native Android/Mac BLE discovery and protected saved trust in development |
-| Lifecycle | R15 Light Signature; boot 3,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
+| Lifecycle | R15 Light Signature; boot 2,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
 | Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation, persistent readout text buffers, dirty-driven SDL presentation and zero settled redraws |
 | Phone/Mac development connection | Native BLE discovery, cluster-approved pairing, protected saved trust, TLS session and bounded IPC; physical new discovery journey awaiting user test |
-| Pending | Navigation/Maps feasibility, clock editor/source, real trip/lap calculations, firmware NVS, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
+| Pending | Navigation/Maps feasibility, clock editor/source, real trip/lap calculations, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
 
 Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Only confirmed theme/design persist. UI warning thresholds and the Settings speed gate are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.
 
@@ -35,6 +35,10 @@ Host odometer, trips, laps, economy and average speed are fixed samples; TCS mut
 
 E2/E3 host work can proceed before delivery. E4 compile preparation can overlap, but board bring-up is a prerequisite to claiming display readiness. E5 can begin with synthetic UART data without Yamaha decoding. Custom moving-map navigation is a separate feasibility gate; it is not hidden inside E6 BLE work. The [companion implementation plan](../mobile/docs/implementation-plan.md) tracks the Android-first Flutter app, Mac bridge and future iOS work.
 
+## Agreed next implementation
+
+Retain two MCUs with separate power branches: vehicle owns acquisition/calculations/inputs/radios; display owns presentation and local Settings. Verify the supplied UART0 cable mapping and USB-console sharing, then implement/fault-test the inter-MCU connection before real phone integration or maps. The 2,000 ms boot and touch Settings entry are implemented in shared UI/native bench firmware; final wiring and radio services remain pending; display Appearance NVS is implemented.
+
 ## Next implementation gates
 
 The host baseline, dashboard, portable presentation/input, settings and applicable host optimizations are implemented. See [resource accounting](resource-budgets.md) for current measurements and [settings](settings.md) for service boundaries.
@@ -43,7 +47,7 @@ The host baseline, dashboard, portable presentation/input, settings and applicab
 2. Build and user-flash the R15 ESP-IDF target, then validate panel behavior with pinned dependencies.
 3. Measure actual flash/partition fit, internal SRAM/PSRAM, driver buffers, timing and scanout behavior before claiming display readiness.
 4. Plan Navigation and clock controls after their service/time-source contracts are reviewed; preserve the approved dashboard and lifecycle visuals.
-5. Review the versioned UART contract and vehicle/radio persistence ownership, then implement and fault-test real adapters. Host theme/design persistence is already implemented; ESP32 NVS is pending.
+5. Review the versioned UART contract and vehicle/radio persistence ownership, then implement and fault-test real adapters. Host theme/design persistence is already implemented; display Appearance NVS is implemented; target restart/power-loss/render measurements remain pending.
 
 No empty firmware scaffolding, unused queues or speculative board pins substitute for these gates.
 
@@ -56,7 +60,7 @@ Received and bench tested on **2026-10-22**: DIS08070H PCB **V3.0** (user photos
 3. Reproduce the revision-matched vendor example with its documented toolchain first. Record versions and prove build/flash/reset recovery. If it uses a different LVGL/framework version, treat it as a bring-up reference; do not mix LVGL 8 APIs into our LVGL 9.2.2 code.
 4. Establish the separate **display ESP-IDF/CMake target** only after that baseline. Validate the compatible toolchain/dependencies, power, RGB color/stride/rotation, backlight, PSRAM/DMA/VSYNC and console/UART availability. No vehicle MCU or phone is needed for the first panel proof.
 5. Port the existing shared dashboard incrementally using clearly labeled synthetic observations. Keep display-only preferences local and all LVGL access under one owner. Inspect both layouts/themes, warnings and unavailable readings on the actual 800 x 480 panel; measure flash/partition fit, memory, render timing and startup.
-6. Test the 3.00 s boot and 2.00 s shutdown behavior separately from total boot latency. Shutdown requires verified retained power; hard power removal cannot be solved by firmware alone. No bike harness connection is required for this desk bring-up.
+6. Test the 2.00 s boot and 2.00 s shutdown behavior separately from total boot latency. Shutdown requires verified retained power; hard power removal cannot be solved by firmware alone. No bike harness connection is required for this desk bring-up.
 7. Record pass/fail evidence and unresolved issues before UART/radio/map integration. The **vehicle firmware** remains a separate future target pending MCU selection. Initial bike integration remains passive/read-only with OEM function retained.
 
 First-session success means a recoverable, revision-matched panel example and measured minimal display baseline. It does not mean complete navigation, working bike telemetry, vehicle readiness or production readiness. Until target gates pass, continue using the independent host and phone previews.
@@ -68,7 +72,7 @@ First-session success means a recoverable, revision-matched panel example and me
 - Factory read: complete 4,194,304-byte image; `verify_flash` digest matched. SHA-256: `babb6b68f22ddaf221760a6321a655405cc0b74abfebab1912491a17e48a50ff`. Saved outside Git at `~/Desktop/R15-factory-backup/crowpanel-v3-factory-rom.bin`. Restore has not been exercised.
 - Delivered board MAC: `b8:f8:62:7f:2c:68`; observed Mac port `/dev/cu.usbserial-110` (may change). Stub-based reads failed; ROM `--no-stub`, 115200 baud read and vendor flash succeeded. This does not establish the underlying transfer fault.
 - Vendor merged image: 1,937,408 bytes written at zero, hash verified. User confirms UI, touch, reset and stable picture. External DHT20/GPIO output untested.
-- R15 target: `firmware/display`, C++17, ESP-IDF/CMake orchestrated by the existing PlatformIO installation, exact LVGL component lock. Reuses `embedded/ui`/application/presentation/assets. Default observations unavailable; touch/serial-selected synthetic sweep and test warnings labelled BENCH. No real odometer, radios, vehicle UART or persistence.
+- R15 target: `firmware/display`, C++17, ESP-IDF/CMake orchestrated by the existing PlatformIO installation, exact LVGL component lock. Reuses `embedded/ui`/application/presentation/assets. Default observations unavailable; touch/serial-selected synthetic sweep and test warnings labelled BENCH. No real odometer, radios or vehicle UART; display Appearance uses validated NVS storage.
 - Run `bash scripts/flash-display.sh --build-only` to build/validate/package without device access. `bash scripts/flash-display.sh` additionally checks this board/backup and writes the combined image via esptool 4.8.1, ROM loader at 115200. The agent prepares software; the user runs flashing.
 - Build verification (2026-10-22): native display target builds successfully; final script passes `--build-only` without device access. Six partition-boundary checks pass. All eleven existing host suites pass (IPC test rerun outside sandbox after a sandbox socket-bind denial); representative 800 x 480 layouts/themes with warning/unavailable states visually inspected. R15 image has not been flashed by the agent. The user subsequently flashed it successfully and supplied a photo/video showing Light Signature followed by Street with unavailable readings. The user confirms layout/theme switching and reset/touch operation. Exact timing, frame rate and heap measurements remain pending.
 - Panel measurements still required: R15 boot artwork duration/total startup, both layouts/themes, warning/unavailable states, touch/serial actions, internal heap/stack/PSRAM and VSYNC/scanout behavior. Shutdown is bench-triggered only and cannot survive unplugging USB.
@@ -169,3 +173,11 @@ Information captions/units now use black/white theme foreground, including ODO, 
 ### Leading-zero speed and brighter shift alert (2026-10-27)
 
 Available speed now retains three digit positions with 16% leading-zero opacity in Street, Track and the Settings transition; significant digits retain theme foreground, and unavailable readings remain dashes. The shift-alert gradient is brighter red; RPM thresholds and flashing timing are unchanged. Host rendering checks cover 0/1/9/10/60/99/100/180/400 and unavailable readings in both layouts/themes. All fourteen host suites pass (phone IPC requires local socket permission), and the display build/package passes without device access. Representative 800 x 480 layouts/themes, warnings and unavailable readings were visually inspected. Physical-panel brightness remains pending user validation.
+
+## Touch Settings and boot verification (2026-10-29)
+
+Shared boot duration is now 2,000 ms; shutdown remains 2,000 ms. Header gear and release-based touch navigation reuse the existing Settings reducer and access gates on host/native display. Non-touch controls remain available. All fourteen host suites pass (local-socket IPC run with socket permission); timing and touch boundary checks pass, and representative 800 × 480 Street/Track, themes, warning/unavailable and Settings frames were visually inspected. Settled redraw count remains zero. Display build/package passes without device access; updated touch behavior and artwork timing still require panel verification. Real radios and UART wiring remain pending; Appearance now has a bounded NVS worker.
+
+Appearance follow-up: theme choices stack in the left column with a live shared-component dashboard preview across the right two columns. Parked Settings fixtures synthesize speed only, without selecting N or flashing left. Tight speed text layers and endpoint menu reveal reduce transition drawing work; actual smoothness requires panel feedback. Preference worker checks exercise restart, malformed records, queue saturation and open/write/commit errors without hardware.
+
+User panel feedback (2026-10-29): after flashing this follow-up, the user reports everything working correctly, covering the revised Settings transition, parked fixture, Appearance preview and Apply behavior. This is user-reported functional acceptance; exact frame timing, retained power and power-cut durability remain unmeasured.

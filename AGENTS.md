@@ -12,7 +12,7 @@ Normalized shared model/protocol code must not depend on LVGL, board drivers or 
 
 ## Current phase
 
-The host dashboard, lifecycle, Settings, Appearance preferences and Bluetooth/Wi-Fi demos are implemented. Navigation/clock, UART, real radio/vehicle adapters and hardware firmware are pending. Continue incremental implementation and verification under docs/implementation-plan.md. Hardware firmware requires board-specific validation. Preserve the specified UI; no unsolicited redesign. Boot lasts 3.00 s and shutdown lasts 2.00 s as defined in docs/power-lifecycle.md. Shutdown requires retained power; never claim a firmware-only guarantee. Full Maps/projection remains unresolved.
+The host dashboard, lifecycle, Settings, Appearance preferences and Phone UI are implemented. Native display bench firmware and vehicle discrete-input USB firmware are implemented; inter-MCU UART, real radio services, Navigation/clock and vehicle calculations remain pending. Vehicle owns acquisition/inputs/calculations/radios; display owns presentation/local Settings. Each board has a separate power branch; final power hardware and UART connector/USB sharing require verification. Continue incremental implementation and verification under docs/implementation-plan.md. Hardware firmware requires board-specific validation. Preserve the specified UI; no unsolicited redesign. Boot lasts 2.00 s and shutdown lasts 2.00 s as defined in docs/power-lifecycle.md. Shutdown requires retained power; never claim a firmware-only guarantee. Full Maps/projection remains unresolved.
 
 ## Work procedure
 

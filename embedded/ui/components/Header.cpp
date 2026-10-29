@@ -16,12 +16,14 @@ Header::Header(lv_obj_t* parent) {
     qs_=label(header_.get(),HeaderLayout::qs,"QS"); vva_=label(header_.get(),HeaderLayout::vva,"VVA");
     clock_=label(header_.get(),HeaderLayout::clock,"—:—",fonts::clock); alignRight(clock_);
     date_=label(header_.get(),HeaderLayout::date,"CLOCK UNAVAILABLE",fonts::caption); alignRight(date_);
+    settings_=createIcon(header_.get(),HeaderLayout::settings.x+6,HeaderLayout::settings.y+10,Icon::Settings);
     rules_[0].reset(box(parent,HeaderLayout::divider)); rules_[1].reset(box(parent,HeaderLayout::gearDivider));
 }
 void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,int settingsProgress) {
     for(auto* label:{mode_,subtitle_,qs_,vva_}) fade(label,255-settingsProgress*255/1000);
     for(const auto& r:rules_) paint(r.get(),p.line);
     ink(date_,p.ink);
+    ink(settings_,p.ink);
     const bool gearChanged=lastGear_.update(s.gear);
     const bool batteryChanged=lastPhoneBattery_.update(s.phoneBatteryPercent);
     const bool connectionChanged=lastPhoneConnection_.update(s.phoneConnected);

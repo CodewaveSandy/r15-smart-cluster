@@ -11,8 +11,9 @@ struct HeaderLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::headerRule};
     static constexpr TextArea gear{28,16,65}, mode{120,26,160}, subtitle{121,56,200};
     static constexpr TextArea phoneBattery{508,36,100}, qs{288,36,48}, vva{344,36,60};
-    static constexpr TextArea clock{650,22,122}, date{630,57,142};
+    static constexpr TextArea clock{598,22,122}, date{578,57,142};
     static constexpr Point phone{456,31};
+    static constexpr Rect settings{728,20,44,52};
     static constexpr Rect divider{Metrics::margin,Metrics::headerRule,Metrics::content,1};
     static constexpr Rect gearDivider{96,22,1,48};
 };
@@ -67,8 +68,8 @@ struct SettingsLayout {
 struct AppearanceLayout {
     static constexpr Rect bounds=SettingsLayout::bounds;
     static constexpr TextArea title{28,5,500}, themeTitle{28,42,500}, back{690,12,82};
-    static constexpr Rect theme(int i) { return {28+i*382,64,362,82}; }
-    static constexpr Rect design{28,164,744,90};
+    static constexpr Rect theme(int i) { return {28,64+i*88,220,76}; }
+    static constexpr Rect design{264,60,508,216};
     static constexpr Rect cancel{484,278,136,44},apply{636,278,136,44};
     static constexpr TextArea status{28,292,440};
 };

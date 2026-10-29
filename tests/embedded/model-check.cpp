@@ -22,15 +22,15 @@ int main() {
         }
     }
     Lifecycle l; check(l.phase()==Phase::Off,"Initial off"); l.key(true,100);
-    l.advance(3099); check(l.phase()==Phase::Boot,"Boot cannot finish early");
-    l.key(true,3080); l.advance(3100); check(l.phase()==Phase::Running,"Repeated on does not restart boot");
+    l.advance(2099); check(l.phase()==Phase::Boot,"Boot cannot finish early");
+    l.key(true,2080); l.advance(2100); check(l.phase()==Phase::Running,"Repeated on does not restart boot");
     l.key(false,4000); l.advance(5999); check(l.phase()==Phase::Shutdown,"Shutdown cannot finish early");
     l.key(true,6000); check(l.phase()==Phase::Running,"Key-on cancels shutdown");
     l.key(false,7000); l.advance(9000); check(l.phase()==Phase::ReadyForPowerOff,"Shutdown completes");
     l.key(true,10000); check(l.phase()==Phase::Boot,"New power cycle boots");
     s={}; s.engineWarning={true,Quality::Available}; check(urgent(s),"Valid urgent warning");
     s.engineWarning.quality=Quality::Stale; check(!urgent(s),"Stale flag not treated as current warning");
-    check(Lifecycle::bootMs==3000&&Lifecycle::shutdownMs==2000,"Animation duration requirement");
+    check(Lifecycle::bootMs==2000&&Lifecycle::shutdownMs==2000,"Animation duration requirement");
     using namespace cluster::presentation;
     for(int value:{0,1,6,9,10,12,13,15,16,17,19,20,21,50,72,99,100}) {
         auto on=fuelPresentation({value,Quality::Available},0);

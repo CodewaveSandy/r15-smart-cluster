@@ -1,6 +1,6 @@
 # Project documentation
 
-The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 480 dual-ESP32 Yamaha R15 V4 cluster. Dashboard, Appearance preferences and unified Phone UI are implemented. The opt-in Mac bridge supports native BLE discovery and TLS Wi-Fi sessions; vehicle observations remain simulated. The separate ESP-IDF display target is prepared for first R15 panel verification; the official V3.0 vendor example has been user-flashed and bench checked. Embedded moving-map feasibility remains pending. An Android-first Flutter companion foundation is documented separately, with future iOS support.
+The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 480 dual-ESP32 Yamaha R15 V4 cluster. Dashboard, Appearance preferences and unified Phone UI are implemented. The opt-in Mac bridge supports native BLE discovery and TLS Wi-Fi sessions; vehicle observations remain simulated. The native ESP-IDF display bench target has been user-flashed with initial artwork/layout/theme/touch observations; current firmware changes still require panel verification. Vehicle discrete-input USB bench firmware is implemented; the inter-MCU UART and ESP32 radio services remain pending. Embedded moving-map feasibility remains pending. An Android-first Flutter companion foundation is documented separately, with future iOS support.
 
 | Guide | Responsibility |
 | --- | --- |

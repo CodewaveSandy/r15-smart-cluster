@@ -31,6 +31,8 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         ink(root_.get(),p.ink);
     }
     const auto animation=animationFrame(life,warning,now);
+    touchVisible_=animation.dashboardVisible;
+    touchMenuReady_=settingsProgress==1000;
     // The opaque lifecycle cover makes dashboard mutations invisible. Resume
     // directly from the latest snapshot on reveal; never replay a hidden backlog.
     if(animation.dashboardVisible) {

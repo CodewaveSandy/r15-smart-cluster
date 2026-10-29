@@ -2,10 +2,30 @@
 #include "embedded/ui/ReadoutText.h"
 #include "embedded/ui/Icons.h"
 #include "embedded/ui/Geometry.h"
+#include "embedded/ui/TouchNavigation.h"
+#include <cassert>
 #include <cstdio>
 #include <initializer_list>
 int main() {
     using namespace cluster::ui;
+    {
+        using namespace cluster;
+        Lifecycle life; life.key(true,0); life.advance(2000);
+        ClusterState state; DisplayOptions view;
+        settingsTouch(view,state,life,750,40,true); assert(!view.settings);
+        state.speedKph={0,Quality::Available};
+        settingsTouch(view,state,life,750,40,true); assert(view.settings);
+        settingsTouch(view,state,life,100,240,false); assert(!view.appearance);
+        settingsTouch(view,state,life,100,240,true); assert(view.appearance);
+        settingsTouch(view,state,life,100,310,true); assert(view.light);
+        settingsTouch(view,state,life,500,440,true); assert(!view.appearance&&!view.light);
+        settingsTouch(view,state,life,750,155,true); assert(!view.settings);
+        state.speedKph={20,Quality::Available};
+        settingsTouch(view,state,life,750,40,true); assert(!view.settings);
+        state.speedKph={0,Quality::Available}; state.engineWarning={true,Quality::Available};
+        settingsTouch(view,state,life,750,40,true); assert(!view.settings);
+        assert(!settingsTouch(view,state,life,800,40,true));
+    }
     lv_init();
     int failed=0;
     const auto fits=[&](const lv_font_t* font,const char* value,int width) {

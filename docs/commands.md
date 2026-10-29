@@ -16,7 +16,7 @@ Connect the Elecrow display to the Mac by USB, close serial monitors and run:
 bash scripts/flash-display.sh
 ```
 
-This builds the current source, packages/checks the display image, checks the saved factory backup and connected board identity, then flashes the delivered V3.0 display and verifies the write hash. Default port: `/dev/cu.usbserial-110`. Keep USB connected until verification finishes. This installs the current **desk-test UI**; real vehicle UART, phone services and persistence are not integrated into that image yet.
+This builds the current source, packages/checks the display image, checks the saved factory backup and connected board identity, then flashes the delivered V3.0 display and verifies the write hash. Default port: `/dev/cu.usbserial-110`. Keep USB connected until verification finishes. This installs the current **desk-test UI**; display Appearance saving uses NVS; real vehicle UART and phone services are not integrated yet.
 
 | Command | What it does |
 | --- | --- |
@@ -25,7 +25,7 @@ This builds the current source, packages/checks the display image, checks the sa
 | `R15_DISPLAY_PORT=/dev/cu.YOUR_DISPLAY_PORT bash scripts/flash-display.sh` | Builds and flashes the display using a different port. |
 | `R15_FACTORY_BACKUP="/absolute/path/crowpanel-v3-factory-rom.bin" bash scripts/flash-display.sh` | Uses a moved factory backup; the script still checks its expected size/hash before flashing. |
 
-After flashing: top-left tap changes layout, top-right changes theme, center starts/stops the synthetic demo, lower-left cycles trips, lower-middle cycles info, and the fuel area previews shutdown. Tap after black to boot. Full serial controls and recovery instructions: [display firmware guide](../firmware/display/README.md). Factory restoration writes an older image and is documented there separately.
+After flashing: top-left tap changes layout, top-right outside the gear changes theme, center starts/stops the synthetic demo, lower-left cycles trips, lower-middle cycles info, and the fuel area previews shutdown. Tap after black to boot. The gear opens Settings when its existing speed/quality/warning gates allow it. Serial `p` selects a stationary synthetic fixture for bench Settings testing; `s` opens, `q` goes Back, `[`/`]` moves focus and Enter selects. Boot and shutdown artwork each last 2 seconds. Full serial controls and recovery instructions: [display firmware guide](../firmware/display/README.md). Factory restoration writes an older image and is documented there separately.
 
 ## Host dashboard preview and captures
 
@@ -83,6 +83,7 @@ Run from repository root:
 | `ctest --test-dir build/lvgl --output-on-failure` | Runs all 14 registered host suites, including rendering and local-socket IPC. Build first. |
 | `ctest --test-dir build/lvgl -N` | Lists registered test names without running them. |
 | `ctest --test-dir build/lvgl -R '^gear-usb-link$' --output-on-failure` | Runs just the USB input/codec suite. Replace the expression with another listed test name to select it. |
+| `python3 tests/embedded/preference-store-check.py` | Compiles/runs the actual firmware preference adapter with fake NVS/RTOS APIs to check restart, invalid data, bounded queues and storage failures; no hardware. |
 | `python3 tests/embedded/display-image-check.py` | Tests partition/image packager bounds without hardware access. |
 | `python3 tests/embedded/vehicle-flash-check.py` | Tests flash-script guards, backup ordering and recovery using fake tools; never flashes a device. |
 | `python3 tests/host/phone-bridge-check.py` | Checks phone sessions and real local TLS/IPC; requires local socket access and OpenSSL. |
@@ -130,3 +131,5 @@ Return to repository root before using these. Generation commands rewrite tracke
 | `R15_VEHICLE_PYTHON` / `R15_VEHICLE_ESPTOOL` | Vehicle-script overrides for Python/esptool locations; normally leave unset. |
 
 For target recovery, toolchain details and wiring, use the linked authoritative guides rather than substituting flash offsets, board pins or images. Update this reference whenever adding/changing a public script or command option.
+
+In native desk-test firmware, tapping the gear (or serial `s`) from the idle no-vehicle state explicitly selects a parked synthetic fixture and opens Settings. The header switches to `BENCH / SYNTHETIC DATA`; this is not a received zero-speed observation. Moving demo/test warnings are never replaced to grant access. Serial `b` returns to boot with unavailable observations. Real/host data-quality gates remain unchanged.

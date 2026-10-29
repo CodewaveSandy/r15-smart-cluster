@@ -11,7 +11,7 @@ Implement the geometry and behavior specified here. Capture deterministic 800 x 
 | Element | Specified baseline |
 | --- | --- |
 | Canvas and content width | 800 x 480; left/right margin 28; usable width 744 |
-| Header | Gear number/N only (no GEAR caption); mode, QS/VVA, phone/battery, clock/date; divider y=85 |
+| Header | Gear number/N only (no GEAR caption); mode, QS/VVA, phone/battery, clock/date; divider y=85; top-right 44 × 52 px Settings gear, clock/date shifted left to leave an 8 px gap |
 | Gear / mode / clock | Chakra Petch 72 px Bold Italic / Inter 23 px SemiBold / Barlow 30 px SemiBold |
 | Tell-tales | Row y=98; arrows at opposite edges |
 | Tachometer | x=28, y=144, width=744; fill begins 20 px below component top |
@@ -74,7 +74,7 @@ Required comparisons: both layouts x both themes; neutral and gears; 0/max/unkno
 
 ## Boot and shutdown artwork
 
-Boot lasts exactly 3.00 s and shutdown lasts exactly 2.00 s using the selected R15 Light Signature. Draw mirrored tapered blue slashes with crisp white cores around a small solid-white R15 wordmark; use a black backdrop, restrained glow and controlled opacity/retraction. Avoid flashes and oversized zooms. Preserve the dashboard at the reveal/fade endpoints and immediate urgent-warning interruption. See [power lifecycle](power-lifecycle.md) for state, power and test requirements.
+Boot lasts exactly 2.00 s and shutdown lasts exactly 2.00 s using the selected R15 Light Signature. Draw mirrored tapered blue slashes with crisp white cores around a small solid-white R15 wordmark; use a black backdrop, restrained glow and controlled opacity/retraction. Avoid flashes and oversized zooms. Preserve the dashboard at the reveal/fade endpoints and immediate urgent-warning interruption. See [power lifecycle](power-lifecycle.md) for state, power and test requirements.
 
 ## Typography roles and preview quality
 
@@ -104,6 +104,6 @@ Bundle source version, hashes, Apache 2.0 license and notices. Only selected gly
 
 ## Settings presentation
 
-The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Three category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host saved preferences. Phone UI/demos follow the same focus/back navigation; Navigation, real radio provisioning and firmware NVS remain pending.
+The implemented Settings flow follows [settings.md](settings.md). Retain the header gear and full tell-tale row while moving speed to center x=200/y=22. Three category tiles use shared geometry and MDI glyphs; focus uses a 2 px accent border. A reversible 280 ms transition moves/scales the same speed label and follows with its unit. Normal layouts restore exactly. Settings requires a valid speed below 20 km/h; urgent warnings, stale speed and lifecycle changes restore instruments immediately. Appearance now offers Midnight/Daylight previews, one Instrument design, Apply/Cancel and host/native NVS saved preferences. Appearance stacks theme choices on the left with an actual-component live preview spanning the right two columns. Phone UI/demos follow the same focus/back navigation; Navigation and real radio provisioning remain pending; NVS power-loss/render coexistence still requires target testing.
 
 Radio pages share the compact instrument strip, a status card and bounded context-sensitive action rows. Unknown service quality offers Back, and Forget confirmation defaults to Cancel. See [settings and connectivity](settings.md) for both radio flows and provisioning boundaries.

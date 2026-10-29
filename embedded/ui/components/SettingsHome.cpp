@@ -22,8 +22,8 @@ SettingsHome::SettingsHome(lv_obj_t* parent):root_(box(parent,SettingsLayout::bo
     show(root_.get(),false);
 }
 void SettingsHome::update(const ViewOptions& options,const PhoneState& phone,const Palette& p,int progress) {
-    show(root_.get(),progress>0&&!options.appearance&&!options.bluetooth&&!options.wifi&&!options.phone);
-    if(progress==0) return;
+    show(root_.get(),progress==1000&&!options.appearance&&!options.bluetooth&&!options.wifi&&!options.phone);
+    if(progress!=1000) return;
     text(details_[1],!phone.available()?"Status unavailable":phone.connected?"Connected":phone.paired?"Waiting for saved phone":"Pair your phone");
     const lv_opa_t alpha=progress*255/1000;
     for(auto* label:{title_,subtitle_,back_}) fade(label,alpha);

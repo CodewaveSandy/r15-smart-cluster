@@ -1,10 +1,22 @@
 #include "simulator/lvgl/PreferenceFile.h"
 #include <chrono>
+#include "embedded/application/SettingsNavigation.h"
 #include <cstdio>
 int main(int argc,char** argv) {
     using namespace cluster;
     int failed=0;
     const auto check=[&](bool ok,const char* why){if(!ok){++failed;std::fprintf(stderr,"FAIL: %s\n",why);}};
+    {
+        DisplayOptions options; ClusterState state; state.speedKph={0,Quality::Available};
+        Lifecycle life;life.key(true,0);life.advance(Lifecycle::bootMs);
+        options.settings=options.appearance=options.appearanceSaving=true;
+        options.appearanceFocus=1;
+        check(settingsAction(options,SettingsAction::Select,state,life)==SettingsEffect::None&&!options.light,"Pending commit blocks another theme selection");
+        options.appearanceFocus=4;
+        check(settingsAction(options,SettingsAction::Select,state,life)==SettingsEffect::None,"Pending commit suppresses repeated Apply");
+        settingsAction(options,SettingsAction::Back,state,life);
+        check(!options.appearance&&!options.appearanceSaving,"Back cancels preview while storage completes independently");
+    }
     Preferences value;
     const auto valid=encodePreferences({true,DashboardDesign::Instrument});
     check(decodePreferences(valid,value)&&value.light,"Preference codec round trip");

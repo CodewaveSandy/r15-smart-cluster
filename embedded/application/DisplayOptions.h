@@ -6,7 +6,7 @@ struct DisplayOptions {
     bool light=false, track=false, imperial=false;
     bool settings=false;
     unsigned settingsFocus=0;
-    bool appearance=false, appearanceOriginalLight=false, appearanceSaveFailed=false;
+    bool appearance=false, appearanceOriginalLight=false, appearanceSaveFailed=false, appearanceSaving=false;
     unsigned appearanceFocus=0;
     bool phone=false,phoneForgetConfirmation=false;
     unsigned phoneFocus=0;

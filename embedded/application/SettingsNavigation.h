@@ -16,9 +16,10 @@ inline SettingsEffect closeBluetooth(DisplayOptions& options) {
 inline SettingsEffect closeRadio(DisplayOptions& o) { if(o.wifi) return closeWifi(o);return closeBluetooth(o); }
 inline void cancelAppearance(DisplayOptions& options) {
     if(options.appearance) options.light=options.appearanceOriginalLight;
-    options.appearance=false; options.appearanceSaveFailed=false;
+    options.appearance=false; options.appearanceSaveFailed=false; options.appearanceSaving=false;
 }
 inline void appearanceSaveResult(DisplayOptions& options,bool saved) {
+    options.appearanceSaving=false;
     options.appearanceSaveFailed=!saved;
     if(saved) { options.appearanceOriginalLight=options.light; options.appearance=false; }
 }
@@ -111,6 +112,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
         default:break;
         }
     } else if(options.appearance) {
+        if(options.appearanceSaving) return SettingsEffect::None;
         switch(action) {
         case SettingsAction::Next:case SettingsAction::Right:case SettingsAction::Down:
             options.appearanceFocus=(options.appearanceFocus+1)%5; break;
@@ -130,7 +132,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
         case SettingsAction::Select:
             if(options.settingsFocus==0) {
                 options.appearance=true; options.appearanceOriginalLight=options.light;
-                options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false;
+                options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false; options.appearanceSaving=false;
             } else if(options.settingsFocus==1) {
                 options.phone=true;options.phoneFocus=0;options.phoneForgetConfirmation=false;
             }

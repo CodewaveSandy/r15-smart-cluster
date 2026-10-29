@@ -14,6 +14,7 @@
 #include "components/RideInfoPanel.h"
 #include "components/FuelGauge.h"
 #include "components/LifecycleOverlay.h"
+#include "TouchNavigation.h"
 
 namespace cluster::ui {
 // Owns the root and fixed-size component members. Components are destroyed
@@ -29,6 +30,10 @@ public:
     Dashboard(const Dashboard&)=delete;
     Dashboard& operator=(const Dashboard&)=delete;
     void update(const ClusterState&,const ViewOptions&,const Lifecycle&,std::uint64_t now);
+    std::optional<SettingsEffect> touch(ViewOptions& view,const ClusterState& state,const Lifecycle& life,int x,int y) {
+        if(!touchVisible_||life.phase()!=Phase::Running) return std::nullopt;
+        return settingsTouch(view,state,life,x,y,touchMenuReady_);
+    }
 private:
     lv_grad_dsc_t shiftGradient_{};
     ObjectOwner root_;
@@ -45,5 +50,6 @@ private:
     FuelGauge fuel_;
     LifecycleOverlay overlay_;
     bool initialized_=false, previousLight_=false, previousShift_=false;
+    bool touchVisible_=false,touchMenuReady_=false;
 };
 } // namespace cluster::ui

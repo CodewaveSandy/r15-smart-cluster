@@ -119,7 +119,7 @@ void help() {
         "U: metric/imperial | X: unavailable/restore\n"
         "L/R: turn signals | Z: hazards | H: high beam | A/E/C: warnings\n"
         "P: stationary demo | S: settings | Arrows: focus | Enter: select | Backspace/Esc: back\n"
-        "O: key on/off (3000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
+        "O: key on/off (2000 ms boot / 2000 ms shutdown) | Space: reset demo\n"
         "F5/F6: Wi-Fi fail next request / unavailable toggle\n"
         "F3: fail next Bluetooth request | F4: Bluetooth service unavailable/restore\n"
         "F1: print controls | F2: all icons | Esc: quit | No real bike connected.");
@@ -387,7 +387,7 @@ int main(int argc,char** argv) {
                     Lifecycle ending; ending.key(true,0); ending.advance(Lifecycle::bootMs); ending.key(false,3000);
                     dashboard.update(state,view,ending,3100); capture(output/("signature-fade-"+suffix+".bmp"));
                 }
-                // Stage boundaries for the R15 light signature with three-second boot and two-second shutdown.
+                // Stage boundaries for the R15 light signature with two-second boot and two-second shutdown.
                 view={}; view.time="20:55"; view.date="18 Oct 2026";
                 const auto renderAnimation=[&](bool bootAnimation,unsigned elapsed,const char* prefix) {
                     Lifecycle animation;
@@ -398,7 +398,7 @@ int main(int argc,char** argv) {
                     dashboard.update(state,view,animation,origin+elapsed);
                     char filename[64]; std::snprintf(filename,sizeof filename,"%s-%04u.bmp",prefix,elapsed);
                     capture(output/filename);
-                    if(bootAnimation&&elapsed==1500) {
+                    if(bootAnimation&&elapsed==1000) {
                         // The wordmark must render, and tapered slashes must not
                         // expand into filled wedges above the intended blades.
                         int white=0;
@@ -415,7 +415,7 @@ int main(int argc,char** argv) {
                     }
                 };
                 for(unsigned elapsed:{0u,100u,250u,349u,350u,500u,700u,850u,1000u,1199u,1200u,1450u,1699u,1700u,1850u,1999u,2000u})
-                    renderAnimation(true,elapsed*3/2,"boot-stage");
+                    renderAnimation(true,elapsed,"boot-stage");
                 for(unsigned elapsed:{0u,100u,199u,200u,300u,399u,400u,800u,1000u,1249u,1250u,1500u,1750u,1899u,1900u,1999u,2000u})
                     renderAnimation(false,elapsed,"shutdown-stage");
                 if(animationSequence) {
@@ -429,7 +429,8 @@ int main(int argc,char** argv) {
                     const auto suffix=std::string(track?"track":"street")+(light?"-day":"-night");
                     dashboard.update(parked,view,life,offset+6000); lv_refr_now(nullptr);
                     const auto before=pixels;
-                    settingsAction(view,SettingsAction::Open,parked,life);
+                    if(!dashboard.touch(view,parked,life,750,40)||!view.settings)
+                        throw std::runtime_error("Touch gear failed to open Settings");
                     dashboard.update(parked,view,life,offset+6100);
                     dashboard.update(parked,view,life,offset+6240); capture(output/("settings-enter-"+suffix+".bmp"));
                     dashboard.update(parked,view,life,offset+6380); capture(output/("settings-home-"+suffix+".bmp"));
@@ -440,6 +441,8 @@ int main(int argc,char** argv) {
                     view.settingsFocus=0;
                     settingsAction(view,SettingsAction::Select,parked,life);
                     dashboard.update(parked,view,life,offset+6450); capture(output/("appearance-home-"+suffix+".bmp"));
+                    if(pixels[207*800+345]!=lv_color_to_u16(lv_color_hex(light?cluster::ui::daylight.background:cluster::ui::midnight.background)))
+                        throw std::runtime_error("Live Appearance preview does not follow selected theme");
                     flushMetrics={};
                     for(int idle=0;idle<100;++idle) { dashboard.update(parked,view,life,offset+6450); lv_refr_now(nullptr); }
                     if(flushMetrics.calls) throw std::runtime_error("Settled Appearance redraw without changes");
@@ -554,6 +557,12 @@ int main(int argc,char** argv) {
                             event.window.event==SDL_WINDOWEVENT_SIZE_CHANGED ||
                             event.window.event==SDL_WINDOWEVENT_RESTORED)) repaint=true;
                         if(event.type==SDL_QUIT) running=false;
+                        if(event.type==SDL_MOUSEBUTTONUP&&event.button.button==SDL_BUTTON_LEFT) {
+                            float x=0,y=0;
+                            SDL_RenderWindowToLogical(renderer.get(),event.button.x,event.button.y,&x,&y);
+                            if(const auto effect=dashboard.touch(view,missing?ClusterState{}:state,life,int(x),int(y)))
+                                dispatchEffect(*effect,now);
+                        }
                         if(event.type!=SDL_KEYDOWN) continue;
                         const auto key=event.key.keysym.sym;
                         if(event.key.repeat && key!=SDLK_LEFT&&key!=SDLK_RIGHT&&key!=SDLK_UP&&key!=SDLK_DOWN&&key!=SDLK_LEFTBRACKET&&key!=SDLK_RIGHTBRACKET) continue;

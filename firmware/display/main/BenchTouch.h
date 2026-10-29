@@ -1,6 +1,11 @@
 #pragma once
 #include "embedded/application/Lifecycle.h"
 namespace cluster::board {
+// Explicit desk firmware only: a Settings request may enter a labelled parked
+// fixture from the idle no-vehicle screen. Never mask moving/demo warnings.
+inline bool parkForSettings(Phase phase,bool demo,bool warnings,bool parked,bool settingsRequested) {
+    return phase==Phase::Running&&!demo&&!warnings&&!parked&&settingsRequested;
+}
 // Desk-test navigation only. ReadyForPowerOff remains powered over USB.
 inline char benchTouchAction(Phase phase,int x,int y) {
     if(x<0||x>=800||y<0||y>=480) return 0;

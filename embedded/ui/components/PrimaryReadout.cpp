@@ -27,6 +27,9 @@ int centerInstrument(lv_obj_t* label,const lv_font_t* font,TextArea area,int sca
         i=nextIndex;
     }
     const int origin=area.x+area.width/2-(left+right)*scale/512;
+    lv_point_t textBounds{};
+    lv_text_get_size(&textBounds,lv_label_get_text(label),font,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+    lv_obj_set_width(label,textBounds.x+8);
     lv_obj_set_x(label,origin);
     return origin+right*scale/256;
 }
@@ -96,6 +99,7 @@ void PrimaryReadout::update(const ClusterState& s,const ViewOptions& v,const Pal
             lv_font_glyph_dsc_t glyph{};
             if(lv_font_get_glyph_dsc(font,&glyph,'0',i+1<zeros?'0':unsigned(digits[0]))) prefixAdvance+=glyph.adv_w;
         }
+        lv_obj_set_width(leadingZeros_.get(),std::max(1,prefixAdvance+4));
         lv_obj_set_x(speed_.get(),lv_obj_get_style_x(speed_.get(),0)+prefixAdvance*scale/256);
         lv_obj_set_pos(unit_.get(),right+10,unitArea.y+(SettingsLayout::unitY-unitArea.y)*settingsProgress/1000);
     }

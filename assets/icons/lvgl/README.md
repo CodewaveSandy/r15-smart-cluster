@@ -1,6 +1,6 @@
 # LVGL dashboard icon subsets
 
-Generated runtime assets: cluster_icons_32.c (15 glyphs) and cluster_icons_30.c (ABS).
+Generated runtime assets: cluster_icons_32.c (16 glyphs) and cluster_icons_30.c (ABS).
 
 Sources, upstream license, notices and exact selection are in [material-design](../material-design/README.md). Run bash scripts/generate-icons.sh to regenerate with the locked font converter. Keep generated assets checked in; do not edit bitmap data by hand.
 

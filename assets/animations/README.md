@@ -1,6 +1,6 @@
 # R15 Light Signature artwork
 
-Current design: user-selected [concept 02](../../docs/reference/r15-light-signature-concept.png). Two mirrored blue light slashes are drawn procedurally in LVGL; a small solid-white R15 wordmark sits between them. Boot lasts three seconds; shutdown lasts two seconds. The dashboard is unchanged.
+Current design: user-selected [concept 02](../../docs/reference/r15-light-signature-concept.png). Two mirrored blue light slashes are drawn procedurally in LVGL; a small solid-white R15 wordmark sits between them. Boot lasts two seconds; shutdown lasts two seconds. The dashboard is unchanged.
 
 - [Source wordmark](source/r15-signature.png): white-on-black PNG generated with the built-in imagegen tool from the approved concept.
 - [Accepted prompt](prompts.md): reference role and generation request.
