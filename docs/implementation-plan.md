@@ -1,6 +1,6 @@
 # Implementation status and plan
 
-Updated: 2026-10-22. Status: native dashboard, Appearance preferences, unified Phone UI and native nearby-discovery development adapter implemented; Navigation, hardware firmware and integrations pending.
+Updated: 2026-10-30. Status: native dashboard, Appearance preferences, unified Phone UI and native nearby-discovery development adapter implemented; Navigation, hardware firmware and integrations pending.
 
 ## Current implementation
 
@@ -15,7 +15,8 @@ Updated: 2026-10-22. Status: native dashboard, Appearance preferences, unified P
 | Lifecycle | R15 Light Signature; boot 2,000 ms, shutdown 2,000 ms; immediate valid urgent-warning reveal |
 | Host optimizations | Persistent RAII components, changed-field updates, bounded formatting, role-specific font/icon subsets, deferred covered instrumentation, persistent readout text buffers, dirty-driven SDL presentation and zero settled redraws |
 | Phone/Mac development connection | Native BLE discovery, cluster-approved pairing, protected saved trust, TLS session and bounded IPC; physical new discovery journey awaiting user test |
-| Pending | Navigation/Maps feasibility, retained/phone/network clock source, real trip/lap calculations, UART codec, real radio/vehicle adapters, panel/power/hardware verification |
+| Vehicle BLE bench | UART return controls, authenticated numeric-comparison bonding and NVS bond persistence implemented; Android/panel/radio acceptance pending; see [bench procedure](phone-uart-bench.md) |
+| Pending | Navigation/Maps feasibility, retained/phone/network clock source, real trip/lap calculations, full telemetry/map UART contract, Wi-Fi/application services and real vehicle adapters, panel/power/hardware verification |
 
 Host odometer, trips, laps, economy and average speed are fixed samples; TCS mutation and radio flows are simulator-only. Confirmed theme/design and clock formats/timezone persist. UI warning thresholds are user-selected behavior, not verified Yamaha limits or proof of safe use while moving.
 

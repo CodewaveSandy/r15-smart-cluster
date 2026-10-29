@@ -1,5 +1,8 @@
 #pragma once
 #include "shared/protocol/GearPacket.h"
+#include "shared/protocol/PhoneLink.h"
+#include "embedded/application/SettingsNavigation.h"
+#include <cstdio>
 #include "driver/uart.h"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -10,7 +13,8 @@ namespace cluster::board {
 // Dedicated UART1 RX on GPIO_D IO38 preserves UART0 USB console/programming.
 class VehicleUart {
 public:
-    void initialize() {
+    void initialize(std::uint32_t session=1) {
+        phone_.initialize(session);
         uart_config_t cfg{};cfg.baud_rate=115200;cfg.data_bits=UART_DATA_8_BITS;
         cfg.parity=UART_PARITY_DISABLE;cfg.stop_bits=UART_STOP_BITS_1;
         cfg.flow_ctrl=UART_HW_FLOWCTRL_DISABLE;cfg.source_clk=UART_SCLK_DEFAULT;
@@ -20,7 +24,7 @@ public:
     }
     void reset() {
         ESP_ERROR_CHECK(uart_flush_input(UART_NUM_1));
-        xQueueReset(events_);receiver_.reset();
+        xQueueReset(events_);receiver_.reset();status_.reset();phone_.reset();
     }
     void poll(std::uint64_t now) {
         // Inspect at most the driver's eight queued events each UI cycle.
@@ -32,9 +36,32 @@ public:
         uint8_t bytes[512];
         const int count=uart_read_bytes(UART_NUM_1,bytes,sizeof bytes,0);
         if(count<0){++overruns_;reset();return;}
-        for(int i=0;i<count;++i) if(receiver_.push(bytes[i],now))++accepted_;
+        for(int i=0;i<count;++i) {
+            if(receiver_.push(bytes[i],now))++accepted_;
+            if(status_.push(bytes[i],now,phonelink::Kind::Status))phone_.update(status_.latest(),now);
+        }
+        phonelink::Packet control;
+        if(phone_.outgoing(now,control)) {
+            const auto bytes=phonelink::encode(control);
+            std::fwrite(bytes.data(),1,bytes.size(),stdout);std::fputc('\n',stdout);
+        }
     }
-    ClusterState state(std::uint64_t now)const{return receiver_.state(now);}
+    ClusterState state(std::uint64_t now)const {
+        auto state=receiver_.state(now);state.phone=phone_.phone(now,receiver_.latest().session);
+        state.phoneConnected={state.phone.connected,state.phone.quality};return state;
+    }
+    bool command(SettingsEffect effect,std::uint64_t now) {
+        phonelink::Action action;
+        switch(effect){
+        case SettingsEffect::PhonePair:action=phonelink::Action::Pair;break;
+        case SettingsEffect::PhoneApprove:action=phonelink::Action::Approve;break;
+        case SettingsEffect::PhoneReject:action=phonelink::Action::Reject;break;
+        case SettingsEffect::PhoneDisconnect:action=phonelink::Action::Disconnect;break;
+        case SettingsEffect::PhoneForget:action=phonelink::Action::Forget;break;
+        default:return false;
+        }
+        return phone_.post(action,now,receiver_.latest().session);
+    }
     gearlink::ButtonClicks takeClicks(){return receiver_.takeClicks();}
     bool received()const{return receiver_.received();}
     bool fresh(std::uint64_t now)const{return receiver_.fresh(now);}
@@ -43,6 +70,7 @@ public:
 private:
     QueueHandle_t events_=nullptr;
     gearlink::Receiver receiver_;
+    phonelink::Receiver status_;phonelink::Client phone_;
     unsigned accepted_=0,overruns_=0;
 };
 }

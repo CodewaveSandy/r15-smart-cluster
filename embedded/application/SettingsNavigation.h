@@ -39,7 +39,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
         if(options.clock){cancelClock(options);return SettingsEffect::None;}
         if(options.phone){
             if(options.phoneForgetConfirmation){options.phoneForgetConfirmation=false;options.phoneFocus=0;}
-            else {options.phone=false;if(state.phone.pairingRequested)return SettingsEffect::PhoneReject;}
+            else {options.phone=false;if(state.phone.pairingRequested&&!state.phone.pairingApproved)return SettingsEffect::PhoneReject;}
             return SettingsEffect::None;
         }
         if(options.appearance) cancelAppearance(options);

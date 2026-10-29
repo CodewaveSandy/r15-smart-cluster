@@ -22,7 +22,7 @@ process = subprocess.Popen([sys.executable, str(source), os.ttyname(slave)], std
 try:
     assert select.select([process.stdout], [], [], 5)[0], "Clock helper did not start"
     assert "Clock sync active" in process.stdout.readline()
-    os.write(master, b"@CLOCK REQUEST\n")
+    os.write(master, b"R15P\x00\x01\xff\n\x00binary-tail\n@CLOCK REQUEST\n")
     data = bytearray()
     deadline = time.monotonic() + 8
     while b"@TIME " not in data or b"\n" not in data[data.find(b"@TIME "):]:
@@ -32,7 +32,7 @@ try:
     frame = bytes(data[data.find(b"@TIME "):]).splitlines()[0].split()
     stamp, offset = int(frame[1]), int(frame[2])
     assert abs(stamp - int(time.time())) <= 5 and -720 <= offset <= 840
-    os.write(master, f"@CLOCK OK {stamp}\n".encode())
+    os.write(master, b"R15P\x00return-frame\n" + f"@CLOCK OK {stamp}\n".encode())
     assert select.select([process.stdout], [], [], 5)[0], "Acknowledgement was not reported"
     assert "Display clock confirmed" in process.stdout.readline()
     process.send_signal(signal.SIGINT)

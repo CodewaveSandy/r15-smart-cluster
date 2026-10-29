@@ -4,6 +4,7 @@
 namespace cluster {
 struct PhoneState {
     Quality quality=Quality::Unavailable;
+    bool bleBench=false,pairWindowOpen=false,commandFailed=false;
     bool paired=false,connected=false,pairingRequested=false,pairingApproved=false;
     std::array<char,7> pairingCode{};
     bool available()const{return quality==Quality::Available;}
@@ -11,6 +12,7 @@ struct PhoneState {
 inline bool valid(const PhoneState& state){
     if(unsigned(state.quality)>unsigned(Quality::Stale))return false;
     if(!state.available())return true;
+    if(state.paired&&state.pairWindowOpen)return false;
     if(state.connected&&!state.paired)return false;
     if(state.paired&&state.pairingRequested)return false;
     if(state.pairingApproved&&!state.pairingRequested)return false;

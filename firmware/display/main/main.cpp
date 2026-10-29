@@ -9,6 +9,8 @@
 #include "embedded/presentation/ClockPresentation.h"
 #include "esp_heap_caps.h"
 #include "esp_system.h"
+#include "esp_random.h"
+#include "driver/uart_vfs.h"
 #include <algorithm>
 #include "esp_log.h"
 #include "esp_psram.h"
@@ -51,7 +53,14 @@ extern "C" void app_main() {
         if(pendingClock)view.clockSaving=savePending;else view.appearanceSaving=savePending;
         if(!savePending)complete(false);
     };
-    cluster::board::VehicleUart vehicleUart;vehicleUart.initialize();
+    // Return frames share console TX GPIO43 with USB bridge RX. Preserve all
+    // binary bytes; only the external RX input (vehicle GPIO18) is attached.
+    uart_vfs_dev_port_set_tx_line_endings(0,ESP_LINE_ENDINGS_LF);
+    cluster::board::VehicleUart vehicleUart;vehicleUart.initialize(esp_random());
+    const auto dispatch=[&](cluster::SettingsEffect effect,std::uint64_t now){
+        if(effect==cluster::SettingsEffect::SavePreferences||effect==cluster::SettingsEffect::SaveClockPreferences)savePreferences(effect);
+        else if(effect!=cluster::SettingsEffect::None)vehicleUart.command(effect,now);
+    };
     bool live=true;
     cluster::ClusterState state;
     cluster::Lifecycle life;
@@ -65,7 +74,7 @@ extern "C" void app_main() {
     const int flags=fcntl(STDIN_FILENO,F_GETFL,0);
     if(flags>=0) fcntl(STDIN_FILENO,F_SETFL,flags|O_NONBLOCK);
     ESP_LOGI(tag,"Keys: l layout, t theme, d moving demo/unknown, w test warnings, n trip, i info, u units, b boot, o shutdown, v live UART, p parked fixture, s Settings, q Back, [/] focus, Enter select. Touch: center demo, top-left layout, top-right theme, bottom-left trip, bottom-middle info, fuel area shutdown; tap black screen to boot.");
-    int x=0,y=0;
+    int x=0,y=0;bool previousPairRequest=false;
     uint64_t report=nowMs(),clockRequest=0,formattedMinute=~uint64_t(0);
     cluster::ClockPreferences formattedPreferences;int formattedOffset=9999;
     unsigned previousFlushes=cluster::board::flushCount();
@@ -79,10 +88,16 @@ extern "C" void app_main() {
             for(unsigned i=0;i<clicks.trip;++i) cluster::applyAction(view,cluster::DashboardAction::NextTrip);
             for(unsigned i=0;i<clicks.info;++i) cluster::applyAction(view,cluster::DashboardAction::NextInfo);
         }
+        if(live&&life.phase()==cluster::Phase::Running) {
+            if(state.phone.available()&&state.phone.pairingRequested&&!previousPairRequest) {
+                view.settings=true;cluster::cancelClock(view);cluster::cancelAppearance(view);view.phone=true;view.phoneFocus=0;view.phoneForgetConfirmation=false;
+            }
+            previousPairRequest=state.phone.available()&&state.phone.pairingRequested;
+        }
         char command=0;
         if(cluster::board::releasedTouch(x,y)) {
             if(const auto effect=dashboard.touch(view,state,life,x,y)) {
-                if(*effect==cluster::SettingsEffect::SavePreferences||*effect==cluster::SettingsEffect::SaveClockPreferences) savePreferences(*effect);
+                dispatch(*effect,now);
             } else command=cluster::board::benchTouchAction(life.phase(),x,y);
         }
         char input[16];
@@ -102,13 +117,13 @@ extern "C" void app_main() {
             switch(key) {
             case 'v': live=true;demo=warnings=false;view.iconTest=false;vehicleUart.reset();state={};break;
             case 'p': live=false; demo=false; warnings=false; state=cluster::board::parkedSettingsFixture(); view.iconTest=false; break;
-            case 's': cluster::settingsAction(view,cluster::SettingsAction::Open,state,life); break;
-            case 'q': cluster::settingsAction(view,cluster::SettingsAction::Back,state,life); break;
+            case 's': dispatch(cluster::settingsAction(view,cluster::SettingsAction::Open,state,life),now); break;
+            case 'q': dispatch(cluster::settingsAction(view,cluster::SettingsAction::Back,state,life),now); break;
             case ']': cluster::settingsAction(view,cluster::SettingsAction::Next,state,life); break;
             case '[': cluster::settingsAction(view,cluster::SettingsAction::Previous,state,life); break;
             case '\n': case '\r': {
                 const auto effect=cluster::settingsAction(view,cluster::SettingsAction::Select,state,life);
-                if(effect==cluster::SettingsEffect::SavePreferences||effect==cluster::SettingsEffect::SaveClockPreferences)savePreferences(effect);
+                dispatch(effect,now);
                 break; }
             case 'l': cluster::applyAction(view,DashboardAction::ToggleLayout); break;
             case 't': cluster::applyAction(view,DashboardAction::ToggleTheme); break;
@@ -149,7 +164,7 @@ extern "C" void app_main() {
             else if(view.appearance&&view.appearanceSaving)cluster::appearanceSaveResult(view,saved);
             ESP_LOGI(tag,"Preferences save %s",saved?"committed":"failed");
         }
-        life.advance(now); cluster::reconcileSettings(view,state,life); dashboard.update(state,view,life,now);
+        life.advance(now); dispatch(cluster::reconcileSettings(view,state,life),now); dashboard.update(state,view,life,now);
         lv_timer_handler();
         if(now-report>=10000) {
             ESP_LOGI(tag,"UART RX GPIO38: accepted=%u overruns/errors=%u fresh=%d source=%s",

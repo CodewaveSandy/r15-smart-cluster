@@ -87,3 +87,7 @@ Host adapter/codec tests and both build-only packages are software evidence. Act
 User bench result (2026-10-29): both updated images were user-flashed. Initial UART WAITING was traced by the user to a loose connection; reseating it produced UART / LIVE. This confirms receipt of valid packets over the reported vehicle GPIO17 → display GPIO_D IO38/GND link with separate Mac USB power. Individual input stimulus, cable-loss/stale recovery, independent resets, soak and vehicle use remain separate pending tests.
 
 User bench acceptance (2026-10-29): the user reports the display follow-up working and confirms the described jumper-input tests working over the physical UART link. This covers the tested neutral/gear, left/right/high-beam and Trip/Info behavior, plus functional acceptance of the current display changes. This is user-reported desk evidence, not instrumented timing, electrical-margin, power-loss/RTC, soak or bike verification. Mac USB clock synchronization remains the selected time source; no RTC hardware change is planned in this phase.
+
+## BLE pairing bench
+
+Vehicle BLE bonding and the display approval return channel are implemented, awaiting physical acceptance. Follow [wiring, flashing and Android acceptance](../../docs/phone-uart-bench.md). Both images need updating. The working GPIO17 → IO38 receive link remains; add display UART0 TX43 → vehicle GPIO18 with no power connection. Wi-Fi and companion application services remain pending.

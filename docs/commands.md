@@ -141,3 +141,15 @@ For target recovery, toolchain details and wiring, use the linked authoritative 
 Tapping the gear or serial `s` opens Settings without substituting demo observations; live UART remains live. Serial `p` is an optional explicitly labelled bench fixture.
 
 For the connected two-board test, follow the [UART flashing and acceptance sequence](../firmware/display/README.md#flash-and-verify). Display serial `v` selects live UART; `p` explicitly selects parked Settings demo; Settings is accessible directly in live mode; the gear color indicates connection and the header date remains the local date.
+
+## Vehicle BLE pairing bench
+
+Follow [the wiring and Android test procedure](phone-uart-bench.md) before flashing both targets. No mobile build is required; use nRF Connect for this milestone. Build without touching hardware:
+
+```bash
+bash scripts/flash-vehicle.sh --build-only
+bash scripts/flash-display.sh --build-only
+python3 tests/embedded/ble-phone-check.py
+```
+
+The last command compiles the actual BLE adapter against fake radio/storage APIs to check approval, authentication, timeout and storage-failure behavior; it does not test a radio.

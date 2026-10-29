@@ -99,3 +99,7 @@ Connect GPIO17 → display GPIO_D IO38 and GND → GND, leaving display cable 3V
 ### Initial connection fails with `Invalid head of packet (0x52)`
 
 The build can succeed while the initial bootloader connection fails; no write has occurred at this stage. `0x52` is ASCII R and matches the start of the running R15G stream, suggesting the application may still be running rather than entering download mode; it is not conclusive proof of the cause. The script now exposes initial esptool progress while still capturing identity for its guards. Close monitors, disconnect the interconnect with both boards off, then retry at 115200. Hold BOOT through initial connection; if necessary keep BOOT held while tapping RESET, and release BOOT when the stub starts. Do not reset between backup/verification/write stages.
+
+## BLE pairing bench
+
+Vehicle BLE bonding and the display approval return channel are implemented, awaiting physical acceptance. Follow [wiring, flashing and Android acceptance](../../docs/phone-uart-bench.md). Both images need updating. The working GPIO17 → IO38 receive link remains; add display UART0 TX43 → vehicle GPIO18 with no power connection. Wi-Fi and companion application services remain pending.

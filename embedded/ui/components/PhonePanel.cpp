@@ -36,12 +36,18 @@ void PhonePanel::update(const PhoneState& state,const ViewOptions& view,const Pa
     show(root_.get(),view.phone&&progress==1000);
     if(!view.phone||progress!=1000) return;
     const auto menu=phoneMenu(state,view.phoneForgetConfirmation);
-    text(subtitle_,"One phone connection for navigation and media");
+    text(subtitle_,state.bleBench?"BLE bench pairing - phone services pending":"One phone connection for navigation and media");
     ink(title_,p.ink);ink(subtitle_,p.muted);ink(back_,p.muted);
     paint(card_,p.panel);outlineColor(card_,p.line);
     const bool ready=state.available()&&valid(state);
     text(name_,!ready?"Phone service unavailable":state.pairingRequested?"Pair this phone?":state.paired?"Rider phone":"Connect your phone");
     text(status_,!ready?"Waiting for phone service":state.pairingRequested?(state.pairingApproved?"Waiting for phone to finish pairing":state.pairingCode.data()):state.connected?"Connected - automatic reconnect enabled":state.paired?"Saved phone - reconnects when available":state.pairingCode[0]?state.pairingCode.data():"Open R15 Companion and select Connect cluster");
+    if(state.bleBench) {
+        text(status_,!ready?"Waiting for BLE service / return UART":state.commandFailed?"Request failed. Try again.":
+            state.pairingRequested?(state.pairingApproved?"Waiting for phone confirmation":state.pairingCode.data()):
+            state.connected?"Authenticated BLE bond connected":state.paired?"Saved BLE bond - reconnect from phone":
+            state.pairWindowOpen?"Pairing enabled for 60 seconds - connect from BLE app":"Select Pair phone, then use a BLE test app");
+    }
     ink(name_,p.ink);ink(status_,ready&&state.connected?p.accent:p.muted);ink(phone_,ready&&state.connected?p.accent:p.muted);
     const auto focused=view.phoneFocus%menu.count;
     for(unsigned i=0;i<3;++i) {

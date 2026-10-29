@@ -63,3 +63,7 @@ ESP-IDF 5.5.4, LVGL 9.2.2, Xtensa GCC 14.2.0, C++17. The R15 build and `flash-di
 ## Changed-area rendering checks (2026-10-23)
 
 The display now uses the same two PSRAM framebuffers in LVGL DIRECT mode, without additional full-frame allocations. LVGL synchronizes dirty regions; only the final flush submits a buffer. The pinned bounce-buffer driver’s frame-complete callback replaces two unconditional VSYNC waits. Host FULL/DIRECT images match across changing readings, themes/layouts, warnings, unavailable data and boot/shutdown. Thirty representative speed/RPM updates redraw 1,853,490 DIRECT pixels versus 11,520,000 FULL pixels. Neither this count nor the theoretical scanout period is a panel performance measurement. Rendered-update/s, flush duration, heap/stack margins and visible tearing/flicker must be checked after the user flashes this image.
+
+## BLE bench build evidence (2026-10-30)
+
+Build-only PlatformIO reports: vehicle static RAM 19,448 bytes, application flash 462,181 bytes; display static RAM 21,784 bytes, application flash 661,627 bytes. Both combined images pass packaging checks. These static reports exclude dynamic NimBLE allocations, task stack high-water measurements, panel bandwidth and concurrent radio/render timing. Actual Android pairing and acquisition-under-radio-load acceptance remain pending. See [BLE bench](phone-uart-bench.md).
