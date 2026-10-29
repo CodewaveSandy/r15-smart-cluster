@@ -4,6 +4,7 @@
 #include "shared/protocol/Button.h"
 #include "shared/protocol/DiscreteInputs.h"
 #include "driver/uart_vfs.h"
+#include "driver/uart.h"
 #include "esp_random.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -12,6 +13,13 @@
 #include <cstdio>
 
 extern "C" void app_main() {
+    uart_config_t link{};
+    link.baud_rate=115200;link.data_bits=UART_DATA_8_BITS;
+    link.parity=UART_PARITY_DISABLE;link.stop_bits=UART_STOP_BITS_1;
+    link.flow_ctrl=UART_HW_FLOWCTRL_DISABLE;link.source_clk=UART_SCLK_DEFAULT;
+    ESP_ERROR_CHECK(uart_param_config(UART_NUM_1,&link));
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1,wiring::displayTx,UART_PIN_NO_CHANGE,UART_PIN_NO_CHANGE,UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1,256,0,0,nullptr,0));
     gpio_config_t inputs{};
     const auto add=[&](wiring::Input input){if(input.pin>=0)inputs.pin_bit_mask|=1ULL<<input.pin;};
     add(wiring::tripButton);add(wiring::infoButton);
@@ -50,6 +58,10 @@ extern "C" void app_main() {
         if(tripButton.update(read(wiring::tripButton).value,packet.uptimeMs))++packet.tripPresses;
         if(infoButton.update(read(wiring::infoButton).value,packet.uptimeMs))++packet.infoPresses;
         const auto bytes=cluster::gearlink::encode(packet);
+        // No TX ring or wait: 36 bytes fit the 128-byte FIFO and consume
+        // 3.125 ms on the wire, versus the 20 ms sampling interval. A partial
+        // write is discarded by CRC/framing at the receiver, never retried.
+        uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
         // 36 bytes per 20 ms: bounded output well below the UART FIFO capacity.
         fwrite(bytes.data(),1,bytes.size(),stdout);
         ++packet.sequence;

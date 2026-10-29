@@ -41,8 +41,14 @@ esptool="${R15_VEHICLE_ESPTOOL:-$HOME/.platformio/packages/tool-esptoolpy/esptoo
 [[ -x "$python" && -f "$esptool" ]] || { echo "Installed esptool/Python missing." >&2; exit 1; }
 baud="${R15_VEHICLE_BAUD:-460800}"
 # Explicit chip and capacity prevent the 4 MB display from receiving this 8 MB image.
-identity="$("$python" "$esptool" --chip esp32s3 --port "$port" --baud "$baud" --after no-reset-stub flash-id)"
-printf '%s\n' "$identity"
+echo "Connecting to vehicle ESP on $port. Hold BOOT now if automatic entry fails."
+echo "If needed: keep BOOT held, tap RESET, then release BOOT once the stub starts."
+# Preserve identity for guards while exposing Connecting/stub progress to the
+# operator. Command substitution alone hides the moment manual BOOT is needed.
+identity_file="$(mktemp "${TMPDIR:-/tmp}/r15-vehicle-identity.XXXXXX")"
+trap 'rm -f "$identity_file"' EXIT
+"$python" "$esptool" --chip esp32s3 --port "$port" --baud "$baud" --after no-reset-stub flash-id | tee "$identity_file"
+identity="$(cat "$identity_file")"
 [[ "$identity" == *"Detected flash size: 8MB"* && "$identity" != *"b8:f8:62:7f:2c:68"* ]] || {
   echo "Expected the 8 MB vehicle ESP32-S3; refusing to write this device." >&2; exit 1;
 }

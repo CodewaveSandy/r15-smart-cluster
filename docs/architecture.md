@@ -71,7 +71,7 @@ Share portable C++ domain/protocol logic between firmware and host where appropr
 
 ## Display concurrency and lifetime
 
-Proposed execution model: a bounded UART receive/parser task plus one UI task that owns all LVGL calls, state presentation and navigation. ISR callbacks only signal driver completion or queue bounded events using supported APIs. Settings storage runs through a separate service/task if writes can block. Avoid extra tasks until measured need exists; assign priorities/core affinity from profiling, not habit.
+Proposed full-protocol execution model: a bounded UART receive/parser task plus one UI task that owns all LVGL calls, state presentation and navigation. ISR callbacks only signal driver completion or queue bounded events using supported APIs. Settings storage runs through a separate service/task if writes can block. Avoid extra tasks until measured need exists; assign priorities/core affinity from profiling, not habit.
 
 The parser publishes a coherent latest-state mailbox; the UI consumes the newest valid state rather than replaying an old telemetry backlog. Physical navigation uses a separate bounded ordered queue. Queue overflow is observable; critical state is recoverable from full snapshots. Define command idempotence and release/cancel behavior before implementing held buttons.
 
@@ -99,7 +99,7 @@ Brightness/backlight fault handling, watchdog coverage, acquisition overrun and 
 | `tests/embedded/` | Portable checks and deterministic LVGL verification |
 | `assets/`, `scripts/`, `tools/fonts/` | Licensed bundled assets, reproducible conversion and preview/audit tools |
 
-The `firmware/display` board adapter uses ESP-IDF RGB/I2C APIs with pins, timings and touch reset derived from the user-tested Elecrow V3.0 example. PlatformIO orchestrates this separate ESP-IDF/CMake target; it does not use Arduino. Shared UART codec remains pending. No empty firmware or protocol folders imply an implementation. Shared model and application/presentation logic stay independent of LVGL, FreeRTOS and device SDKs.
+The `firmware/display` board adapter uses ESP-IDF RGB/I2C APIs with pins, timings and touch reset derived from the user-tested Elecrow V3.0 example. PlatformIO orchestrates this separate ESP-IDF/CMake target; it does not use Arduino. The existing portable v3 discrete-input codec now serves the GPIO17→GPIO38 bench link; the full UART telemetry/phone/map contract remains pending. No empty firmware or protocol folders imply an implementation. Shared model and application/presentation logic stay independent of LVGL, FreeRTOS and device SDKs.
 
 ## Current UI composition
 
@@ -109,11 +109,13 @@ The shared LVGL `Dashboard` is a composition shell for ten focused components un
 
 Vehicle ESP32 owns acquisition, validation, calculations, physical inputs and Bluetooth/Wi-Fi. Display ESP32 owns local Settings, presentation, warning visibility and LVGL. UART carries validated normalized observations and explicit requests/results; vehicle packets never manipulate widgets. Display-to-vehicle requests do not optimistically change confirmed state. Stale/lost communication stays explicit and is never interpreted as key-off.
 
-Both boards have separate power branches, as specified in [power lifecycle](power-lifecycle.md#agreed-power-topology). The supplied four-wire cable fits the display UART0 connector, but pin order, USB bridge contention and final UART allocation still require schematic verification before wiring. No power is transferred between the boards through that cable in the USB bench setup.
+Both boards have separate power branches, as specified in [power lifecycle](power-lifecycle.md#agreed-power-topology). The supplied four-wire cable fits multiple connectors; the selected bench path is vehicle GPIO17 → display GPIO_D IO38 plus GND. UART0 shares the USB bridge and is not used for this receive path. No power is transferred between the boards through that cable in the USB bench setup.
+
+The current narrow input bench uses bounded nonblocking UART polling on app_main before rendering; no parser task or cross-task LVGL access is introduced. See the [display bench contract](../firmware/display/README.md#vehicle-to-display-uart-bench).
 
 ## UART contract proposal
 
-The [vehicle discrete-input test](../firmware/vehicle/README.md) samples configurable pins, defaulting GPIO4/5 to left/right. Portable version 3 packets carry N–6, three lamps and debounced Trip/Info press counters over USB to the Mac; the host serial adapter publishes normalized observations under the existing LVGL owner. All twelve bench inputs are enabled with weak pull-downs: left/right GPIO4/5, N GPIO6, high beam GPIO7, gears 1–6 GPIO8–13, Trip/Info GPIO14/15. The vehicle flash script verifies the chip/capacity and preserves a verified full backup before writing. Turn phase is explicit to prevent double blinking. This is separate from the full inter-MCU UART proposal below. Reported active levels are 2–3.3 V; 2 V needs resolution against the GPIO HIGH threshold. Exact module/flash and board schematic validation remain pending.
+The [vehicle discrete-input test](../firmware/vehicle/README.md) samples configurable pins, defaulting GPIO4/5 to left/right. Portable version 3 packets carry N–6, three lamps and debounced Trip/Info press counters over USB to the Mac; the host serial adapter publishes normalized observations under the existing LVGL owner. All twelve bench inputs are enabled with weak pull-downs: left/right GPIO4/5, N GPIO6, high beam GPIO7, gears 1–6 GPIO8–13, Trip/Info GPIO14/15. The vehicle flash script verifies the chip/capacity and preserves a verified full backup before writing. Turn phase is explicit to prevent double blinking. The same packet is now mirrored over dedicated UART1 GPIO17 to the display UART1 GPIO38 receiver; this narrow input bench is separate from the full inter-MCU UART proposal below. Reported active levels are 2–3.3 V; 2 V needs resolution against the GPIO HIGH threshold. Exact module/flash and board schematic validation remain pending.
 
 UART carries normalized observations and semantic actions, never framebuffer pixels. Display TX, if used, carries a tightly limited application command set such as trip/lap actions, not arbitrary CAN forwarding. Receive-only telemetry is sufficient for the first display bring-up. Do not expose vehicle control or radio management commands by default.
 

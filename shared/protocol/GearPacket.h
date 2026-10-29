@@ -53,6 +53,8 @@ class Receiver {
     ButtonClicks pending_{};
     Packet latest_{};bool received_=false;std::uint64_t receipt_=0;
 public:
+    bool received()const{return received_;}
+    bool fresh(std::uint64_t now)const{return received_&&now>=receipt_&&now-receipt_<1000;}
     ButtonClicks takeClicks(){auto result=pending_;pending_={};return result;}
     void reset(){pending_={};size_=0;received_=false;latest_={};receipt_=0;}
     bool push(std::uint8_t byte,std::uint64_t now) {

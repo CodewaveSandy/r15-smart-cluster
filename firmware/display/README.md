@@ -68,3 +68,24 @@ Panel acceptance: open Appearance, switch each theme and inspect the live previe
 The native LVGL dirty-area refresh period is 16 ms instead of the default 33 ms, giving speed movement more update opportunities without changing panel pixel clock or frame-complete ownership. Actual rendered rate remains bounded by rendering and scanout; inspect the panel/logs before claiming a frame-rate gain. Preview components update only when theme/layout/units change.
 
 User panel feedback (2026-10-29): after flashing this follow-up, the user reports everything working correctly, covering the revised Settings transition, parked fixture, Appearance preview and Apply behavior. This is user-reported functional acceptance; exact frame timing, retained power and power-cut durability remain unmeasured.
+
+## Vehicle-to-display UART bench
+
+The default source is now UART1, RX GPIO38 on GPIO_D, 115200 8N1 without flow control. TX is unused. Vehicle GPIO17 sends the existing version-3 36-byte R15G discrete-input packet every 20 ms; display UART0 stays available for Mac programming and serial controls. The display reads at most 512 bytes and eight queued driver events per UI cycle, without waiting and outside LVGL rendering. RX storage is 1024 bytes; over-budget backlog/overflow/framing/read faults discard buffered data and reset observations/click baselines, with a counter in the ten-second console report. A fresh complete packet then recovers the link. The parser rejects bad CRC/version/ranges, duplicate/reordered sequence/uptime and rebases actions on reconnect/session changes.
+
+The date field shows `UART / WAITING` before a packet, `UART / LIVE` for an advancing valid stream, and `UART / STALE` after 1,000 ms without an accepted packet. Gear N–6, left/right observed phase, high beam and Trip/Info clicks are supported; speed/RPM/fuel/clock/ODO/phone stay unavailable. Link loss never triggers shutdown. This is the narrow development input protocol, not the full future UART phone/map/command contract. It has no return channel or authentication. The vehicle samples these discrete inputs immediately before sending; v3 has no independently aged vehicle-source observations.
+
+Serial `v` resets/re-enters live UART, `p` explicitly selects the parked Settings fixture, `d` enters the moving demo (again returns to live), and `b` reboots into live. Synthetic and UART observations are never blended. Receiver bytes/clicks are drained during demos so old clicks are not replayed. In live mode, unknown speed still blocks Settings; use explicit `p` for desk menu work. Tapping the gear in live mode does not synthesize zero speed.
+
+### Flash and verify
+
+1. Power both off and disconnect their interconnect before separately flashing. Close serial monitors.
+2. Run `bash scripts/flash-display.sh` for the display and `bash scripts/flash-vehicle.sh --port /dev/cu.YOUR_VEHICLE_PORT` for the vehicle. Use the actual vehicle port; the previously observed `/dev/cu.usbserial-0001` can change. Each script builds its own firmware and applies its board/backup guards.
+3. Power both off, reconnect GPIO17 → IO38 and GND → GND, leave power/NC leads insulated, then reconnect separate USB supplies.
+4. After boot, expect `UART / LIVE` even with no acquisition inputs attached. Gear should be unavailable when no position is asserted. Enabled unwired lamp inputs read inactive in the existing weak-pulldown bench profile; this is not wire-fault detection.
+5. For an engine-off, harness-disconnected desk stimulus, connect an isolated dry switch from vehicle 3V3 to one input at a time: GPIO6 neutral, GPIO8 gear 1, GPIO4 left, GPIO5 right, GPIO7 high beam. Remove the stimulus between gear selections. Never connect raw bike voltages. GPIO14/15 momentary presses exercise Trip/Info pages; numbers stay unavailable.
+6. Power down both boards, disconnect only the UART signal, then power both again: expect WAITING. To test timeout while running without rewiring powered hardware, stop/reset the sender long enough for the one-second deadline; check stale indication and recovery with no replayed clicks. Inspect accepted/overflow counters and repeat independent resets/boot order. A simple quick reset may recover before timeout and need not visibly show STALE.
+
+Host adapter/codec tests and both build-only packages are software evidence. Actual GPIO17→GPIO38 communication, input response, electrical levels, load/soak and reset/loss recovery require the user's bench results.
+
+User bench result (2026-10-29): both updated images were user-flashed. Initial UART WAITING was traced by the user to a loose connection; reseating it produced UART / LIVE. This confirms receipt of valid packets over the reported vehicle GPIO17 → display GPIO_D IO38/GND link with separate Mac USB power. Individual input stimulus, cable-loss/stale recovery, independent resets, soak and vehicle use remain separate pending tests.

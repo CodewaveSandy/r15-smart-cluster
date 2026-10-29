@@ -192,6 +192,17 @@ int main(int argc,char** argv) {
                     dashboard.update(conflict,view,life,1400);capture(output/(suffix+"-usb-conflict.bmp"));
                     conflict.gear.quality=Quality::Stale;
                     dashboard.update(conflict,view,life,1400);capture(output/(suffix+"-usb-stale.bmp"));
+                    for(const char* status:{"WAITING","LIVE","STALE"}) {
+                        char uartDate[24];std::snprintf(uartDate,sizeof uartDate,"UART / %s",status);
+                        view.date=uartDate;
+                        ClusterState uart;uart.turnSignalsArePhase=true;
+                        if(std::strcmp(status,"LIVE")==0) {
+                            uart.gear={2,Quality::Available};uart.left={true,Quality::Available};
+                            uart.right=uart.highBeam={false,Quality::Available};
+                        } else if(std::strcmp(status,"STALE")==0)
+                            uart.gear.quality=uart.left.quality=uart.right.quality=uart.highBeam.quality=Quality::Stale;
+                        dashboard.update(uart,view,life,1400);capture(output/(suffix+"-uart-"+status+".bmp"));
+                    }
                     view.date=oldDate;
                     auto warning=state; warning.engineRpm.value=11400; warning.engineWarning.value=true; warning.absWarning.value=true;
                     dashboard.update(warning,view,life,1200); capture(output/(suffix+"-warning.bmp"));

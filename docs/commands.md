@@ -16,11 +16,12 @@ Connect the Elecrow display to the Mac by USB, close serial monitors and run:
 bash scripts/flash-display.sh
 ```
 
-This builds the current source, packages/checks the display image, checks the saved factory backup and connected board identity, then flashes the delivered V3.0 display and verifies the write hash. Default port: `/dev/cu.usbserial-110`. Keep USB connected until verification finishes. This installs the current **desk-test UI**; display Appearance saving uses NVS; real vehicle UART and phone services are not integrated yet.
+This builds the current source, packages/checks the display image, checks the saved factory backup and connected board identity, then flashes the delivered V3.0 display and verifies the write hash. Default port: `/dev/cu.usbserial-110`. Keep USB connected until verification finishes. This installs the current **desk-test UI**; display Appearance saving uses NVS; one-way discrete-input UART uses vehicle GPIO17 → display GPIO_D IO38; phone services and the full UART protocol remain pending.
 
 | Command | What it does |
 | --- | --- |
 | `bash scripts/flash-display.sh --build-only` | Builds and validates/packages the latest display firmware without accessing hardware. |
+| `screen /dev/cu.usbserial-110 115200` | Opens the display USB serial console for `v` live UART, `p` parked Settings, and diagnostics. Change the port if needed; quit with Ctrl+A, then backslash, then `y` before flashing. |
 | `ls /dev/cu.*` | Lists Mac serial-device paths. Compare before/after plugging in the display to identify its port. |
 | `R15_DISPLAY_PORT=/dev/cu.YOUR_DISPLAY_PORT bash scripts/flash-display.sh` | Builds and flashes the display using a different port. |
 | `R15_FACTORY_BACKUP="/absolute/path/crowpanel-v3-factory-rom.bin" bash scripts/flash-display.sh` | Uses a moved factory backup; the script still checks its expected size/hash before flashing. |
@@ -83,6 +84,7 @@ Run from repository root:
 | `ctest --test-dir build/lvgl --output-on-failure` | Runs all 14 registered host suites, including rendering and local-socket IPC. Build first. |
 | `ctest --test-dir build/lvgl -N` | Lists registered test names without running them. |
 | `ctest --test-dir build/lvgl -R '^gear-usb-link$' --output-on-failure` | Runs just the USB input/codec suite. Replace the expression with another listed test name to select it. |
+| `python3 tests/embedded/vehicle-uart-check.py` | Tests the actual GPIO38 receive adapter with fake drivers: nonblocking receive, CRC/duplicates, stale data, clicks, overflow/errors and reset; no device. |
 | `python3 tests/embedded/preference-store-check.py` | Compiles/runs the actual firmware preference adapter with fake NVS/RTOS APIs to check restart, invalid data, bounded queues and storage failures; no hardware. |
 | `python3 tests/embedded/display-image-check.py` | Tests partition/image packager bounds without hardware access. |
 | `python3 tests/embedded/vehicle-flash-check.py` | Tests flash-script guards, backup ordering and recovery using fake tools; never flashes a device. |
@@ -133,3 +135,5 @@ Return to repository root before using these. Generation commands rewrite tracke
 For target recovery, toolchain details and wiring, use the linked authoritative guides rather than substituting flash offsets, board pins or images. Update this reference whenever adding/changing a public script or command option.
 
 In native desk-test firmware, tapping the gear (or serial `s`) from the idle no-vehicle state explicitly selects a parked synthetic fixture and opens Settings. The header switches to `BENCH / SYNTHETIC DATA`; this is not a received zero-speed observation. Moving demo/test warnings are never replaced to grant access. Serial `b` returns to boot with unavailable observations. Real/host data-quality gates remain unchanged.
+
+For the connected two-board test, follow the [UART flashing and acceptance sequence](../firmware/display/README.md#flash-and-verify). Display serial `v` selects live UART; `p` explicitly selects parked Settings demo; no automatic stationary observation is created in live mode.

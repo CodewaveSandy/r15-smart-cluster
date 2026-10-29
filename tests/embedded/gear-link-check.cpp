@@ -65,8 +65,10 @@ int main() {
         assert(r.gear(2).value==2);
     }
     Receiver r;assert(!r.gear(0).available());
+    assert(!r.received()&&!r.fresh(0));
     for(int i=0;i<50;++i)r.push('x',0);
     assert(feed(r,b,10));assert(r.gear(1009).available());
+    assert(r.received()&&r.fresh(1009)&&!r.fresh(1010)&&!r.fresh(9));
     assert(!feed(r,b,500));assert(r.gear(1010).quality==Quality::Stale);
     ++p.sequence;p.uptimeMs=100;p.gear=Signal<int>{3,Quality::Available};
     assert(feed(r,encode(p),1100));assert(r.gear(1100).value==3);
@@ -82,6 +84,7 @@ int main() {
         bad=b;bad[offset]=3;put(bad,32,crc(bad.data(),32));assert(!decode(bad,decoded));
     }
     assert(feed(r,b,1500));r.reset();assert(!r.gear(1501).available());
+    assert(!r.received()&&!r.fresh(1501));
     // Actual POSIX serial adapter against a pseudo-terminal, without hardware.
     const int master=posix_openpt(O_RDWR|O_NOCTTY|O_NONBLOCK);
     assert(master>=0&&grantpt(master)==0&&unlockpt(master)==0);

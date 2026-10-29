@@ -2,6 +2,7 @@
 #include "BenchSweep.h"
 #include "BenchTouch.h"
 #include "PreferenceStore.h"
+#include "VehicleUart.h"
 #include "embedded/ui/Dashboard.h"
 #include "embedded/application/DashboardInput.h"
 #include "embedded/application/SettingsNavigation.h"
@@ -21,7 +22,7 @@ constexpr char tag[]="r15-bench";
 uint64_t nowMs() { return uint64_t(esp_timer_get_time()/1000); }
 }
 extern "C" void app_main() {
-    ESP_LOGI(tag,"R15 DISPLAY BENCH ONLY; no vehicle, radio, ignition adapter");
+    ESP_LOGI(tag,"R15 UART INPUT BENCH; no speed, radio or ignition adapter");
     const auto psram=esp_psram_get_size();
     ESP_LOGI(tag,"IDF %s; PSRAM %u bytes",esp_get_idf_version(),unsigned(psram));
     if(psram<2*800*480*2) { ESP_LOGE(tag,"Insufficient PSRAM"); abort(); }
@@ -43,6 +44,8 @@ extern "C" void app_main() {
         view.appearanceSaving=savePending;
         if(!savePending) cluster::appearanceSaveResult(view,false);
     };
+    cluster::board::VehicleUart vehicleUart;vehicleUart.initialize();
+    bool live=true;
     cluster::ClusterState state;
     cluster::Lifecycle life;
     bool demo=false, warnings=false, parked=false;
@@ -54,17 +57,24 @@ extern "C" void app_main() {
     life.key(true,nowMs());
     const int flags=fcntl(STDIN_FILENO,F_GETFL,0);
     if(flags>=0) fcntl(STDIN_FILENO,F_SETFL,flags|O_NONBLOCK);
-    ESP_LOGI(tag,"Keys: l layout, t theme, d moving demo/unknown, w test warnings, n trip, i info, u units, b boot, o shutdown, p parked fixture, s Settings, q Back, [/] focus, Enter select. Touch: center demo, top-left layout, top-right theme, bottom-left trip, bottom-middle info, fuel area shutdown; tap black screen to boot.");
+    ESP_LOGI(tag,"Keys: l layout, t theme, d moving demo/unknown, w test warnings, n trip, i info, u units, b boot, o shutdown, v live UART, p parked fixture, s Settings, q Back, [/] focus, Enter select. Touch: center demo, top-left layout, top-right theme, bottom-left trip, bottom-middle info, fuel area shutdown; tap black screen to boot.");
     int x=0,y=0;
     uint64_t report=nowMs();
     unsigned previousFlushes=cluster::board::flushCount();
     for(;;) {
         const auto now=nowMs();
+        vehicleUart.poll(now);
+        const auto clicks=vehicleUart.takeClicks();
+        if(live) {
+            state=vehicleUart.state(now);
+            for(unsigned i=0;i<clicks.trip;++i) cluster::applyAction(view,cluster::DashboardAction::NextTrip);
+            for(unsigned i=0;i<clicks.info;++i) cluster::applyAction(view,cluster::DashboardAction::NextInfo);
+        }
         char command=0;
         if(cluster::board::releasedTouch(x,y)) {
             const auto gear=cluster::ui::geometry::HeaderLayout::settings;
             const bool gearHit=x>=gear.x&&x<gear.x+gear.width&&y>=gear.y&&y<gear.y+gear.height;
-            if(cluster::board::parkForSettings(life.phase(),demo,warnings,parked,gearHit)) {
+            if(!live&&cluster::board::parkForSettings(life.phase(),demo,warnings,parked,gearHit)) {
                 parked=true; state=cluster::board::parkedSettingsFixture(); view.iconTest=false;
                 ESP_LOGI(tag,"Settings selected: BENCH parked synthetic fixture; no vehicle speed source");
             }
@@ -80,9 +90,10 @@ extern "C" void app_main() {
             if(shutdownPreview && key!='b') continue;
             using cluster::DashboardAction;
             switch(key) {
-            case 'p': parked=true; demo=false; warnings=false; state=cluster::board::parkedSettingsFixture(); view.iconTest=false; break;
+            case 'v': live=true;demo=warnings=parked=false;view.iconTest=false;vehicleUart.reset();state={};break;
+            case 'p': live=false; parked=true; demo=false; warnings=false; state=cluster::board::parkedSettingsFixture(); view.iconTest=false; break;
             case 's':
-                if(cluster::board::parkForSettings(life.phase(),demo,warnings,parked,true)) {
+                if(!live&&cluster::board::parkForSettings(life.phase(),demo,warnings,parked,true)) {
                     parked=true; state=cluster::board::parkedSettingsFixture(); view.iconTest=false;
                 }
                 cluster::settingsAction(view,cluster::SettingsAction::Open,state,life); break;
@@ -98,11 +109,11 @@ extern "C" void app_main() {
             case 'n': cluster::applyAction(view,DashboardAction::NextTrip); break;
             case 'i': cluster::applyAction(view,DashboardAction::NextInfo); break;
             case 'u': cluster::applyAction(view,DashboardAction::ToggleUnits); break;
-            case 'd': parked=false; demo=!demo; demoStarted=now; state={}; warnings=false; break;
-            case 'w': warnings=!warnings;
+            case 'd': parked=false; demo=!demo; live=!demo; demoStarted=now; state={}; warnings=false; break;
+            case 'w': live=false;warnings=!warnings;
                 if(!warnings && !demo) state={};
                 break;
-            case 'b': parked=false; shutdownPreview=false; demo=false; warnings=false; state={}; view.iconTest=false;
+            case 'b': live=true;vehicleUart.reset();parked=false; shutdownPreview=false; demo=false; warnings=false; state={}; view.iconTest=false;
                 life=cluster::Lifecycle{}; life.key(true,now); break;
             case 'o': shutdownPreview=true; warnings=false; view.iconTest=false;
                 // Stop synthetic urgent warnings from interrupting this explicit
@@ -115,7 +126,7 @@ extern "C" void app_main() {
         if(demo && !shutdownPreview) state=cluster::board::benchSweep(now-demoStarted);
         if(warnings) state.engineWarning=state.coolantWarning=state.absWarning=state.left=state.right=state.highBeam={true,cluster::Quality::Available};
         view.iconTest=demo&&!shutdownPreview&&cluster::board::benchLampTestLit(now-demoStarted);
-        view.date=shutdownPreview?"BENCH / SHUTDOWN TEST":warnings?"BENCH / TEST WARNINGS":
+        view.date=live&&!shutdownPreview?(vehicleUart.fresh(now)?"UART / LIVE":vehicleUart.received()?"UART / STALE":"UART / WAITING"):shutdownPreview?"BENCH / SHUTDOWN TEST":warnings?"BENCH / TEST WARNINGS":
             demo&&cluster::board::benchLampTest(now-demoStarted)?"BENCH / LAMP TEST":(demo||parked)?"BENCH / SYNTHETIC DATA":"BENCH / NO VEHICLE";
         bool saved=false;
         if(savePending&&preferenceStore.result(saved)) {
@@ -127,6 +138,8 @@ extern "C" void app_main() {
         life.advance(now); cluster::reconcileSettings(view,state,life); dashboard.update(state,view,life,now);
         lv_timer_handler();
         if(now-report>=10000) {
+            ESP_LOGI(tag,"UART RX GPIO38: accepted=%u overruns/errors=%u fresh=%d source=%s",
+                vehicleUart.accepted(),vehicleUart.overruns(),int(vehicleUart.fresh(now)),live?"UART":"BENCH");
             const unsigned frames=cluster::board::flushCount();
             ESP_LOGI(tag,"rendered updates/s=%.1f (10s average; includes idle time)",
                 double(frames-previousFlushes)*1000/double(now-report));
