@@ -4,6 +4,7 @@ The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 
 
 | Guide | Responsibility |
 | --- | --- |
+| [Command reference](commands.md) | Copyable commands and descriptions for flashing, previews, phone connection, builds, tests and asset tools |
 | [Preview and development](getting-started.md) | Mac setup, controls, builds, captures and asset regeneration |
 | [Display firmware](../firmware/display/README.md) | V3.0 board provenance, native ESP-IDF desk-test build, user-operated flash and recovery |
 | [Hardware connections](hardware-connections.md) | Confirmed power path, engine-off bike power-on evidence and missing wiring details |

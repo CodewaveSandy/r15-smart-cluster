@@ -6,6 +6,10 @@ The native macOS preview includes Street/Track dashboards, Midnight/Daylight the
 
 ## Run the preview
 
+**Looking for a command?** See the [command reference](docs/commands.md) for display/vehicle flashing, previews, phone connection, tests and asset tools.
+
+To build and flash the latest display desk-test UI over USB: `bash scripts/flash-display.sh`. See the [display instructions](docs/commands.md#flash-the-display-with-the-latest-ui) for port selection and checks.
+
 Prerequisites: C++ compiler, CMake, Ninja and SDL2.
 
 ```sh
