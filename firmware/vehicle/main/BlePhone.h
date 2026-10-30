@@ -30,6 +30,8 @@ private:
     bool displayAvailable(std::uint64_t now);
     void fault(const char* source,int code,int type=0);
     bool faultLogged_=false,healthLogged_=false,advertiseRequested_=false;
+    void finishForget(std::uint64_t now);
+    bool forgetting_=false;std::uint64_t forgetDeadline_=0;
     void advertise();void process();void updateBond();void publish();void reject();
     Snapshot state_,published_;std::uint64_t publishedAt_=0,displayObservedAt_=0,windowDeadline_=0,pairDeadline_=0;
     bool storageFault_=false;ble_store_write_fn* write_=nullptr;ble_store_delete_fn* delete_=nullptr;

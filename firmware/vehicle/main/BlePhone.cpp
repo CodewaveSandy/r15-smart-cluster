@@ -39,7 +39,7 @@ int BlePhone::storeDelete(int type,const union ble_store_key* key) {
 }
 void BlePhone::task(void*){nimble_port_run();nimble_port_freertos_deinit();}
 void BlePhone::reset(int reason) {
-    auto& s=*instance_;s.fault("host-reset",reason);s.ready_=false;s.advertiseRequested_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_={};s.state_.phone.bleBench=true;s.publish();
+    auto& s=*instance_;s.fault("host-reset",reason);s.forgetting_=false;s.ready_=false;s.advertiseRequested_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_={};s.state_.phone.bleBench=true;s.publish();
 }
 void BlePhone::synced() {
     auto& s=*instance_;if(ble_hs_id_infer_auto(0,&s.addressType_)!=0)return;
@@ -82,7 +82,7 @@ void BlePhone::advertise() {
     // Advertising can stop and the sole connection slot can be reserved before
     // IDF delivers CONNECT. Only explicit lifecycle events request a restart;
     // periodic work must not interpret inactive advertising as an idle radio.
-    if(!advertiseRequested_||!ready_||connection_!=BLE_HS_CONN_HANDLE_NONE||ble_gap_adv_active())return;
+    if(forgetting_||!advertiseRequested_||!ready_||connection_!=BLE_HS_CONN_HANDLE_NONE||ble_gap_adv_active())return;
     ble_hs_adv_fields fields{};fields.flags=BLE_HS_ADV_F_DISC_GEN|BLE_HS_ADV_F_BREDR_UNSUP;
     const char* name=ble_svc_gap_device_name();fields.name=reinterpret_cast<const std::uint8_t*>(name);fields.name_len=std::strlen(name);fields.name_is_complete=1;
     const int fieldsResult=ble_gap_adv_set_fields(&fields);
@@ -123,16 +123,32 @@ void BlePhone::process() {
         case phonelink::Action::Disconnect:
             rc=connection_==BLE_HS_CONN_HANDLE_NONE?-1:ble_gap_terminate(connection_,BLE_ERR_REM_USER_CONN_TERM);break;
         case phonelink::Action::Forget:
-            if(!knownBond_){rc=-1;break;}
-            rc=ble_gap_unpair(&bonded_);updateBond();
-            if(knownBond_)rc=-1;else state_.phone.connected=false;
-            if(connection_!=BLE_HS_CONN_HANDLE_NONE)ble_gap_terminate(connection_,BLE_ERR_REM_USER_CONN_TERM);
+            if(!knownBond_||forgetting_){rc=-1;break;}
+            forgetting_=true;forgetDeadline_=now+3000;
+            state_.phone.pairWindowOpen=false;
+            // Delete keys only after the active link has actually closed.
+            if(connection_!=BLE_HS_CONN_HANDLE_NONE) {
+                rc=ble_gap_terminate(connection_,BLE_ERR_REM_USER_CONN_TERM);
+                if(rc)forgetting_=false;
+            }
             break;
         default:rc=-1;break;
         }
         if(rc)state_.phone.commandFailed=true;
     }
-    if(ready_)advertise();publish();
+    finishForget(now);
+    if(ready_&&!forgetting_)advertise();publish();
+}
+void BlePhone::finishForget(std::uint64_t now) {
+    if(!forgetting_)return;
+    if(now>=forgetDeadline_){forgetting_=false;state_.phone.commandFailed=true;return;}
+    if(connection_!=BLE_HS_CONN_HANDLE_NONE)return;
+    // NimBLE refuses unpair while advertising is active (resolving-list update).
+    const int stopped=ble_gap_adv_active()?ble_gap_adv_stop():0;
+    if(stopped){forgetting_=false;state_.phone.commandFailed=true;return;}
+    const int result=ble_gap_unpair(&bonded_);updateBond();
+    forgetting_=false;state_.phone.commandFailed=result!=0||knownBond_;
+    state_.phone.connected=false;advertiseRequested_=true;
 }
 int BlePhone::gap(ble_gap_event* event,void* arg) {
     auto& s=*static_cast<BlePhone*>(arg);
@@ -144,7 +160,7 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
         if(ble_gap_conn_find(s.connection_,&desc)!=0){ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;}
         // A reconnecting phone may still present an unresolved private address
         // here. The stored identity is checked after authenticated encryption.
-        if(!s.knownBond_&&(!s.state_.phone.pairWindowOpen||!s.displayAvailable(nowMs())||nowMs()>=s.windowDeadline_)) {
+        if(s.forgetting_||(!s.knownBond_&&(!s.state_.phone.pairWindowOpen||!s.displayAvailable(nowMs())||nowMs()>=s.windowDeadline_))) {
             ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;
         }
         if(ble_gap_security_initiate(s.connection_)!=0)ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);
@@ -152,7 +168,7 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
     case BLE_GAP_EVENT_DISCONNECT:
         s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_.phone.connected=false;
         s.state_.phone.pairingRequested=s.state_.phone.pairingApproved=false;s.state_.phone.pairingCode={};s.state_.pairing=s.state_.code=0;s.approved_=false;
-        s.updateBond();s.advertiseRequested_=true;s.advertise();break;
+        s.updateBond();if(!s.forgetting_){s.advertiseRequested_=true;s.advertise();}break;
     case BLE_GAP_EVENT_PASSKEY_ACTION:
         if(event->passkey.params.action!=BLE_SM_IOACT_NUMCMP||!s.state_.phone.pairWindowOpen||!s.displayAvailable(nowMs())||nowMs()>=s.windowDeadline_||s.knownBond_) {
             ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;

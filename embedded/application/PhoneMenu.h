@@ -5,6 +5,7 @@ enum class PhoneItem{Approve,Reject,Pair,Disconnect,Forget,ConfirmForget,Cancel,
 struct PhoneMenu{std::array<PhoneItem,3> items{{PhoneItem::Back,PhoneItem::Back,PhoneItem::Back}};unsigned count=1;};
 inline PhoneMenu phoneMenu(const PhoneState& state,bool confirm){
     if(!state.available()||!valid(state))return {};
+    if(state.forgetting)return {};
     if(state.pairingRequested&&!state.pairingApproved)return {{{PhoneItem::Reject,PhoneItem::Approve,PhoneItem::Back}},2};
     if(state.pairingRequested)return {{{PhoneItem::Reject,PhoneItem::Back,PhoneItem::Back}},2};
     if(confirm&&state.paired)return {{{PhoneItem::Cancel,PhoneItem::ConfirmForget,PhoneItem::Back}},2};

@@ -514,6 +514,11 @@ int main(int argc,char** argv) {
                         dashboard.update(sample,view,life,base+11000+scene*1000);
                         capture(output/("ble-phone-"+std::to_string(scene)+"-"+suffix+".bmp"));
                     }
+                    auto forgetting=state;forgetting.phone={};forgetting.phone.bleBench=true;
+                    forgetting.phone.quality=Quality::Available;forgetting.phone.paired=forgetting.phone.connected=forgetting.phone.forgetting=true;
+                    view.phoneForgetConfirmation=false;view.phoneFocus=0;
+                    dashboard.update(forgetting,view,life,base+19500);
+                    capture(output/("ble-phone-forgetting-"+suffix+".bmp"));
                     auto interruption=state;interruption.speedKph={0,Quality::Available};interruption.engineWarning={true,Quality::Available};
                     reconcileSettings(view,interruption,life);
                     if(!view.settings||!view.phone)throw std::runtime_error("Prototype warning unexpectedly closed Phone");

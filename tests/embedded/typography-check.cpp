@@ -27,6 +27,21 @@ int main() {
         state.speedKph={0,Quality::Available}; state.engineWarning={true,Quality::Available};
         settingsTouch(view,state,life,750,40,true); assert(view.settings);
         assert(!settingsTouch(view,state,life,800,40,true));
+        view.phone=true;state.phone.quality=Quality::Available;
+        state.phone.paired=state.phone.connected=true;
+        const auto row=geometry::PhoneLayout::row(1);
+        const int rowY=geometry::SettingsLayout::bounds.y+row.y+10;
+        settingsTouch(view,state,life,row.x+10,rowY,true);assert(view.phoneForgetConfirmation);
+        auto confirmed=settingsTouch(view,state,life,row.x+10,rowY,true);
+        assert(confirmed&&*confirmed==SettingsEffect::PhoneForget&&!view.phoneForgetConfirmation);
+        state.phone.forgetting=true;
+        for(int repeat=0;repeat<5;++repeat) {
+            auto repeated=settingsTouch(view,state,life,row.x+10,rowY,true);
+            assert(repeated&&*repeated==SettingsEffect::None&&!view.phoneForgetConfirmation);
+        }
+        state.phone.forgetting=false;state.phone.paired=state.phone.connected=false;
+        reconcileSettings(view,state,life);assert(phoneMenu(state.phone,false).items[0]==PhoneItem::Pair);
+
     }
     lv_init();
     int failed=0;

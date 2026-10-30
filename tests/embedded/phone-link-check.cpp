@@ -70,4 +70,19 @@ int main(int argc,char** argv){
     assert(!gate.receive(wrong,1900,0,request,changed));
     Receiver controls;auto heartbeat=Packet{};heartbeat.kind=Kind::Control;heartbeat.vehicle=12;heartbeat.display=99;heartbeat.uptime=0xffffffff;heartbeat.sequence=0xffffffff;
     assert(feed(controls,encode(heartbeat),0,Kind::Control));heartbeat.uptime=1;heartbeat.sequence=1;assert(feed(controls,encode(heartbeat),20,Kind::Control));
+    Client forget;forget.initialize(77);Packet saved;saved.vehicle=12;saved.display=77;
+    saved.phone.quality=Quality::Available;saved.phone.paired=saved.phone.connected=true;
+    forget.update(saved,100);assert(forget.post(Action::Forget,110,12));
+    assert(forget.phone(110,12).forgetting);Packet forgettingCommand;assert(forget.outgoing(110,forgettingCommand));
+    saved.request=forgettingCommand.request;saved.action=Action::Forget;saved.result=Result::Queued;
+    forget.update(saved,200);assert(forget.phone(200,12).forgetting); // Queue ACK is not completion.
+    assert(!forget.post(Action::Forget,210,12));
+    saved.phone.connected=saved.phone.paired=false;forget.update(saved,300);
+    assert(!forget.phone(300,12).forgetting&&!forget.phone(300,12).paired);
+    saved.phone.paired=true;forget.update(saved,400);assert(forget.post(Action::Forget,410,12));
+    assert(forget.outgoing(410,forgettingCommand));saved.request=forgettingCommand.request;
+    forget.update(saved,500);assert(forget.phone(500,12).forgetting);
+    forget.update(saved,3800);forget.outgoing(3910,forgettingCommand);
+    assert(!forget.phone(3910,12).forgetting&&forget.phone(3910,12).commandFailed);
+
 }

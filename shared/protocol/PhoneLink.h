@@ -91,14 +91,15 @@ public:
     void stamp(Packet& p)const{p.display=display_;p.request=lastId_;p.action=lastAction_;p.result=result_;}
 };
 class Client {
-    std::uint32_t own_=0,sequence_=0,nextId_=0;Packet status_,pending_;bool seen_=false,pendingActive_=false,failed_=false;
+    std::uint32_t own_=0,sequence_=0,nextId_=0;Packet status_,pending_;bool seen_=false,pendingActive_=false,failed_=false,forgetting_=false;
     std::uint64_t receipt_=0,nextSend_=0,started_=0;
 public:
     void initialize(std::uint32_t session){*this=Client{};own_=session?session:1;}
     void update(const Packet& p,std::uint64_t now) {
-        if(seen_&&status_.vehicle!=p.vehicle){failed_=pendingActive_;pendingActive_=false;nextSend_=0;}
+        if(seen_&&status_.vehicle!=p.vehicle){failed_=pendingActive_||forgetting_;pendingActive_=forgetting_=false;nextSend_=0;}
         status_=p;seen_=true;receipt_=now;
-        if(pendingActive_&&p.display==own_&&p.request==pending_.request&&p.result!=Result::None){failed_=p.result==Result::Rejected;pendingActive_=false;}
+        if(pendingActive_&&p.display==own_&&p.request==pending_.request&&p.result!=Result::None){failed_=p.result==Result::Rejected;pendingActive_=false;if(failed_)forgetting_=false;}
+        if(forgetting_&&p.display==own_&&(!p.phone.paired||p.phone.commandFailed)){forgetting_=false;}
     }
     bool fresh(std::uint64_t now)const{return seen_&&now>=receipt_&&now-receipt_<1000;}
     PhoneState phone(std::uint64_t now,std::uint32_t gearSession)const {
@@ -106,22 +107,24 @@ public:
         if(!fresh(now)){result.unavailable=PhoneUnavailable::Status;return result;}
         if(status_.vehicle!=gearSession){result.unavailable=PhoneUnavailable::VehicleSession;return result;}
         if(status_.display!=own_){result.unavailable=PhoneUnavailable::ReturnChannel;return result;}
-        result=status_.phone;result.commandFailed=result.commandFailed||failed_;return result;
+        result=status_.phone;result.forgetting=forgetting_;result.commandFailed=result.commandFailed||failed_;return result;
     }
     bool post(Action action,std::uint64_t now,std::uint32_t gearSession) {
         const auto state=phone(now,gearSession);
-        if(!state.available()||pendingActive_||action==Action::Heartbeat){failed_=true;return false;}
+        if(pendingActive_||forgetting_)return false;
+        if(!state.available()||action==Action::Heartbeat){failed_=true;return false;}
         if((action==Action::Approve||action==Action::Reject)&&!state.pairingRequested){failed_=true;return false;}
         pending_={};pending_.action=action;pending_.request=++nextId_;if(!nextId_)pending_.request=++nextId_;
         if(action==Action::Approve||action==Action::Reject)pending_.pairing=status_.pairing;
-        pendingActive_=true;failed_=false;started_=now;nextSend_=0;return true;
+        pendingActive_=true;forgetting_=action==Action::Forget;failed_=false;started_=now;nextSend_=0;return true;
     }
     bool outgoing(std::uint64_t now,Packet& out) {
-        if(pendingActive_&&now-started_>=1500){pendingActive_=false;failed_=true;}
+        if(pendingActive_&&now-started_>=1500){pendingActive_=forgetting_=false;failed_=true;}
+        if(forgetting_&&now-started_>=3500){forgetting_=false;failed_=true;}
         if(!fresh(now)||now<nextSend_)return false;
         out=pendingActive_?pending_:Packet{};out.kind=Kind::Control;out.vehicle=status_.vehicle;out.display=own_;
         out.sequence=++sequence_;out.uptime=std::uint32_t(now);nextSend_=now+200;return true;
     }
-    void reset(){const auto own=own_,sequence=sequence_,id=nextId_;const bool uncertain=pendingActive_;initialize(own);sequence_=sequence;nextId_=id;failed_=uncertain;}
+    void reset(){const auto own=own_,sequence=sequence_,id=nextId_;const bool uncertain=pendingActive_||forgetting_;initialize(own);sequence_=sequence;nextId_=id;failed_=uncertain;}
 };
 }

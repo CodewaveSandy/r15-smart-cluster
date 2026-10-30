@@ -16,7 +16,7 @@ using portMUX_TYPE=int;
 #define portMUX_INITIALIZER_UNLOCKED 0
 #define portENTER_CRITICAL(x) ((void)(x))
 #define portEXIT_CRITICAL(x) ((void)(x))
-constexpr int pdTRUE=1,ESP_OK=0,BLE_HS_ENOENT=2;
+constexpr int pdTRUE=1,ESP_OK=0,BLE_HS_ENOENT=5;
 constexpr uint16_t BLE_HS_CONN_HANDLE_NONE=65535;
 constexpr int BLE_SM_IO_CAP_DISP_YES_NO=1,BLE_SM_PAIR_KEY_DIST_ENC=1,BLE_SM_PAIR_KEY_DIST_ID=2,BLE_SM_IOACT_NUMCMP=4;
 constexpr int BLE_HS_ADV_F_DISC_GEN=1,BLE_HS_ADV_F_BREDR_UNSUP=2,BLE_GAP_CONN_MODE_UND=1,BLE_GAP_DISC_MODE_GEN=1,BLE_HS_FOREVER=-1,BLE_ERR_REM_USER_CONN_TERM=19;
@@ -62,13 +62,14 @@ inline void ble_svc_gap_init(){}inline void ble_svc_gatt_init(){}
 inline int ble_hs_id_infer_auto(int,uint8_t* type){*type=0;return 0;}
 inline int ble_store_util_bonded_peers(ble_addr_t* address,int* count,int max){assert(max==1);*count=bonds;*address=storedAddress;return 0;}
 inline int ble_gap_adv_active(){return advertising;}
+inline int ble_gap_adv_stop(){advertising=false;return 0;}
 inline int ble_gap_adv_set_fields(const ble_hs_adv_fields* fields){assert(fields->name_len==11);return 0;}
 inline int ble_gap_adv_start(int,void*,int,ble_gap_adv_params*,int(*callback)(ble_gap_event*,void*),void* context){++advertiseCalls;if(pendingConnection)return 6;advertising=true;gapCallback=callback;gapContext=context;return 0;}
 inline int ble_gap_conn_find(uint16_t,ble_gap_conn_desc* out){*out=descriptor;return 0;}
 inline int ble_gap_security_initiate(uint16_t){return 0;}
 inline int ble_gap_terminate(uint16_t,int){++terminated;return 0;}
 inline int ble_sm_inject_io(uint16_t,ble_sm_io* io){assert(io->action==BLE_SM_IOACT_NUMCMP);if(io->numcmp_accept)++accepted;else ++rejected;return 0;}
-inline int ble_gap_unpair(const ble_addr_t*){if(storeFail)return 1;bonds=0;return 0;}
+inline int ble_gap_unpair(const ble_addr_t*){assert(!advertising);if(storeFail)return 1;bonds=0;return 0;}
 struct ble_npl_event {void(*callback)(ble_npl_event*)=nullptr;void* arg=nullptr;bool queued=false;};
 inline std::deque<ble_npl_event*> workQueue;
 inline void ble_npl_event_init(ble_npl_event* e,void(*cb)(ble_npl_event*),void* arg){e->callback=cb;e->arg=arg;}
@@ -111,7 +112,17 @@ int main(){
  assert(phone.post({Action::Pair,0}));phone.poll(true);drain();emit(BLE_GAP_EVENT_CONNECT);emit(BLE_GAP_EVENT_PASSKEY_ACTION);
  assert(phone.post({Action::Approve,987}));phone.poll(true);drain();bonds=1;descriptor.sec_state={true,true,true,16};emit(BLE_GAP_EVENT_ENC_CHANGE);
  s=phone.snapshot(millis);assert(valid(s.phone)&&s.phone.connected&&s.phone.paired&&!s.phone.pairingRequested);
- emit(BLE_GAP_EVENT_DISCONNECT);assert(advertising);assert(phone.snapshot(millis).phone.paired&&!phone.snapshot(millis).phone.connected);
+ // Connected Forget must close the link before deleting its persisted bond.
+ assert(phone.post({Action::Forget,0}));phone.poll(true);drain();
+ millis+=3000;phone.poll(true);drain();
+ assert(bonds==1&&phone.snapshot(millis).phone.commandFailed); // No fake success on disconnect timeout.
+ const auto terminations=terminated;
+ assert(phone.post({Action::Forget,0}));phone.poll(true);drain();
+ assert(terminated==terminations+1&&bonds==1&&phone.snapshot(millis).phone.connected);
+ emit(BLE_GAP_EVENT_DISCONNECT);assert(!advertising);
+ phone.poll(true);drain();assert(bonds==0&&advertising&&!phone.snapshot(millis).phone.paired);
+ // Saved/disconnected Forget must stop advertising before unpairing.
+ bonds=1;emit(BLE_GAP_EVENT_DISCONNECT);assert(advertising);assert(phone.snapshot(millis).phone.paired&&!phone.snapshot(millis).phone.connected);
  assert(phone.post({Action::Forget,0}));phone.poll(true);drain();assert(!phone.snapshot(millis).phone.paired);
  assert(phone.post({Action::Pair,0}));phone.poll(true);drain();emit(BLE_GAP_EVENT_CONNECT);emit(BLE_GAP_EVENT_PASSKEY_ACTION);
  phone.poll(false);drain();assert(!phone.snapshot(millis).phone.pairingRequested&&!phone.snapshot(millis).phone.pairWindowOpen);

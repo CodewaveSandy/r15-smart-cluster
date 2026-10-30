@@ -16,6 +16,9 @@ int main(){
     settingsAction(options,SettingsAction::Select,state,life);assert(!options.phoneForgetConfirmation);
     options.phoneFocus=1;settingsAction(options,SettingsAction::Select,state,life);settingsAction(options,SettingsAction::Next,state,life);
     assert(settingsAction(options,SettingsAction::Select,state,life)==SettingsEffect::PhoneForget);
+    state.phone.forgetting=true;assert(phoneMenu(state.phone,false).count==1);
+    options.phoneFocus=0;assert(settingsAction(options,SettingsAction::Select,state,life)==SettingsEffect::None);
+    assert(!options.phone);options.phone=true;state.phone.forgetting=false;
     state.phone.paired=false;state.phone.connected=false;state.phone.pairingRequested=true;
     options.phoneFocus=0;assert(settingsAction(options,SettingsAction::Select,state,life)==SettingsEffect::PhoneReject);
     settingsAction(options,SettingsAction::Next,state,life);
