@@ -43,7 +43,10 @@ void PhonePanel::update(const PhoneState& state,const ViewOptions& view,const Pa
     text(name_,!ready?"Phone service unavailable":state.pairingRequested?"Pair this phone?":state.paired?"Rider phone":"Connect your phone");
     text(status_,!ready?"Waiting for phone service":state.pairingRequested?(state.pairingApproved?"Waiting for phone to finish pairing":state.pairingCode.data()):state.connected?"Connected - automatic reconnect enabled":state.paired?"Saved phone - reconnects when available":state.pairingCode[0]?state.pairingCode.data():"Open R15 Companion and select Connect cluster");
     if(state.bleBench) {
-        text(status_,!ready?"Waiting for BLE service / return UART":state.commandFailed?"Request failed. Try again.":
+        const char* unavailable=state.unavailable==PhoneUnavailable::ReturnChannel?"Return UART not confirmed - check TX43 to GPIO18":
+            state.unavailable==PhoneUnavailable::Status?"Waiting for vehicle phone-status packets":
+            state.unavailable==PhoneUnavailable::VehicleSession?"Waiting for matching vehicle session":"Vehicle BLE service unavailable";
+        text(status_,!ready?unavailable:state.commandFailed?"Request failed. Try again.":
             state.pairingRequested?(state.pairingApproved?"Waiting for phone confirmation":state.pairingCode.data()):
             state.connected?"Authenticated BLE bond connected":state.paired?"Saved BLE bond - reconnect from phone":
             state.pairWindowOpen?"Pairing enabled for 60 seconds - connect from BLE app":"Select Pair phone, then use a BLE test app");

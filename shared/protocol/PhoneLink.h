@@ -103,7 +103,9 @@ public:
     bool fresh(std::uint64_t now)const{return seen_&&now>=receipt_&&now-receipt_<1000;}
     PhoneState phone(std::uint64_t now,std::uint32_t gearSession)const {
         PhoneState result;result.bleBench=true;
-        if(!fresh(now)||status_.vehicle!=gearSession||status_.display!=own_)return result;
+        if(!fresh(now)){result.unavailable=PhoneUnavailable::Status;return result;}
+        if(status_.vehicle!=gearSession){result.unavailable=PhoneUnavailable::VehicleSession;return result;}
+        if(status_.display!=own_){result.unavailable=PhoneUnavailable::ReturnChannel;return result;}
         result=status_.phone;result.commandFailed=result.commandFailed||failed_;return result;
     }
     bool post(Action action,std::uint64_t now,std::uint32_t gearSession) {

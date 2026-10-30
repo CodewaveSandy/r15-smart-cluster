@@ -51,7 +51,7 @@ struct ble_gap_event {
 };
 struct ble_sm_io {uint8_t action=0,numcmp_accept=0;};
 inline ble_gap_conn_desc descriptor;inline ble_addr_t storedAddress;
-inline bool advertising=false;inline int bonds=0,terminated=0,accepted=0,rejected=0;
+inline bool advertising=false,pendingConnection=false;inline int advertiseCalls=0;inline int bonds=0,terminated=0,accepted=0,rejected=0;
 inline int(*gapCallback)(ble_gap_event*,void*)=nullptr;inline void* gapContext=nullptr;
 struct ble_hs_adv_fields {int flags=0;const uint8_t* name=nullptr;unsigned name_len=0;int name_is_complete=0;};
 struct ble_gap_adv_params {int conn_mode=0,disc_mode=0;};
@@ -63,7 +63,7 @@ inline int ble_hs_id_infer_auto(int,uint8_t* type){*type=0;return 0;}
 inline int ble_store_util_bonded_peers(ble_addr_t* address,int* count,int max){assert(max==1);*count=bonds;*address=storedAddress;return 0;}
 inline int ble_gap_adv_active(){return advertising;}
 inline int ble_gap_adv_set_fields(const ble_hs_adv_fields* fields){assert(fields->name_len==11);return 0;}
-inline int ble_gap_adv_start(int,void*,int,ble_gap_adv_params*,int(*callback)(ble_gap_event*,void*),void* context){advertising=true;gapCallback=callback;gapContext=context;return 0;}
+inline int ble_gap_adv_start(int,void*,int,ble_gap_adv_params*,int(*callback)(ble_gap_event*,void*),void* context){++advertiseCalls;if(pendingConnection)return 6;advertising=true;gapCallback=callback;gapContext=context;return 0;}
 inline int ble_gap_conn_find(uint16_t,ble_gap_conn_desc* out){*out=descriptor;return 0;}
 inline int ble_gap_security_initiate(uint16_t){return 0;}
 inline int ble_gap_terminate(uint16_t,int){++terminated;return 0;}
@@ -90,8 +90,18 @@ int main(){
  board::BlePhone phone;assert(phone.initialize());
  assert(std::strcmp(deviceName,"R15 Cluster")==0&&ble_hs_cfg.sm_mitm&&ble_hs_cfg.sm_sc&&ble_hs_cfg.sm_bonding);
  phone.poll(true);drain();assert(phone.snapshot(millis).phone.available());
+ // app_main captures its loop timestamp before waking the BLE host. The host
+ // can publish a newer snapshot before app_main reads it in the same cycle.
+ const auto loopStarted=millis;millis+=2;phone.poll(true);drain();
+ assert(phone.snapshot(loopStarted).phone.available());
+ assert(!phone.snapshot(millis+1000).phone.available());
  emit(BLE_GAP_EVENT_CONNECT);assert(terminated==1);emit(BLE_GAP_EVENT_DISCONNECT);
  assert(phone.post({Action::Pair,0}));phone.poll(true);drain();assert(phone.snapshot(millis).phone.pairWindowOpen);
+ // IDF reserves the sole connection and stops advertising before delivering
+ // CONNECT (remote-feature exchange can delay the callback). Poll in that gap.
+ const auto starts=advertiseCalls;advertising=false;pendingConnection=true;
+ phone.poll(true);drain();assert(phone.snapshot(millis).phone.available());
+ assert(advertiseCalls==starts);pendingConnection=false;
  emit(BLE_GAP_EVENT_CONNECT);emit(BLE_GAP_EVENT_PASSKEY_ACTION);
  auto s=phone.snapshot(millis);assert(s.phone.pairingRequested&&s.pairing==987&&!s.phone.connected);
  assert(phone.post({Action::Approve,988}));phone.poll(true);drain();assert(!accepted&&phone.snapshot(millis).phone.commandFailed);
@@ -101,7 +111,7 @@ int main(){
  assert(phone.post({Action::Pair,0}));phone.poll(true);drain();emit(BLE_GAP_EVENT_CONNECT);emit(BLE_GAP_EVENT_PASSKEY_ACTION);
  assert(phone.post({Action::Approve,987}));phone.poll(true);drain();bonds=1;descriptor.sec_state={true,true,true,16};emit(BLE_GAP_EVENT_ENC_CHANGE);
  s=phone.snapshot(millis);assert(valid(s.phone)&&s.phone.connected&&s.phone.paired&&!s.phone.pairingRequested);
- emit(BLE_GAP_EVENT_DISCONNECT);assert(phone.snapshot(millis).phone.paired&&!phone.snapshot(millis).phone.connected);
+ emit(BLE_GAP_EVENT_DISCONNECT);assert(advertising);assert(phone.snapshot(millis).phone.paired&&!phone.snapshot(millis).phone.connected);
  assert(phone.post({Action::Forget,0}));phone.poll(true);drain();assert(!phone.snapshot(millis).phone.paired);
  assert(phone.post({Action::Pair,0}));phone.poll(true);drain();emit(BLE_GAP_EVENT_CONNECT);emit(BLE_GAP_EVENT_PASSKEY_ACTION);
  phone.poll(false);drain();assert(!phone.snapshot(millis).phone.pairingRequested&&!phone.snapshot(millis).phone.pairWindowOpen);
@@ -121,5 +131,7 @@ with tempfile.TemporaryDirectory(prefix="r15-ble-check-") as directory:
         header.write_text('#include "platform.h"\n')
     (temp / "check.cpp").write_text(test)
     subprocess.run(["c++", "-std=c++17", "-I", str(temp), "-I", str(root), "-I", str(root / "firmware/vehicle/main"), str(temp / "check.cpp"), str(root / "firmware/vehicle/main/BlePhone.cpp"), "-o", str(temp / "check")], check=True)
-    subprocess.run([str(temp / "check")], check=True)
+    result = subprocess.run([str(temp / "check")], check=True, capture_output=True, text=True)
+    assert "@BLE FAULT source=store-write code=1 type=1" in result.stdout
+    assert "@BLE FAULT source=host-health age_ms=1000" in result.stdout
 print("Actual BLE adapter: explicit enrollment, code-bound approval, authentication, bonds, timeout and storage faults pass (fake radio).")

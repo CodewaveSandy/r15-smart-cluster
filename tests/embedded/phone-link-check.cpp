@@ -55,7 +55,10 @@ int main(int argc,char** argv){
     assert(display.post(Action::Pair,280,12)&&display.outgoing(280,control));
     display.outgoing(1800,control);assert(!display.phone(1800,12).available()); // Link freshness independent of request timeout.
     status.phone={};status.phone.quality=Quality::Available;status.vehicle=13;status.display=0;status.pairing=status.code=0;status.result=Result::None;status.request=0;status.action=Action::Heartbeat;
-    display.update(status,1820);assert(!display.phone(1820,13).available()); // Requires new display-session echo.
+    display.update(status,1820);assert(!display.phone(1820,13).available());
+    assert(display.phone(1820,13).unavailable==PhoneUnavailable::ReturnChannel);
+    assert(display.phone(1820,14).unavailable==PhoneUnavailable::VehicleSession);
+    assert(display.phone(2820,13).unavailable==PhoneUnavailable::Status); // Requires new display-session echo.
     gate.invalidate();assert(!gate.fresh(1820));
     Packet hello;hello.kind=Kind::Control;hello.vehicle=12;hello.display=99;
     assert(!gate.receive(hello,1830,0,request,changed));

@@ -28,6 +28,8 @@ private:
     static int storeWrite(int,const union ble_store_value*);static int storeDelete(int,const union ble_store_key*);
     static void synced();static void reset(int);static void task(void*);static void work(ble_npl_event*);
     bool displayAvailable(std::uint64_t now);
+    void fault(const char* source,int code,int type=0);
+    bool faultLogged_=false,healthLogged_=false,advertiseRequested_=false;
     void advertise();void process();void updateBond();void publish();void reject();
     Snapshot state_,published_;std::uint64_t publishedAt_=0,displayObservedAt_=0,windowDeadline_=0,pairDeadline_=0;
     bool storageFault_=false;ble_store_write_fn* write_=nullptr;ble_store_delete_fn* delete_=nullptr;

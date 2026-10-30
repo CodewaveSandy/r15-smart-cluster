@@ -2,7 +2,9 @@
 #include "Quality.h"
 #include <array>
 namespace cluster {
+enum class PhoneUnavailable {Service, Status, VehicleSession, ReturnChannel};
 struct PhoneState {
+    PhoneUnavailable unavailable=PhoneUnavailable::Service;
     Quality quality=Quality::Unavailable;
     bool bleBench=false,pairWindowOpen=false,commandFailed=false;
     bool paired=false,connected=false,pairingRequested=false,pairingApproved=false;

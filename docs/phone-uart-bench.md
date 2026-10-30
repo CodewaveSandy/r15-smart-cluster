@@ -1,6 +1,6 @@
 # Vehicle BLE pairing bench
 
-Implemented in firmware; actual Android/radio acceptance remains pending. Vehicle owns BLE and bond storage; display owns the approval UI. This milestone provides authenticated BLE bonding only. Wi-Fi, companion application data, navigation, media and maps remain pending. The existing Flutter/Mac companion transport is not yet adapted to this firmware.
+Implemented in firmware; first numeric-comparison pairing and saved-bond reconnect after powering both boards off/on are user bench-confirmed (2026-10-30). Vehicle owns BLE and bond storage; display owns the approval UI. This milestone provides authenticated BLE bonding only. Wi-Fi, companion application data, navigation, media and maps remain pending. The existing Flutter/Mac companion transport is not yet adapted to this firmware.
 
 ## Wiring and flashing
 
@@ -66,3 +66,25 @@ All integers are little endian; no native structs are transmitted. CRC uses refl
 Status and heartbeat cadence is 200 ms; freshness is 1,000 ms. Controls require an established matching session and fresh heartbeat. Requests retry every 200 ms with a 1,500 ms local deadline; vehicle deduplicates IDs. Approve/Reject must match the current random pairing nonce. Queued acknowledges queue admission only; subsequent status confirms the result. Reboots invalidate prior-session commands. RX overflow invalidates freshness without clearing accepted-request deduplication.
 
 Display console output includes binary control frames followed by LF alongside diagnostic text. LF conversion is disabled to preserve bytes. Vehicle accepts only validated Control frames; clock helper tolerates binary console lines. This is a bench sideband, not the final full telemetry/map protocol.
+
+## Diagnosing unavailable Phone status
+
+The normal gear color proves only the R15G telemetry path. Phone distinguishes missing status packets, a mismatched vehicle session, an unconfirmed return UART and a vehicle BLE service fault. “Return UART not confirmed” means the vehicle has not echoed this display boot session; check TX43 → GPIO18 and the existing common ground. One shared GND is sufficient. Repeated Android status 19 disconnects before enrollment are consistent with the vehicle rejecting an unapproved connection; they do not establish a radio failure.
+
+BLE health age is measured when the snapshot is observed, accounting for the host task publishing after the acquisition loop timestamp was captured. A newer concurrent publication must not be reported unavailable. The fake-radio regression reproduces this scheduling order and retains the one-second stale-health boundary. Subsequent user bench evidence confirms first pairing and a saved-bond reconnect; prolonged/concurrent load testing remains pending.
+
+If the return channel is confirmed but BLE becomes unavailable during connection, capture the bounded vehicle fault diagnostic over its USB console. Stop other serial monitors first. With the current native USB vehicle port:
+
+```bash
+/Users/codewavesandy/.platformio/penv/bin/python tools/vehicle/ble_log.py /dev/cu.usbmodem1101
+```
+
+The reader sends no commands and filters binary input snapshots out. Start it before selecting Pair phone and connecting Android. `@BLE FAULT` reports only an operation, numeric result/object type or health age, never keys or numeric-comparison codes. Faults are latched/rate-limited; if already emitted, start the reader before powering the vehicle and reconnect if USB enumeration changes. This diagnostic identifies a failure; it does not establish its cause without the reported result.
+
+Advertising restarts only when synchronization, disconnect, a failed connection or advertising completion explicitly requests it. In pinned ESP-IDF 5.5.4 NimBLE, the sole connection slot can be reserved before CONNECT reaches the application (remote-feature exchange precedes that callback). Periodic polling must not restart advertising during this interval: `ble_gap_adv_start` returns `BLE_HS_ENOMEM` (6) when no connection slot remains. The fake-radio regression models this interval and verifies pairing status remains available and no restart is attempted. This is not evidence of general heap exhaustion. Subsequent first pairing and saved-bond reconnect are user bench-confirmed.
+
+## User bench evidence — 2026-10-30
+
+User reports matching-code first pairing succeeded, then both boards were powered off/on and nRF Connect reconnected after tapping Connect without another code. The supplied Android log shows BONDED, then a reconnect with encryption ENABLED / AES (16 bytes), with no new pairing exchange in that reconnect segment. This supports bond persistence across the reported power cycle and encrypted saved-bond reuse. Connection initiation at 16:03:04.663 reaches Connected at 16:03:05.019 (about 356 ms); encryption notification follows at 16:03:05.166 (about 503 ms from initiation). These are this run's Android log timings, not latency guarantees.
+
+A GATT CONN TIMEOUT appears before the reconnect, consistent with the reported power interruption; the log alone cannot establish that cause. The phone currently shows CONNECTED/BONDED. Automatic phone-initiated reconnect, extended stability, failure cases and GPIO/render performance under radio load remain separate acceptance work. No pairing code, bond key or phone content is retained in this record.
