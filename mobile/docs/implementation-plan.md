@@ -1,12 +1,35 @@
 # Companion implementation plan
 
-Updated: 2026-10-21. Designed for Android first and future iOS using Flutter. Host, phone, bench, target and bike evidence remain separate.
+Updated: 2026-10-30. Android and iOS Flutter companion; Android implementation/device verification first, with separate iOS verification. Host, phone, bench, target and bike evidence remain separate.
+
+## Approved implementation sequence
+
+The user approved [Concept 01 and its visual contract](visual-design.md) on 2026-10-30 and requires modular architecture, reusable components, standard practices, smooth performance and a final result faithful to the approved visuals. This is a locked sequence and acceptance plan, not a claim of implementation or authorization to begin coding yet.
+
+All implementation in this chat is limited to `mobile/`, including its Dart, Android/iOS adapters, tests, assets and documentation. Firmware, shared C++, simulator, root tooling and hardware configuration remain read-only. A missing accessory service is an external dependency to document, never permission to change firmware. Existing working preview/session behavior must survive each incremental stage.
+
+| Step | Implementation scope | Completion gate |
+| --- | --- | --- |
+| 1. Design system and asset preparation | Measure Concept 01; freeze dark/light tokens, text roles, spacing, motion, responsive rules and approved bike/rectangular-HMI assets. Establish screenshot fixtures from current behavior. | Reviewed artwork and screen-state specifications; no speculative packages; all assets local, licensed/provenance recorded and appropriately sized. |
+| 2. Reusable presentation foundation | Add shared controls only when first consumed: screen shell, action button, status pill, surface, telemetry tile, bike hero, modal layout and two-destination navigation. Keep constructor-based dependency composition. | Existing tests remain green; focused component/semantics checks; light/dark, text scaling and small-screen inspection; no service calls or parsing inside widgets. |
+| 3. Opening and first-time flow | Implement the illustrated splash/pulse and explicit first-time/returning-user routing. Preserve native launch behavior separately; branding never waits for radios. | Cancellable animation, reduced motion, background/resume/disposal and deterministic captures; returning users can see disconnected/reconnecting Home. |
+| 4. Pairing experience | Implement bounded radar, found-device cards and approval/error states using the existing development session through narrow adapters. Preserve saved trust, disconnect and confirmed forget. | Scan/empty/denied/disabled/wrong-peer/timeout/reject/reconnect/storage-failure tests; no fake device/success; Android manual preview. Clearly distinguish the Mac adapter from physical ESP32 bonding. |
+| 5. My bike and telemetry presentation | Build the approved hero/Home and navigation entry. Introduce immutable quality/source/unit-bearing telemetry models and an application controller when real streams require them. Keep unavailable data honest. | Pixel/visual review against approved Home; stale/disconnect/reboot boundaries and independent field updates; live contract absent means unavailable values, not sample bike readings. |
+| 6. Map and navigation contract decision | Research current primary provider docs and evaluate Android/iOS SDKs, search/routing, licensing/attribution, regional/offline behavior, costs and permitted embedded delivery. Specify cancellation, source quality and bounded data interfaces. | Record selected provider and limitations before adding its SDK. Resolve required credentials/paid-service decisions with the user. No assumption that a Flutter map widget grants cluster data rights. |
+| 7. Destination search and route overview | Integrate the selected phone map, permission-aware location, search, destination details, full route path, ETA/distance and Start ride. | Real provider-backed phone results; debounced/cancellable search, old-result rejection, no-route/offline/denied states, legal attribution and reviewed map styling. |
+| 8. Active phone navigation | Add moving position, next-turn overlay, GPS speed, route-follow/overview/recenter, rerouting, arrival and End ride. Add platform background services only as supported and needed. | Real Android GPS/locked-screen/background/revocation tests, stale/low-accuracy treatment, route-generation cancellation and profile-mode measurements. Phone navigation remains distinguishable from cluster projection. |
+| 9. Mobile accessory integration | Implement only mobile adapters against an available reviewed accessory contract: capabilities, authenticated sessions, real telemetry and navigation delivery. Retain Mac development support without making it the production transport. | Physical accessory evidence, shared-contract fixtures consumed on the mobile side, reconnect/reset/flood/partial-forget tests. Currently blocked by absent companion application GATT/Wi-Fi/navigation services; no firmware edits or invented UUIDs/packets. |
+| 10. iOS validation and final polish | Verify Swift/platform capabilities on macOS/Xcode and real iPhone; audit all approved screens, accessibility, lifecycle, assets, dependencies, privacy and performance. | iOS builds and device evidence separately recorded; visual fidelity accepted; unsupported capabilities explicit; signed release/distribution remains a separately authorized milestone. |
+
+Steps 1–5 can proceed without real accessory services, using honest unavailable states and isolated labelled design fixtures. Step 6 precedes map SDK commitment; step 9 depends on a separately delivered accessory contract. iOS-friendly boundaries and layout checks apply from step 1; step 10 supplies native evidence rather than deferring portability until the end. Notifications/media are outside this four-screen implementation and remain later optional milestones.
+
+At every step: format, analyze, run relevant tests, build affected mobile targets where available, review representative screenshots and report measured evidence/limitations. Do not start the next dependent step with a known regression. Design iteration is allowed to achieve the approved appearance; adding screens, services, paid providers or changes to the approved direction requires an explicit recorded decision. Routine review does not require repeated approval for already authorized work.
 
 ## Current scope
 
 This change establishes generated Android/iOS projects, a Flutter composition root, immutable feature-status values, a branded startup and connection-aware home screen, tests and documentation. A [development Wi-Fi Mac preview session](mac-preview-connection.md) now implements TLS enrollment, heartbeat, disconnect/resume and confirmed forget. Native Android/Mac BLE discovery and protected saved pairing are implemented. ESP32 Wi-Fi provisioning and navigation/media/notification services remain pending. The unified cluster Phone page uses normalized bridge observations, including first-pair approval. Separate rider-facing radio pages are removed. Exact executed verification belongs in [development](development.md).
 
-## Delivery stages
+## Broader product roadmap (context, not this chat's edit scope)
 
 | Stage | Deliverable | Acceptance evidence |
 | --- | --- | --- |
@@ -28,9 +51,9 @@ Pure Dart: capability/quality decisions, session transitions, protocol validatio
 
 CI should use the pinned Flutter revision and lockfile, run format/analyze/tests, Android debug build on suitable runner and unsigned iOS simulator build on macOS/Xcode. CMake checks remain independent. Add CI when runner/toolchain policy is established; don't represent a missing workflow as an enforced gate.
 
-## Decisions still needed
+## Integration decisions still needed
 
-- Exact vehicle MCU and delivered display revision, UART pins/baud and measured resource budget.
+- Use the latest root hardware/bench guides for recorded board identities and UART details; measured resource headroom and the full application/map contract remain external dependencies.
 - Map provider/routing engine, data licensing/attribution/caching, regional/offline coverage and cost.
 - Wire representation, numeric/text/map limits, freshness deadlines and golden vectors.
 - Authenticated enrollment, crypto/library choice, secure storage, reconnect and revocation semantics.
