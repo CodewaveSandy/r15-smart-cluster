@@ -4,6 +4,7 @@ import '../../../app/widgets/brand_mark.dart';
 import '../domain/phone_status.dart';
 import '../application/preview_session.dart';
 import 'preview_pairing_sheet.dart';
+import 'connection_landing.dart';
 
 class PhonePage extends StatelessWidget {
   const PhonePage({required this.status, this.session, super.key});
@@ -20,38 +21,20 @@ class PhonePage extends StatelessWidget {
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
+        useSafeArea: true,
+        isDismissible: false,
+        enableDrag: false,
         builder: (_) => PreviewPairingSheet(session: session!),
       );
       return;
     }
     showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Connect your cluster',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Phone pairing is coming next. You will be able to select '
-                'your cluster and securely connect it here.',
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Got it'),
-              ),
-            ],
-          ),
-        ),
-      ),
+      isDismissible: false,
+      enableDrag: false,
+      useSafeArea: true,
+      builder: (_) => const PreviewPairingSheet(),
     );
   }
 
@@ -63,6 +46,15 @@ class PhonePage extends StatelessWidget {
         (session?.busy ?? false);
     final unavailable = status.connection == ClusterConnection.unavailable;
     final colors = Theme.of(context).colorScheme;
+    if (!connected && session?.hasTrust != true) {
+      return ConnectionLanding(
+        onConnect: () => _connect(context),
+        busy: busy,
+        error:
+            session?.error ??
+            (unavailable ? 'Cluster connection unavailable' : null),
+      );
+    }
     return Scaffold(
       body: SafeArea(
         child: Center(

@@ -19,6 +19,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/illustrations/bike-opening.png
     - assets/fonts/inter/OFL.txt
     - assets/fonts/chakra-petch/OFL.txt
   fonts:

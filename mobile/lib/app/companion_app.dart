@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../features/phone/domain/phone_status.dart';
 import '../features/phone/application/preview_session.dart';
 import '../features/phone/presentation/phone_page.dart';
-import 'widgets/brand_mark.dart';
+import 'theme/companion_theme.dart';
+import 'widgets/opening_screen.dart';
 
 class CompanionApp extends StatelessWidget {
   const CompanionApp({required this.phoneStatus, this.session, super.key});
@@ -17,19 +18,9 @@ class CompanionApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'R15 Companion',
     debugShowCheckedModeBanner: false,
-    theme: _theme(Brightness.light),
-    darkTheme: _theme(Brightness.dark),
+    theme: CompanionTheme.forBrightness(Brightness.light),
+    darkTheme: CompanionTheme.forBrightness(Brightness.dark),
     home: _Startup(status: phoneStatus, session: session),
-  );
-
-  ThemeData _theme(Brightness brightness) => ThemeData(
-    brightness: brightness,
-    fontFamily: 'Inter',
-    colorSchemeSeed: const Color(0xff007757),
-    scaffoldBackgroundColor: brightness == Brightness.dark
-        ? const Color(0xff090e14)
-        : const Color(0xffeff3f5),
-    useMaterial3: true,
   );
 }
 
@@ -50,7 +41,7 @@ class _StartupState extends State<_Startup> {
   void initState() {
     super.initState();
     // Brief branding only; this does not claim to initialize phone services.
-    _timer = Timer(const Duration(milliseconds: 900), () {
+    _timer = Timer(CompanionTokens.openingDuration, () {
       if (mounted) setState(() => _showHome = true);
     });
   }
@@ -72,7 +63,5 @@ class _StartupState extends State<_Startup> {
                   session: widget.session,
                 ),
               )
-      : const Scaffold(
-          body: SafeArea(child: Center(child: BrandMark())),
-        );
+      : const OpeningScreen();
 }

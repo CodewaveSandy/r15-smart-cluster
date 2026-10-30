@@ -4,6 +4,8 @@ Updated: 2026-10-30. Android and iOS Flutter companion; Android implementation/d
 
 ## Approved implementation sequence
 
+Current verification override, requested by the user on 2026-10-30: no new automated test cases for now. Validate manually with preview/device checks, formatting/static analysis and affected builds; preserve existing tests. Automated test/golden authoring gates below are deferred until the user resumes that work. Do not claim manual checks not actually performed.
+
 The user approved [Concept 01 and its visual contract](visual-design.md) on 2026-10-30 and requires modular architecture, reusable components, standard practices, smooth performance and a final result faithful to the approved visuals. This is a locked sequence and acceptance plan, not a claim of implementation or authorization to begin coding yet.
 
 All implementation in this chat is limited to `mobile/`, including its Dart, Android/iOS adapters, tests, assets and documentation. Firmware, shared C++, simulator, root tooling and hardware configuration remain read-only. A missing accessory service is an external dependency to document, never permission to change firmware. Existing working preview/session behavior must survive each incremental stage.
@@ -23,7 +25,17 @@ All implementation in this chat is limited to `mobile/`, including its Dart, And
 
 Steps 1–5 can proceed without real accessory services, using honest unavailable states and isolated labelled design fixtures. Step 6 precedes map SDK commitment; step 9 depends on a separately delivered accessory contract. iOS-friendly boundaries and layout checks apply from step 1; step 10 supplies native evidence rather than deferring portability until the end. Notifications/media are outside this four-screen implementation and remain later optional milestones.
 
-At every step: format, analyze, run relevant tests, build affected mobile targets where available, review representative screenshots and report measured evidence/limitations. Do not start the next dependent step with a known regression. Design iteration is allowed to achieve the approved appearance; adding screens, services, paid providers or changes to the approved direction requires an explicit recorded decision. Routine review does not require repeated approval for already authorized work.
+At every step: format, analyze, build affected mobile targets where available, perform the current manual checks, review representative screenshots and report measured evidence/limitations. Do not start the next dependent step with a known regression. Design iteration is allowed to achieve the approved appearance; adding screens, services, paid providers or changes to the approved direction requires an explicit recorded decision. Routine review does not require repeated approval for already authorized work.
+
+### First implementation slice: 2026-10-30
+
+Follow-up: the user approved the [first-connection refinement](visual-design.md#approved-first-connection-refinement). The illustrated no-trust landing, real-scan radar, rectangular-HMI discovery cards and existing code approval flow are implemented. Plain launches can now request native Android discovery; without a configured development session, a discovered device does not become paired and the missing application adapter is explained. No new protocol/firmware service was added. Existing saved/connected presentation is retained pending the Home milestone. New UI checks remain manual per user instruction; native discovery, large-text/light/reduced-motion appearance and pairing failure states require phone review.
+
+User manual preview acceptance (2026-10-30): the user reports the new landing/discovery presentation looks perfect and requests committing it. This records visual acceptance of the preview, not proof of accessory pairing, exhaustive permission/large-text/reduced-motion coverage, iOS behavior or measured performance.
+
+Shared dark/daylight blue theme tokens, component theme defaults, a reusable local bike illustration and the illustrated opening/pulse are implemented. Branding still hands off after 900 ms to the existing connection-aware screen. Pairing, Home telemetry and map screens have not yet been migrated to Concept 01. First-time/returning routing and the rectangular HMI artwork remain upcoming, so steps 1–3 are partially complete rather than fully accepted.
+
+Format/static analysis and the Android ARM64 debug build pass. Before the manual-testing instruction arrived, the existing 18 tests plus 13 temporary opening/theme checks passed (live Mac TLS test skipped). The new test file was subsequently removed, preserving a verified ignored backup; no new test cases remain in source. Host opening captures were visually inspected in dark/light at 390 x 844 and with large text at 320 x 568. Actual Android appearance, reduced motion and profile-mode smoothness still require device review. No iOS or performance acceptance claim. See the development guide for manual preview checks.
 
 ## Current scope
 

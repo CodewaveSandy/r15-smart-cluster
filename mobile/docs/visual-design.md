@@ -4,7 +4,15 @@ Approved by the user: 2026-10-30. Status: design baseline, not implemented UI.
 
 ![Approved Concept 01](reference/approved-concept-01.png)
 
-This board is the visual authority for the next mobile implementation. Reference apps supplied by the user are inspiration only. Preserve the board's composition, hierarchy, restrained electric-blue accent, near-black surfaces, bike artwork prominence and compact overlays. Do not introduce a competing redesign while implementing. This approval authorizes planning; implementation starts on the user's next instruction.
+## Approved first-connection refinement
+
+Approved 2026-10-30: the first-time/disconnected-without-trust landing and discovery modal use this refinement of Concept 01.
+
+![Approved first connection](reference/approved-first-connection.png)
+
+Use the bundled three-quarter bike illustration, a faint rectangular cluster outline and halo, small R15/Companion branding, a large left-aligned headline, supporting copy and one bottom Connect cluster action. The headline is **Your bike. In sync.** so the empty state does not claim a connection. The scan sheet dims this background, shows a bounded decorative radar without invented blips, then actual discovered devices or an actionable empty/error state. Do not show the reference's Bluetooth-is-on row without a confirmed OS observation. Runtime bike art differs from the generated reference; the rectangular HMI result illustration is drawn as a local decorative widget, without live readings.
+
+This board is the visual authority for the mobile implementation, authorized to start by the user on 2026-10-30. Reference apps supplied by the user are inspiration only. Preserve the board's composition, hierarchy, restrained electric-blue accent, near-black surfaces, bike artwork prominence and compact overlays. Do not introduce a competing redesign while implementing.
 
 ## Design rules
 
@@ -42,6 +50,8 @@ Show surrounding roads, route path and moving position. Distinguish PHONE GPS sp
 “Google map type” describes the interaction, not an approved vendor. Provider selection must establish Android/iOS support, search/routing, data rights, attribution, cost and the separately permitted path to the embedded display. A phone map alone does not fulfill cluster projection. Do not forward a provider's rendered tiles or pixels without permitted support.
 
 ## Fidelity and motion acceptance
+
+Current user override (2026-10-30): manual testing for this phase; defer new automated test cases and golden-test authoring. Preserve existing tests. Visual comparisons and builds still apply, with device observations reported separately from host captures.
 
 Use a 390 x 844 logical-pixel dark reference composition derived from the board. Save deterministic screen captures and reviewed golden baselines for opening, scanning, discovered, approval, Home, route overview and active navigation. Fix time, fixture data and animation phase for comparisons. Compare hierarchy, bike crop, spacing, typography, card geometry, map overlays and colors side by side; record justified accessibility/platform differences. Text and final artwork must be sharper and more accurate than the generated board.
 

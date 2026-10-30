@@ -26,6 +26,16 @@ No connected phone or ambiguous selection produces instructions instead of launc
 
 ## Commands
 
+### Current opening preview (2026-10-30)
+
+On the configured Windows laptop, use Git Bash from the repository root: `bash scripts/preview-mobile.sh`. Flutter 3.47.7 is at `E:\learning\flutter`; Android SDK is at `E:\learning\AndroidStudioSDK`, with NDK 28.2.13676358 and Platform 36 installed. Git Bash startup exports the required tool paths. The user has confirmed the previous app preview installed and launched on this laptop.
+
+The first Concept 01 slice adds the illustrated opening and blue theme. After launching, use **R** (hot restart) to see the 900 ms opening again. Check the bike/halo and typography in dark and light system appearance, increase Android font size and verify scroll access, then enable Remove animations and check the still opening. After branding, verify the existing disconnected/connected Home and pairing behavior. No telemetry/map services were added. Phone review and measured profile-mode performance for this new slice remain pending.
+
+Per the user's current instruction, do not add automated test cases yet; retain existing tests and use manual validation, format/static analysis and native builds during implementation.
+
+First-connection follow-up: after the opening, an unpaired app shows the approved bike landing. Tap Connect cluster to request Android Nearby access and start actual discovery. Check radar/empty results, denied permission, Bluetooth off, Cancel/Back, large text, daylight and Remove animations. The reference's Bluetooth-status row is intentionally absent because the UI has no independent confirmed adapter-state observation. Discovery only finds advertisements matching the existing development service. Current vehicle BLE bonding does not expose that service. Plain launch can discover but cannot create an application session; Mac preview bootstrap remains required for existing app pairing. No device results or connection success are fabricated. Existing UI tests have not been updated or rerun for the new screen labels during this manual-testing phase.
+
 Run from `mobile/` with the pinned SDK on PATH:
 
 ```sh
