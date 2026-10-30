@@ -41,7 +41,9 @@ Future<void> main() async {
         nearby: nearby,
         peerId: useSaved ? saved['id'] as String : id,
       );
-      if (useSaved) session.restore(saved['session'] as String);
+      if (useSaved) {
+        await session.restore(saved['session'] as String, reconnectNow: false);
+      }
     } on Object {
       session = null;
     }

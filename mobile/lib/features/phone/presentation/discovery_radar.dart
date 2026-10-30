@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 /// Exists only during a real scan. Decorative sweep never invents devices.
 class DiscoveryRadar extends StatefulWidget {
-  const DiscoveryRadar({super.key});
+  const DiscoveryRadar({this.scanning = true, this.diameter = 250, super.key});
+  final bool scanning;
+  final double diameter;
   @override
   State<DiscoveryRadar> createState() => _DiscoveryRadarState();
 }
@@ -18,7 +20,18 @@ class _DiscoveryRadarState extends State<DiscoveryRadar>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context) ||
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(DiscoveryRadar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    if (!widget.scanning ||
+        MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled) {
       _sweep.stop();
     } else if (!_sweep.isAnimating) {
@@ -36,7 +49,7 @@ class _DiscoveryRadarState extends State<DiscoveryRadar>
   Widget build(BuildContext context) => ExcludeSemantics(
     child: RepaintBoundary(
       child: SizedBox.square(
-        dimension: 250,
+        dimension: widget.diameter,
         child: AnimatedBuilder(
           animation: _sweep,
           builder: (context, child) => CustomPaint(

@@ -1,5 +1,29 @@
 # Companion development and verification
 
+## Android startup access and ESP32 discovery (2026-10-30)
+
+Current radar rule: only names starting exactly with `R15 Cluster` are displayed (case-sensitive, no UUID/name exceptions). All retained real matches appear together inside a single radar, with adaptive sizes and stable decorative scatter; no paging or distance inference. Long names use complete fitted two-line labels plus accessible full names/tooltips. Pinch to zoom when dense. Scan windows run for five seconds, with a three-second rest before each repeat to avoid rapid scanner restarts; the radar keeps moving across these windows, except in reduced motion. Latest results arrive at the end of each window, not per advertisement. Stop/selection/background/disposal cancels scheduled and active scans, and late results are ignored. Errors stop scanning and expose retry. Devices absent from two successful rounds expire. Retained display is bounded to 32; native recent-selection validation retains at most 64 addresses for 20 seconds without logging them.
+
+Manual checks: verify R15 Cluster and R15 Cluster-prefixed names appear while other names are hidden; watch multiple scan rounds, device arrival/disappearance and Cancel; inspect one/multiple/dense matches, two-line names, zoom and tap-to-pair. Verify background/resume and denied Bluetooth access stop/restart appropriately. These checks remain manual; build evidence does not prove physical radio behavior.
+
+Radar pairing popup refinement: tap Connect cluster, wait for real scan results, then tap the device icon/name inside the radar. Swipe between results; names are split into two complete fitted lines rather than ellipsized. For physical BLE devices this starts Android bonding through a bounded LE GATT connection and `createBond`; open Pair phone on the cluster first and compare/approve the system code on both devices. Android owns the pairing confirmation dialog. A confirmed OS bond shows Bluetooth paired, not application Connected. The temporary GATT connection is closed afterward; application telemetry/services remain pending. An already saved Android bond is reported as saved, not proof of a live encrypted session. No bond is silently removed on failure or timeout.
+
+Manual checks for this refinement: single/multiple/long-name results, swiping and selecting the intended device, reduced motion and large text; new ESP32 bond with matching codes; Reject, 45-second app timeout, closed cluster enrollment, permission loss and already-bonded behavior. During bonding, popup dismissal is disabled until the result; process destruction releases native work without erasing any saved bond. Actual ESP32 acceptance remains pending. [Android's bonding API](https://developer.android.com/reference/android/bluetooth/BluetoothDevice#createBond()) owns the OS prompt and bond status.
+
+The app checks BLE permission/radio readiness after the brief branding screen and before showing the main app. Missing permissions are requested on each launch when requestable. Denial leaves an explicit retry/Settings screen; returning from Settings or resuming the app rechecks OS state. Modern Android requests Nearby devices only. Older supported Android needs Location permission/services for scanning; this is not navigation GPS tracking. No extra runtime permission is needed for Wi-Fi status. Native iOS discovery/permission setup is still pending.
+
+The native scanner already used BLE; its old advertised-service filter matched only the Mac preview. The current ESP32 firmware advertises R15 Cluster without that UUID. Discovery now performs a five-second BLE advertisement scan, deduplicates up to 32 results and prioritizes R15-name/preview-service candidates. Unnamed devices remain Unnamed BLE device. Classic Bluetooth discovery is not used. Advertisements may be suppressed by Android's declared neverForLocation policy; this is not a promise to list every radio in range.
+
+Manual verification:
+
+1. Run `bash scripts/preview-mobile.sh` and allow Nearby devices/enabling Bluetooth before the landing opens.
+2. Deny/revoke access in Android Settings, reopen the app and check retry or Open app settings; restore access and return. No automatic grant or repeated dialog loop is expected.
+3. Power the ESP32, leave it advertising (disconnect nRF Connect if it is occupying the single BLE connection), and tap Connect cluster. Expect an R15 Cluster candidate without requiring the Mac service UUID. Also inspect unnamed/unrelated BLE results and empty/error/retry/Cancel behavior.
+4. Tap the radar device icon to initiate Android Bluetooth bonding. Firmware bonding and companion application services remain separate; this does not implement ESP32 app data, telemetry or maps. Existing Mac-service results retain the identity/code/approval flow when the preview is configured.
+5. Verify the permission screen in light/dark, large text, Bluetooth off, and after returning from Settings. Check saved preview reconnect happens after readiness. iOS requires separate future implementation/testing.
+
+Static analysis/native build are software evidence; the above phone/radio checks remain manual and pending until the user reports results. No new automated tests are authored or run in this phase.
+
 ## Toolchain
 
 Pinned Flutter **3.47.7**, framework revision **abaf9c5237**, engine revision **deb287481e**, bundled Dart **3.13.5**. `.flutter-version` records the version for humans/version managers; it does not automatically select an SDK. Verify `flutter --version` before resolving dependencies. Use the official [SDK archive](https://docs.flutter.dev/install/archive) and [installation guide](https://docs.flutter.dev/install/manual). Commit `pubspec.lock`; do not upgrade transitives casually.

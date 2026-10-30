@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../features/phone/domain/phone_status.dart';
 import '../features/phone/application/preview_session.dart';
 import '../features/phone/presentation/phone_page.dart';
+import '../features/phone/presentation/ble_access_gate.dart';
 import 'theme/companion_theme.dart';
 import 'widgets/opening_screen.dart';
 
@@ -54,14 +55,20 @@ class _StartupState extends State<_Startup> {
 
   @override
   Widget build(BuildContext context) => _showHome
-      ? widget.session == null
-            ? PhonePage(status: widget.status)
-            : AnimatedBuilder(
-                animation: widget.session!,
-                builder: (context, _) => PhonePage(
-                  status: widget.session!.status,
-                  session: widget.session,
+      ? BleAccessGate(
+          onReady: () {
+            if (widget.session?.hasTrust == true) widget.session!.reconnect();
+          },
+          onBlocked: widget.session?.pauseForAccess,
+          child: widget.session == null
+              ? PhonePage(status: widget.status)
+              : AnimatedBuilder(
+                  animation: widget.session!,
+                  builder: (context, _) => PhonePage(
+                    status: widget.session!.status,
+                    session: widget.session,
+                  ),
                 ),
-              )
+        )
       : const OpeningScreen();
 }
