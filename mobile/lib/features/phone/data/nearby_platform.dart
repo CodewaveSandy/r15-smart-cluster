@@ -3,9 +3,16 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 final class NearbyDevice {
-  const NearbyDevice({required this.address, required this.name});
+  const NearbyDevice({
+    required this.address,
+    required this.name,
+    this.previewService = false,
+    this.clusterCandidate = false,
+  });
   final String address;
   final String name;
+  final bool previewService;
+  final bool clusterCandidate;
 }
 
 abstract interface class NearbyPlatform {
@@ -22,6 +29,7 @@ abstract interface class NearbyPlatform {
 final class NativeNearby implements NearbyPlatform {
   const NativeNearby();
   static const _channel = MethodChannel('dev.r15cluster/nearby');
+  Future<void> stopScan() => _channel.invokeMethod<void>('stopScan');
   @override
   Future<List<NearbyDevice>> scan({bool interactive = true}) async {
     final result =
@@ -29,7 +37,7 @@ final class NativeNearby implements NearbyPlatform {
           'interactive': interactive,
         }) ??
         [];
-    if (result.length > 8) {
+    if (result.length > 32) {
       throw const FormatException('Too many discovery results');
     }
     return result
@@ -38,8 +46,11 @@ final class NativeNearby implements NearbyPlatform {
           return NearbyDevice(
             address: data['address'] as String,
             name: data['name'] as String,
+            previewService: data['preview'] == true,
+            clusterCandidate: data['candidate'] == true,
           );
         })
+        .where((device) => device.name.startsWith('R15 Cluster'))
         .toList(growable: false);
   }
 

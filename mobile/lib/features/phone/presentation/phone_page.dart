@@ -12,29 +12,22 @@ class PhonePage extends StatelessWidget {
   final PreviewSession? session;
 
   void _connect(BuildContext context) {
-    if (session != null) {
-      if (session!.hasTrust) {
-        session!.reconnect();
-        return;
-      }
-      showModalBottomSheet<void>(
-        context: context,
-        showDragHandle: true,
-        isScrollControlled: true,
-        useSafeArea: true,
-        isDismissible: false,
-        enableDrag: false,
-        builder: (_) => PreviewPairingSheet(session: session!),
-      );
+    if (session?.hasTrust == true) {
+      session!.reconnect();
       return;
     }
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      useSafeArea: true,
-      builder: (_) => const PreviewPairingSheet(),
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: PreviewPairingSheet(session: session),
+        ),
+      ),
     );
   }
 

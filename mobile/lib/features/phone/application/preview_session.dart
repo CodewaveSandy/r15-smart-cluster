@@ -30,7 +30,14 @@ final class PreviewSession extends ChangeNotifier {
       );
     }
     try {
-      return await nearby!.scan(interactive: interactive);
+      final devices = await nearby!.scan(interactive: interactive);
+      // Saved Mac sessions rediscover only their advertised service; a matching
+      // display name on another BLE accessory is not an endpoint to probe.
+      return interactive
+          ? devices
+          : devices
+                .where((device) => device.previewService)
+                .toList(growable: false);
     } on PlatformException catch (failure) {
       throw PreviewFailure(
         failure.message ?? 'Allow Nearby devices access and turn on Bluetooth.',
@@ -70,10 +77,10 @@ final class PreviewSession extends ChangeNotifier {
     return offer['code'] as String;
   }
 
-  Future<void> restore(String session) async {
+  Future<void> restore(String session, {bool reconnectNow = true}) async {
     if (session.length < 16 || session.length > 64) return;
     _session = session;
-    await reconnect();
+    if (reconnectNow) await reconnect();
   }
 
   Future<void> _saveTrust() async {
@@ -129,6 +136,12 @@ final class PreviewSession extends ChangeNotifier {
   }
 
   Future<void> reconnect() => _command('/resume', {}, connect: true);
+  void pauseForAccess() {
+    _wanted = false;
+    _heartbeat?.cancel();
+    _setStatus(ClusterConnection.unavailable);
+  }
+
   Future<void> disconnect() => _command('/disconnect', {});
   Future<void> forget() => _command('/forget', {});
 
