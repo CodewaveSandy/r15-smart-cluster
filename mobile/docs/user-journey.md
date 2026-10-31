@@ -39,3 +39,5 @@ Phone page shows trusted phone plus Navigation, Notifications and Music capabili
 | Warning or lifecycle interruption | Immediate instrument/warning presentation; cancel pending setup; no phone wait in shutdown |
 
 Phone retains headset audio routing for music/calls/guidance. Cluster audio streaming, call answering, message replies and voice assistant are separate future decisions, not implied by metadata access.
+
+Connected phone metadata: after each bonded link, Android now shares its current local phone label, actual phone battery and UTC/local offset through the reviewed authenticated endpoint. The cluster displays those fresh phone fields and synchronizes its clock; this is separate from Home bike telemetry and navigation readiness. Updates normally refresh every 30 seconds and on current phone observations/resume, with bounded coalescing/retry. Connection settings show sync success/unavailable/unsupported independently from Bluetooth state. Disconnect clears live metadata; reconnect samples the phone again. No background-service or cold-power clock-retention guarantee is introduced. See [metadata handoff](phone-connected-metadata-handoff.md).

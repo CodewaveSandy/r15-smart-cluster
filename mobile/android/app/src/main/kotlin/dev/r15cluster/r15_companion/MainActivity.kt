@@ -252,5 +252,6 @@ class MainActivity : FlutterActivity() {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12))) }
         return String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
     }
+    override fun onResume() { super.onResume(); if (::bonding.isInitialized) bonding.refreshMetadata() }
     override fun onDestroy() { bonding.dispose(); linkEvents = null; finishError("cancelled", "Discovery stopped."); storage.shutdown(); super.onDestroy() }
 }

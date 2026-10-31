@@ -7,7 +7,7 @@ import '../../../app/theme/companion_theme.dart';
 import 'preview_pairing_sheet.dart';
 import 'connection_landing.dart';
 
-/// Existing pairing/connection intents, also available from the Home drawer.
+/// Existing pairing/connection intents, available from Home connection settings.
 class PhonePage extends StatelessWidget {
   const PhonePage({
     required this.status,
@@ -123,6 +123,21 @@ class PhonePage extends StatelessWidget {
                   ),
                 ),
               ),
+              if (connected && status.bluetoothLinkOnly)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    switch (status.metadata) {
+                      PhoneMetadataState.synced => 'Phone name, battery and clock details shared with your cluster.',
+                      PhoneMetadataState.syncing => 'Syncing phone details…',
+                      PhoneMetadataState.unsupported => 'Phone details are unavailable with this cluster firmware.',
+                      _ => 'Phone details are currently unavailable. The Bluetooth link is still connected.',
+                    },
+                    style: theme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               if (error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 20),

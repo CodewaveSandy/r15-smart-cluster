@@ -58,3 +58,7 @@ The large modal occupies only Settings content, preserving the header and warnin
 Test first pairing with/without name, long names, invalid payloads, reject/timeout, power-cycle saved reconnect and warnings during the modal. Matching-code approval remains necessary even when the displayed name looks familiar.
 
 Security-initiation regression: Android/nRF Connect may start SMP before the optional name timer fires. In pinned NimBLE, `BLE_HS_EALREADY` (2) means an existing security procedure is active and must be retained. The vehicle now accepts this result for both initial bonding and saved-bond reconnect; real failures still terminate with an explicit numeric diagnostic. Fake-radio tests cover the peer-first ordering, name/no-name paths, rejection, authenticated reconnect and Forget. Actual-device acceptance of this correction remains pending.
+
+## Companion implementation status (2026-10-31)
+
+The Android companion retains this pre-bond enrollment-label flow and now also implements [connected phone metadata](phone-connected-metadata-handoff.md) on the separate c012 endpoint. Saved peers never write c011. App-side GATT ownership, MTU/operation ordering, refresh/cancellation and actual acceptance evidence are recorded in [development](development.md). The latest connected-metadata bench run succeeded; the updated first-pair ordering still requires its own explicit bench check.

@@ -8,6 +8,14 @@ enum FeatureReadiness {
   ready,
 }
 
+enum PhoneMetadataState {
+  notConnected,
+  syncing,
+  synced,
+  unsupported,
+  unavailable,
+}
+
 enum ClusterConnection { disconnected, connecting, connected, unavailable }
 
 /// An immutable presentation snapshot, not a wire encoding or OS permission.
@@ -18,6 +26,7 @@ final class PhoneStatus {
     this.connection = ClusterConnection.disconnected,
     this.clusterName,
     this.bluetoothLinkOnly = false,
+    this.metadata = PhoneMetadataState.notConnected,
     required this.navigation,
     required this.notifications,
     required this.music,
@@ -27,6 +36,7 @@ final class PhoneStatus {
     : connection = ClusterConnection.disconnected,
       clusterName = null,
       bluetoothLinkOnly = false,
+      metadata = PhoneMetadataState.notConnected,
       navigation = FeatureReadiness.notImplemented,
       notifications = FeatureReadiness.notImplemented,
       music = FeatureReadiness.notImplemented;
@@ -34,6 +44,7 @@ final class PhoneStatus {
   final ClusterConnection connection;
   final String? clusterName;
   final bool bluetoothLinkOnly;
+  final PhoneMetadataState metadata;
   final FeatureReadiness navigation;
   final FeatureReadiness notifications;
   final FeatureReadiness music;

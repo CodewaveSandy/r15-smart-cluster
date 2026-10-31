@@ -29,6 +29,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   bool _foreground = true, _access = false, _stopped = false, _disposed = false;
   int _attempt = 0, _generation = 0;
   String? error;
+  PhoneMetadataState _metadata = PhoneMetadataState.notConnected;
   bool get hasSelection => _selected != null;
   bool get busy => _busy;
   bool get live => _live;
@@ -43,6 +44,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
         : ClusterConnection.disconnected,
     clusterName: _selected?.name,
     bluetoothLinkOnly: true,
+    metadata: _metadata,
     navigation: FeatureReadiness.notImplemented,
     notifications: FeatureReadiness.notImplemented,
     music: FeatureReadiness.notImplemented,
@@ -58,6 +60,14 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     _bonded = value['bonded'] == true;
     _retryAllowed = value['retryAllowed'] != false;
     _live = value['state'] == 'connected';
+    _metadata = _live
+        ? switch (value['metadataState']) {
+            'synced' => PhoneMetadataState.synced,
+            'syncing' => PhoneMetadataState.syncing,
+            'unsupported' => PhoneMetadataState.unsupported,
+            _ => PhoneMetadataState.unavailable,
+          }
+        : PhoneMetadataState.notConnected;
     error = value['error'] as String?;
     if (_live) {
       _attempt = 0;
