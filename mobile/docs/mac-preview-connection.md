@@ -1,5 +1,8 @@
 # Nearby discovery and saved phone pairing
 
+Automated test files/runners were removed by user instruction on 2026-10-31. Do not create or restore them until requested. Earlier test results below are historical evidence; current verification uses builds, static analysis, diagnostics and manual preview/bench checks.
+
+
 Updated 2026-10-21. The cluster now presents one **Phone** category; separate Bluetooth/Wi-Fi pages are removed. Android uses real BLE discovery, then a TLS Wi-Fi session. USB installs/debugs the app and never carries cluster connection traffic.
 
 ## First-time journey
@@ -59,12 +62,8 @@ Initial Mac trust still comes from the developer launcher bootstrap; this is not
 ## Verification
 
 ```sh
-python3 tests/host/phone-bridge-check.py
-python3 tests/host/phone-preview-smoke.py
-ctest --test-dir build/lvgl --output-on-failure
 cd mobile
 flutter analyze --no-pub
-flutter test --no-pub
 ```
 
 Mac native BLE advertising readiness and a temporary-item Keychain round trip were exercised. Android native code compiled. Seven Python session tests cover approval, persisted restart/resume, revocation and storage failure. Flutter tests cover discovered results, selection, pair, reconnect, confirmation and faults through injected adapters; the live TLS smoke uses the real Dart client and LVGL host. Actual Android-to-Mac BLE selection/approval and automatic restart reconnect still require the physical-phone run with permissions. This evidence is separate from the user's previously successful Wi-Fi-only bridge connection.

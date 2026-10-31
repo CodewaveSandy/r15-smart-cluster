@@ -56,7 +56,7 @@ On the configured Windows laptop, use Git Bash from the repository root: `bash s
 
 The first Concept 01 slice adds the illustrated opening and blue theme. After launching, use **R** (hot restart) to see the 900 ms opening again. Check the bike/halo and typography in dark and light system appearance, increase Android font size and verify scroll access, then enable Remove animations and check the still opening. After branding, verify the existing disconnected/connected Home and pairing behavior. No telemetry/map services were added. Phone review and measured profile-mode performance for this new slice remain pending.
 
-Per the user's current instruction, do not add automated test cases yet; retain existing tests and use manual validation, format/static analysis and native builds during implementation.
+Per the user's current instruction, do not add automated test cases yet; defer test-file re-creation and use manual validation, format/static analysis and native builds during implementation.
 
 First-connection follow-up: after the opening, an unpaired app shows the approved bike landing. Tap Connect cluster to request Android Nearby access and start actual discovery. Check radar/empty results, denied permission, Bluetooth off, Cancel/Back, large text, daylight and Remove animations. The reference's Bluetooth-status row is intentionally absent because the UI has no independent confirmed adapter-state observation. Discovery only finds advertisements matching the existing development service. Current vehicle BLE bonding does not expose that service. Plain launch can discover but cannot create an application session; Mac preview bootstrap remains required for existing app pairing. No device results or connection success are fabricated. Existing UI tests have not been updated or rerun for the new screen labels during this manual-testing phase.
 
@@ -69,7 +69,6 @@ flutter pub get
 
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze --no-pub
-flutter test --no-pub
 
 flutter devices
 flutter run -d <android-device-id>
@@ -107,6 +106,6 @@ Commit Dart/native source, manifests, Gradle configuration, Xcode project, asset
 
 ## Wi-Fi connection slice verification
 
-See [connection verification](mac-preview-connection.md#verification) for the current session/TLS/UI test evidence and exact two-terminal launch commands. The initial eleven UI tests now form part of an eighteen-test mobile suite; a separate smoke runner exercises live Dart TLS and the LVGL host. The new physical BLE discovery/approval/restart journey remains to be tried by the user; the previous Wi-Fi-only connection worked.
+See [connection verification](mac-preview-connection.md#verification) for the current session/TLS/UI test evidence and exact two-terminal launch commands. Earlier automated-suite evidence is historical; those test files/runners were removed on 2026-10-31. Use manual verification and affected builds for current changes. The new physical BLE discovery/approval/restart journey remains to be tried by the user; the previous Wi-Fi-only connection worked.
 
 Current discovery verification: native Mac BLE advertising reported active; a temporary-item Keychain round trip passed; Android BLE/Keystore native code compiled. Cluster render coverage is now 210 scenarios with three Settings categories and unified Phone. See the connection guide for the new search/select/approve/Pair workflow and saved restart behavior.

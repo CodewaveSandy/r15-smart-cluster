@@ -1,8 +1,13 @@
 # R15 Smart Cluster — Agent Instructions
 
+## Development-phase verification override (2026-10-31)
+
+Per the user, all repository-owned automated test files have been removed for this development phase. Do not create, restore, expand or run automated test files/suites unless the user explicitly requests resuming that work. This applies to firmware, shared code, host preview and mobile. Defer automated unit/integration/golden tests until the later testing stage. Use affected builds, formatting/static analysis, runtime diagnostics, manual preview inspection and physical bench checks as appropriate; report exactly what was and was not verified. Preserve runtime validation, CRC/security checks, flash/backup/partition guards, development previews and normative protocol vectors. This override supersedes automated-test authoring/preservation gates elsewhere in project documents.
+
+
 ## Read before work
 
-Read RULES.md, docs/README.md, docs/architecture.md and the relevant style/lifecycle/implementation documents, then inspect affected source/tests. RULES.md is the engineering authority. User instructions take precedence except where they would require unsafe vehicle behavior or invented hardware facts.
+Read RULES.md, docs/README.md, docs/architecture.md and the relevant style/lifecycle/implementation documents, then inspect affected source. RULES.md is the engineering authority. User instructions take precedence except where they would require unsafe vehicle behavior or invented hardware facts.
 
 ## Product and boundaries
 
@@ -16,9 +21,9 @@ The host dashboard, lifecycle, Settings, Appearance preferences and Phone UI are
 
 ## Work procedure
 
-1. Inspect rules, docs, affected implementation and tests.
+1. Inspect rules, docs and affected implementation.
 2. Make the smallest coherent change, preserving unrelated user work.
-3. Test behavior and boundaries; build affected targets when available.
+3. Manually check behavior and boundaries; build affected targets when available.
 4. For UI changes, inspect 800 x 480 representative states in both layouts/themes, warnings and unavailable data.
 5. Check runtime diagnostics, ownership, bounded work and non-touch navigation.
 6. Update relevant docs and report actual verification and limitations.

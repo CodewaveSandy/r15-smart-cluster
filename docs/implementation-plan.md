@@ -1,5 +1,8 @@
 # Implementation status and plan
 
+Automated test files/runners were removed by user instruction on 2026-10-31. Do not create or restore them until requested. Earlier test results below are historical evidence; current verification uses builds, static analysis, diagnostics and manual preview/bench checks.
+
+
 Updated: 2026-10-30. Status: native dashboard, Appearance preferences, unified Phone UI and native nearby-discovery development adapter implemented; Navigation, hardware firmware and integrations pending.
 
 ## Current implementation

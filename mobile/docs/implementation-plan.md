@@ -4,7 +4,7 @@ Updated: 2026-10-30. Android and iOS Flutter companion; Android implementation/d
 
 ## Approved implementation sequence
 
-Current verification override, requested by the user on 2026-10-30: no new automated test cases for now. Validate manually with preview/device checks, formatting/static analysis and affected builds; preserve existing tests. Automated test/golden authoring gates below are deferred until the user resumes that work. Do not claim manual checks not actually performed.
+Current verification override, requested by the user on 2026-10-30: no new automated test cases for now. Validate manually with preview/device checks, formatting/static analysis and affected builds; defer test-file re-creation until requested. Automated test/golden authoring gates below are deferred until the user resumes that work. Do not claim manual checks not actually performed.
 
 The user approved [Concept 01 and its visual contract](visual-design.md) on 2026-10-30 and requires modular architecture, reusable components, standard practices, smooth performance and a final result faithful to the approved visuals. This is a locked sequence and acceptance plan, not a claim of implementation or authorization to begin coding yet.
 

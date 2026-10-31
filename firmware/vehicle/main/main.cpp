@@ -1,5 +1,6 @@
 #include "shared/protocol/GearPacket.h"
 #include "BlePhone.h"
+#include "shared/protocol/PairingIdentity.h"
 #include "driver/gpio.h"
 #include "InputConfig.h"
 #include "shared/protocol/Button.h"
@@ -46,7 +47,7 @@ extern "C" void app_main() {
     cluster::gearlink::Packet packet;packet.session=esp_random();if(!packet.session)packet.session=1;
     static cluster::board::BlePhone phone;phone.initialize();
     cluster::phonelink::Receiver controls;cluster::phonelink::Gate gate(packet.session);
-    std::uint32_t statusSequence=0;std::uint64_t lastStatus=0;
+    std::uint32_t statusSequence=0,nameSequence=0;std::uint64_t lastStatus=0,lastName=0;
     cluster::inputs::Button tripButton,infoButton;
     for(;;) {
         const auto now=std::uint64_t(esp_timer_get_time()/1000);
@@ -91,6 +92,16 @@ extern "C" void app_main() {
             status.phone=snapshot.phone;status.pairing=snapshot.pairing;status.code=snapshot.code;gate.stamp(status);
             const auto bytes=cluster::phonelink::encode(status);
             uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+        }
+        else if(now-lastName>=200) {
+            lastName=now;const auto snapshot=phone.snapshot(now);
+            if(snapshot.phone.available()&&snapshot.phone.pairingRequested&&snapshot.phone.displayName[0]) {
+                cluster::pairidentity::Packet identity;identity.vehicle=packet.session;identity.pairing=snapshot.pairing;
+                identity.sequence=++nameSequence;identity.uptime=std::uint32_t(now);identity.label=snapshot.phone.displayName;
+                const auto bytes=cluster::pairidentity::encode(identity);
+                // 36 telemetry + 64 identity bytes fit the FIFO; never append to a status cycle.
+                uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+            }
         }
         ++packet.sequence;
         vTaskDelay(pdMS_TO_TICKS(20));

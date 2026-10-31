@@ -96,7 +96,7 @@ Brightness/backlight fault handling, watchdog coverage, acquisition overrun and 
 | `embedded/presentation/` | Bounded formatting, quality policies and animation/transition math |
 | `embedded/ui/` | LVGL composition, components, geometry, typography and themes |
 | `simulator/lvgl/` | SDL host, keyboard adapter, preference file adapter and timed radio fixtures |
-| `tests/embedded/` | Portable checks and deterministic LVGL verification |
+
 | `assets/`, `scripts/`, `tools/fonts/` | Licensed bundled assets, reproducible conversion and preview/audit tools |
 
 The `firmware/display` board adapter uses ESP-IDF RGB/I2C APIs with pins, timings and touch reset derived from the user-tested Elecrow V3.0 example. PlatformIO orchestrates this separate ESP-IDF/CMake target; it does not use Arduino. The existing portable v3 discrete-input codec now serves the GPIO17→GPIO38 bench link; the full UART telemetry/phone/map contract remains pending. No empty firmware or protocol folders imply an implementation. Shared model and application/presentation logic stay independent of LVGL, FreeRTOS and device SDKs.
@@ -165,3 +165,5 @@ The [nearby pairing contract](../mobile/docs/mac-preview-connection.md) describe
 ## Vehicle BLE bench implementation
 
 See [the normative bench contract](phone-uart-bench.md). R15G input snapshots remain independent of R15P phone status/control. Display console TX43 supplies the return channel to vehicle RX18; vehicle TX17 still supplies display RX38. BLE host callbacks own radio and vehicle NVS; a bounded expiring queue bridges semantic requests. The LVGL owner consumes validated snapshots only. BLE bond authentication is separate from future companion application authorization.
+
+Optional pairing labels use a narrowly scoped write-only vehicle GATT service and the bounded R15N sideband, matched to the active pairing challenge. Phone names never authorize bonds or commands. The display retains the existing LVGL owner and persistent modal objects. See [phone-name contract](phone-name-integration.md) for the app handoff and compatibility.

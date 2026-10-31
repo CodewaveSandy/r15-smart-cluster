@@ -20,13 +20,9 @@ Tab changes layout, D previews themes, arrows adjust speed/RPM, brackets adjust 
 
 See the [step-by-step preview guide](docs/getting-started.md), [project documentation](docs/README.md), [architecture](docs/architecture.md) and [implementation plan](docs/implementation-plan.md).
 
-## Verify
+## Development verification
 
-```sh
-ctest --test-dir build/lvgl --output-on-failure
-```
-
-Fifteen test suites check portable state/lifecycle/presentation, settings/radio flows, phone bridge IPC and persistence, and render 210 deterministic scenarios, including the two-second boot / two-second shutdown R15 Light Signature timeline. Simulated output is not bike verification.
+Automated test files were removed at the user's request on 2026-10-31 and are deferred until requested again. Use affected builds, static analysis, runtime diagnostics, manual previews and physical bench checks. See [RULES.md](RULES.md) for the project-wide rule. Simulated output is not bike verification.
 
 ## Mobile companion
 

@@ -97,13 +97,9 @@ bash scripts/preview.sh
 
 The converter is installed using tools/fonts/package-lock.json when absent. Generated font C files are deliberate runtime assets; ship their OFL license.
 
-## Tests and screenshots
+## Manual verification and screenshots
 
-```sh
-ctest --test-dir build/lvgl --output-on-failure
-```
-
-This runs fifteen suites: Phone menu/IPC, portable model/lifecycle, Light Signature timeline and presentation/input checks, desktop key mappings, Bluetooth and Wi-Fi state/requests, preference storage/restart checks, typography bounds/glyph coverage, and deterministic dashboard/Phone render scenarios with SDL's dummy video driver. The render test rejects LVGL warnings and checks that low-fuel blinking reaches the pixels. BMP images are written to build/lvgl/previews and can be opened with macOS Preview. That directory also receives host-metrics.json with unchanged-update flush counts, object count, host buffer sizes and diagnostic host timing; these are not ESP32 measurements. Stable-state tests reject redundant flushes.
+Automated test files/suites were removed by user instruction on 2026-10-31. Re-creation is deferred until requested. Continue compiling affected targets and inspecting manual preview/bench behavior, including warnings, unavailable data and both layouts/themes. The render mode writes BMP captures and diagnostic host metrics; these are not ESP32 measurements or a replacement for physical acceptance.
 
 To build and render without opening a window:
 
@@ -111,7 +107,7 @@ To build and render without opening a window:
 SDL_VIDEODRIVER=dummy bash scripts/preview.sh --render build/lvgl/previews
 ```
 
-Render coverage includes both layouts/themes, fuel blink phases, warnings, missing data, boot, shutdown, off and urgent-warning interruption. Review screenshots visually; tests alone do not establish design quality.
+Render coverage includes both layouts/themes, fuel blink phases, warnings, missing data, boot, shutdown, off and urgent-warning interruption. Review screenshots visually and record actual observations.
 
 ## Current limits
 

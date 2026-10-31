@@ -9,6 +9,8 @@ extern "C" {
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 #include "host/ble_sm.h"
+#include "host/ble_gatt.h"
+#include "host/ble_uuid.h"
 #include "host/ble_store.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
@@ -25,11 +27,14 @@ public:
 private:
     static BlePhone* instance_;
     static int gap(ble_gap_event*,void*);
+    static int nameAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
+    bool securityPending_=false;std::uint64_t securityDue_=0;
     static int storeWrite(int,const union ble_store_value*);static int storeDelete(int,const union ble_store_key*);
     static void synced();static void reset(int);static void task(void*);static void work(ble_npl_event*);
     bool displayAvailable(std::uint64_t now);
     void fault(const char* source,int code,int type=0);
     bool faultLogged_=false,healthLogged_=false,advertiseRequested_=false;
+    void beginSecurity();
     void finishForget(std::uint64_t now);
     bool forgetting_=false;std::uint64_t forgetDeadline_=0;
     void advertise();void process();void updateBond();void publish();void reject();

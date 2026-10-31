@@ -75,24 +75,14 @@ Requires the pinned Flutter SDK and an authorized physical Android phone connect
 
 In Flutter's running Terminal: `r` hot reloads, `R` restarts, `q` quits. Connection setup and permissions: [Mac connection guide](../mobile/docs/mac-preview-connection.md).
 
-## Build, test and diagnostics
+## Build and diagnostics
 
 Run from repository root:
 
 | Command | What it does |
 | --- | --- |
-| `cmake -S . -B build/lvgl -G Ninja -DCMAKE_BUILD_TYPE=Debug` | Configures the host build, including the hash-pinned LVGL dependency and tests. |
-| `cmake --build build/lvgl --parallel 4` | Builds host UI and test executables without launching a window. Configure first. |
-| `ctest --test-dir build/lvgl --output-on-failure` | Runs all 15 registered host suites, including rendering and local-socket IPC. Build first. |
-| `ctest --test-dir build/lvgl -N` | Lists registered test names without running them. |
-| `ctest --test-dir build/lvgl -R '^gear-usb-link$' --output-on-failure` | Runs just the USB input/codec suite. Replace the expression with another listed test name to select it. |
-| `~/.platformio/penv/bin/python tests/host/clock-sync-check.py` | Tests real clock-helper serial framing/acknowledgement on a pseudo-terminal, without a board; requires pyserial. |
-| `python3 tests/embedded/vehicle-uart-check.py` | Tests the actual GPIO38 receive adapter with fake drivers: nonblocking receive, CRC/duplicates, stale data, clicks, overflow/errors and reset; no device. |
-| `python3 tests/embedded/preference-store-check.py` | Compiles/runs the actual firmware preference adapter with fake NVS/RTOS APIs to check restart, invalid data, bounded queues and storage failures; no hardware. |
-| `python3 tests/embedded/display-image-check.py` | Tests partition/image packager bounds without hardware access. |
-| `python3 tests/embedded/vehicle-flash-check.py` | Tests flash-script guards, backup ordering and recovery using fake tools; never flashes a device. |
-| `python3 tests/host/phone-bridge-check.py` | Checks phone sessions and real local TLS/IPC; requires local socket access and OpenSSL. |
-| `python3 tests/host/phone-preview-smoke.py` | Runs the Mac LVGL host, local bridge and Flutter TLS test together; requires a built Mac host, Flutter dependencies and local sockets. |
+| `cmake -S . -B build/lvgl -G Ninja -DCMAKE_BUILD_TYPE=Debug` | Configures the host build, including the hash-pinned LVGL dependency. |
+| `cmake --build build/lvgl --parallel 4` | Builds the host UI executable without launching a window. Configure first. |
 | `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json` | Reports compiled host asset/resource sizes; build first. These are not target SRAM/FPS measurements. |
 
 For mobile checks, first change directory:
@@ -108,7 +98,6 @@ cd /Users/codewavesandy/Desktop/learning/projects/r15-smart-cluster/mobile
 | `flutter pub get --enforce-lockfile` | Restores dependencies using the committed lockfile. |
 | `dart format --output=none --set-exit-if-changed lib test` | Checks Dart formatting without rewriting source. |
 | `flutter analyze --no-pub` | Runs static analysis after dependencies are restored. |
-| `flutter test --no-pub` | Runs Flutter/Dart tests. |
 | `flutter run --no-pub -d YOUR_ANDROID_DEVICE_ID` | Direct app launch; use the root launcher for version checking and bridge configuration. |
 | `flutter build apk --debug --no-pub` | Builds a debug APK without installing it. |
 | `flutter build ios --simulator --no-pub` | Builds for iOS simulator; needs full Xcode/native setup, still a separate verification gate. |
@@ -149,7 +138,6 @@ Follow [the wiring and Android test procedure](phone-uart-bench.md) before flash
 ```bash
 bash scripts/flash-vehicle.sh --build-only
 bash scripts/flash-display.sh --build-only
-python3 tests/embedded/ble-phone-check.py
 ```
 
-The last command compiles the actual BLE adapter against fake radio/storage APIs to check approval, authentication, timeout and storage-failure behavior; it does not test a radio.
+Both commands build/package firmware without opening a device. Automated test files and their runner commands were removed on 2026-10-31; use manual verification, static analysis and affected builds until the user resumes test development.

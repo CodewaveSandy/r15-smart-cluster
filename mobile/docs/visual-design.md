@@ -53,7 +53,7 @@ Show surrounding roads, route path and moving position. Distinguish PHONE GPS sp
 
 ## Fidelity and motion acceptance
 
-Current user override (2026-10-30): manual testing for this phase; defer new automated test cases and golden-test authoring. Preserve existing tests. Visual comparisons and builds still apply, with device observations reported separately from host captures.
+Current user override (2026-10-30): manual testing for this phase; defer new automated test cases and golden-test authoring. Automated test files were removed by user instruction on 2026-10-31; defer re-creation until requested. Visual comparisons and builds still apply, with device observations reported separately from host captures.
 
 Use a 390 x 844 logical-pixel dark reference composition derived from the board. Save deterministic screen captures and reviewed golden baselines for opening, scanning, discovered, approval, Home, route overview and active navigation. Fix time, fixture data and animation phase for comparisons. Compare hierarchy, bike crop, spacing, typography, card geometry, map overlays and colors side by side; record justified accessibility/platform differences. Text and final artwork must be sharper and more accurate than the generated board.
 

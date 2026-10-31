@@ -83,6 +83,12 @@ struct PhoneLayout {
     static constexpr Rect device{28,58,744,78};
     static constexpr Rect row(unsigned i) { return {28,154+int(i)*56,744,48}; }
 };
+struct PairingLayout {
+    // Relative to the Phone/Settings content; keep header and warning lamps visible.
+    static constexpr Rect backdrop{0,0,800,340},card{64,4,672,324};
+    static constexpr TextArea title{24,12,624},identity{24,38,624},code{24,80,624},hint{24,216,624};
+    static constexpr Rect allow{88,250,300,62},reject{412,250,300,62};
+};
 struct LifecycleLayout {
     static constexpr Rect bounds{0,0,Metrics::width,Metrics::height};
     static constexpr Point center{Metrics::width/2,220};

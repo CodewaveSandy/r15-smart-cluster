@@ -1,9 +1,13 @@
 # Companion documentation
 
+Automated test files/runners were removed by user instruction on 2026-10-31. Do not create or restore them until requested. Earlier test results below are historical evidence; current verification uses builds, static analysis, diagnostics and manual preview/bench checks.
+
+
 Updated: 2026-10-30. Flutter Android/iOS companion with an implemented Android foundation and development bridge. The approved four-screen visual direction is planned, not implemented. Production accessory services and iOS device validation remain pending.
 
 | Guide | Authority |
 | --- | --- |
+| [Real ESP32 connection handoff](esp32-connection-handoff.md) | Next Android task: phone-name write, real pairing, retained BLE link, saved reconnect and manual acceptance |
 | [Architecture](architecture.md) | Ownership, dependency direction, native boundaries and build separation |
 | [User journey](user-journey.md) | Unified Phone experience, permissions and failure behavior |
 | [Implementation plan](implementation-plan.md) | Milestones, evidence levels and acceptance gates |

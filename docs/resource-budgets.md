@@ -6,7 +6,7 @@ Updated: 2026-10-19. The selected display module is reported as ESP32-S3-WROOM-1
 
 ```sh
 cmake --build build/lvgl --parallel 4
-ctest --test-dir build/lvgl --output-on-failure
+SDL_VIDEODRIVER=dummy bash scripts/preview.sh --render build/lvgl/previews
 python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json
 ```
 

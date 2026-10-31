@@ -1,6 +1,7 @@
 #pragma once
 #include "shared/protocol/GearPacket.h"
 #include "shared/protocol/PhoneLink.h"
+#include "shared/protocol/PairingIdentity.h"
 #include "embedded/application/SettingsNavigation.h"
 #include <cstdio>
 #include "driver/uart.h"
@@ -24,7 +25,7 @@ public:
     }
     void reset() {
         ESP_ERROR_CHECK(uart_flush_input(UART_NUM_1));
-        xQueueReset(events_);receiver_.reset();status_.reset();phone_.reset();
+        xQueueReset(events_);receiver_.reset();status_.reset();identity_.reset();phone_.reset();
     }
     void poll(std::uint64_t now) {
         // Inspect at most the driver's eight queued events each UI cycle.
@@ -37,6 +38,7 @@ public:
         const int count=uart_read_bytes(UART_NUM_1,bytes,sizeof bytes,0);
         if(count<0){++overruns_;reset();return;}
         for(int i=0;i<count;++i) {
+            identity_.push(bytes[i],now);
             if(receiver_.push(bytes[i],now))++accepted_;
             if(status_.push(bytes[i],now,phonelink::Kind::Status))phone_.update(status_.latest(),now);
         }
@@ -48,6 +50,7 @@ public:
     }
     ClusterState state(std::uint64_t now)const {
         auto state=receiver_.state(now);state.phone=phone_.phone(now,receiver_.latest().session);
+        if(state.phone.available()&&state.phone.pairingRequested)state.phone.displayName=identity_.label(now,receiver_.latest().session,status_.latest().pairing);
         state.phoneConnected={state.phone.connected,state.phone.quality};return state;
     }
     bool command(SettingsEffect effect,std::uint64_t now) {
@@ -70,6 +73,7 @@ public:
 private:
     QueueHandle_t events_=nullptr;
     gearlink::Receiver receiver_;
+    pairidentity::Receiver identity_;
     phonelink::Receiver status_;phonelink::Client phone_;
     unsigned accepted_=0,overruns_=0;
 };

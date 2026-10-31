@@ -508,12 +508,17 @@ int main(int argc,char** argv) {
                         auto sample=state;sample.phone={};auto& phone=sample.phone;
                         phone.bleBench=true;phone.quality=scene==7?Quality::Unavailable:Quality::Available;
                         phone.pairWindowOpen=scene==1;phone.pairingRequested=scene==2||scene==3;
-                        phone.pairingApproved=scene==3;if(phone.pairingRequested)std::strcpy(phone.pairingCode.data(),"012345");
+                        phone.pairingApproved=scene==3;if(phone.pairingRequested){std::strcpy(phone.pairingCode.data(),"012345");std::strcpy(phone.displayName.data(),"Samsung S25 Ultra");}
                         phone.paired=scene==4||scene==5;phone.connected=scene==5;phone.commandFailed=scene==6;
                         view.phoneForgetConfirmation=false;view.phoneFocus=0;
                         dashboard.update(sample,view,life,base+11000+scene*1000);
                         capture(output/("ble-phone-"+std::to_string(scene)+"-"+suffix+".bmp"));
                     }
+                    auto pairWarning=state;pairWarning.phone={};pairWarning.phone.quality=Quality::Available;
+                    pairWarning.phone.bleBench=pairWarning.phone.pairingRequested=true;
+                    std::strcpy(pairWarning.phone.pairingCode.data(),"999999");std::snprintf(pairWarning.phone.displayName.data(),pairWarning.phone.displayName.size(),"%s","WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW");pairWarning.engineWarning={true,Quality::Available};
+                    view.phoneFocus=1;dashboard.update(pairWarning,view,life,base+19000);
+                    capture(output/("ble-phone-modal-warning-"+suffix+".bmp"));
                     auto forgetting=state;forgetting.phone={};forgetting.phone.bleBench=true;
                     forgetting.phone.quality=Quality::Available;forgetting.phone.paired=forgetting.phone.connected=forgetting.phone.forgetting=true;
                     view.phoneForgetConfirmation=false;view.phoneFocus=0;

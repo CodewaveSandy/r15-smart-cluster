@@ -1,5 +1,10 @@
 # R15 Smart Cluster — Engineering Rules
 
+## Development-phase verification override (2026-10-31)
+
+Per the user, all repository-owned automated test files have been removed for this development phase. Do not create, restore, expand or run automated test files/suites unless the user explicitly requests resuming that work. This applies to firmware, shared code, host preview and mobile. Defer automated unit/integration/golden tests until the later testing stage. Use affected builds, formatting/static analysis, runtime diagnostics, manual preview inspection and physical bench checks as appropriate; report exactly what was and was not verified. Preserve runtime validation, CRC/security checks, flash/backup/partition guards, development previews and normative protocol vectors. This override supersedes automated-test authoring/preservation gates elsewhere in project documents.
+
+
 ## Priorities
 
 Correctness and vehicle safety, clear ownership/layers, maintainability/testability, deterministic behavior, responsive readable UI, portability and measured performance. Prefer simple explicit code over framework-heavy abstractions.
@@ -36,6 +41,6 @@ Measure internal SRAM, PSRAM bandwidth/capacity, task stacks, DMA needs, flash/i
 
 ## Verification and delivery
 
-Nontrivial behavior needs practical tests. Cover below/minimum/normal/maximum/above numeric boundaries and disconnected/valid/malformed/stale/reconnect/reset cases. Test simultaneous warnings, lifecycle interruption and rapid ignition changes. Use deterministic host clocks/scenarios and isolated storage. Build affected targets, run relevant tests and inspect runtime warnings. Significant UI changes require actual visual inspection, including both modes/themes and unavailable data. No source-only completion claims.
+Nontrivial behavior needs practical manual checks during this phase. Cover below/minimum/normal/maximum/above numeric boundaries and disconnected/valid/malformed/stale/reconnect/reset cases. Test simultaneous warnings, lifecycle interruption and rapid ignition changes. Use deterministic host clocks/scenarios and isolated storage. Build affected targets, run relevant tests and inspect runtime warnings. Significant UI changes require actual visual inspection, including both modes/themes and unavailable data. No source-only completion claims.
 
 Maintain docs for behavior, architecture, workflow and decisions. Report designed, implemented, simulated, bench verified, hardware verified and bike verified as distinct states. Use modern target-oriented CMake and explicit dependencies. Keep generated artifacts untracked; respect user work and Git control. Preserve necessary backups before authorized removal/replacement.

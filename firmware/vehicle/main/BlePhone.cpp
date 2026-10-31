@@ -1,6 +1,7 @@
 #include "BlePhone.h"
 #include "esp_timer.h"
 #include "esp_random.h"
+#include "shared/protocol/PairingIdentity.h"
 #include "nvs_flash.h"
 #include <cstring>
 #include "sdkconfig.h"
@@ -23,9 +24,32 @@ bool BlePhone::initialize() {
     ble_hs_cfg.sm_their_key_dist=BLE_SM_PAIR_KEY_DIST_ENC|BLE_SM_PAIR_KEY_DIST_ID;
     ble_svc_gap_init();ble_svc_gatt_init();
     if(ble_svc_gap_device_name_set("R15 Cluster")!=0)return false;
+    // Display label only, deliberately not an authorization or vehicle command.
+    static const ble_uuid128_t nameService=BLE_UUID128_INIT(0x10,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static const ble_uuid128_t nameCharacteristic=BLE_UUID128_INIT(0x11,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static ble_gatt_chr_def characteristics[2]{};
+    static ble_gatt_svc_def services[2]{};
+    characteristics[0].uuid=&nameCharacteristic.u;characteristics[0].access_cb=nameAccess;
+    characteristics[0].flags=BLE_GATT_CHR_F_WRITE;
+    services[0].type=BLE_GATT_SVC_TYPE_PRIMARY;services[0].uuid=&nameService.u;services[0].characteristics=characteristics;
+    if(ble_gatts_count_cfg(services)||ble_gatts_add_svcs(services))return false;
     ble_store_config_init();write_=ble_hs_cfg.store_write_cb;delete_=ble_hs_cfg.store_delete_cb;
     if(!write_||!delete_)return false;
     ble_hs_cfg.store_write_cb=storeWrite;ble_hs_cfg.store_delete_cb=storeDelete;initialized_=true;nimble_port_freertos_init(task);return true;
+}
+int BlePhone::nameAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt* context,void*) {
+    auto& s=*instance_;
+    if(context->op!=BLE_GATT_ACCESS_OP_WRITE_CHR)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    const auto now=nowMs();
+    if(!s.ready_||s.storageFault_||!s.state_.phone.available()||handle!=s.connection_||s.knownBond_||s.forgetting_||!s.displayAvailable(now)||
+       !s.state_.phone.pairWindowOpen||now>=s.windowDeadline_||s.state_.phone.pairingApproved)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    const unsigned size=OS_MBUF_PKTLEN(context->om);std::array<std::uint8_t,32> bytes{};pairidentity::Name label;
+    if(!size||size>bytes.size()||os_mbuf_copydata(context->om,0,size,bytes.data())||!pairidentity::name(bytes.data(),size,label))return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    if(s.state_.phone.displayName[0]&&s.state_.phone.displayName!=label)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    s.state_.phone.displayName=label;
+    // Finish the ATT response before beginning security on the host's next turn.
+    if(s.securityPending_)s.securityDue_=now+20;
+    s.publish();return 0;
 }
 void BlePhone::fault(const char* source,int code,int type) {
     if(!faultLogged_)std::printf("@BLE FAULT source=%s code=%d type=%d\n",source,code,type);
@@ -39,7 +63,7 @@ int BlePhone::storeDelete(int type,const union ble_store_key* key) {
 }
 void BlePhone::task(void*){nimble_port_run();nimble_port_freertos_deinit();}
 void BlePhone::reset(int reason) {
-    auto& s=*instance_;s.fault("host-reset",reason);s.forgetting_=false;s.ready_=false;s.advertiseRequested_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_={};s.state_.phone.bleBench=true;s.publish();
+    auto& s=*instance_;s.fault("host-reset",reason);s.securityPending_=false;s.forgetting_=false;s.ready_=false;s.advertiseRequested_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_={};s.state_.phone.bleBench=true;s.publish();
 }
 void BlePhone::synced() {
     auto& s=*instance_;if(ble_hs_id_infer_auto(0,&s.addressType_)!=0)return;
@@ -99,11 +123,30 @@ void BlePhone::reject() {
     if(connection_!=BLE_HS_CONN_HANDLE_NONE&&!state_.phone.connected)ble_gap_terminate(connection_,BLE_ERR_REM_USER_CONN_TERM);
     state_.phone.pairingRequested=state_.phone.pairingApproved=false;state_.phone.pairingCode={};state_.pairing=state_.code=0;approved_=false;
 }
+void BlePhone::beginSecurity() {
+    const int result=ble_gap_security_initiate(connection_);
+    // Android may already have started SMP (createBond / nRF Bond). In the
+    // pinned NimBLE, EALREADY leaves that existing procedure intact. Never
+    // terminate it just because our optional metadata timer also fired.
+    if(result==BLE_HS_EALREADY)std::printf("@BLE SECURITY peer-procedure-active\n");
+    if(result&&result!=BLE_HS_EALREADY) {
+        std::printf("@BLE SECURITY start-failed code=%d\n",result);
+        state_.phone.commandFailed=true;
+        ble_gap_terminate(connection_,BLE_ERR_REM_USER_CONN_TERM);
+    }
+}
 void BlePhone::process() {
     if(storageFault_){state_.phone.quality=Quality::Unavailable;state_.phone.connected=false;reject();publish();return;}
     const auto now=nowMs();const bool displayFresh=displayAvailable(now);
     if(!displayFresh||now>=windowDeadline_)state_.phone.pairWindowOpen=false;
     if(state_.phone.pairingRequested&&(!displayFresh||now>=pairDeadline_))reject();
+    if(securityPending_&&now>=securityDue_) {
+        securityPending_=false;
+        if(connection_!=BLE_HS_CONN_HANDLE_NONE) {
+            if(!displayFresh||!state_.phone.pairWindowOpen)ble_gap_terminate(connection_,BLE_ERR_REM_USER_CONN_TERM);
+            else beginSecurity();
+        }
+    }
     Queued queued;
     for(unsigned i=0;i<4&&xQueueReceive(queue_,&queued,0)==pdTRUE;++i) {
         const auto request=queued.request;
@@ -156,20 +199,24 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
     switch(event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if(event->connect.status){s.advertiseRequested_=true;s.advertise();break;}
-        s.connection_=event->connect.conn_handle;s.advertiseRequested_=false;s.approved_=false;
+        s.connection_=event->connect.conn_handle;s.advertiseRequested_=false;s.approved_=false;s.state_.phone.displayName={};
         if(ble_gap_conn_find(s.connection_,&desc)!=0){ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;}
         // A reconnecting phone may still present an unresolved private address
         // here. The stored identity is checked after authenticated encryption.
         if(s.forgetting_||(!s.knownBond_&&(!s.state_.phone.pairWindowOpen||!s.displayAvailable(nowMs())||nowMs()>=s.windowDeadline_))) {
             ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;
         }
-        if(ble_gap_security_initiate(s.connection_)!=0)ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);
+        if(s.knownBond_) {
+            s.beginSecurity();
+        } else {s.securityPending_=true;s.securityDue_=nowMs()+3000;}
         break;
     case BLE_GAP_EVENT_DISCONNECT:
-        s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_.phone.connected=false;
+        std::printf("@BLE LINK disconnected reason=%d\n",int(event->disconnect.reason));
+        s.securityPending_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_.phone.displayName={};s.state_.phone.connected=false;
         s.state_.phone.pairingRequested=s.state_.phone.pairingApproved=false;s.state_.phone.pairingCode={};s.state_.pairing=s.state_.code=0;s.approved_=false;
         s.updateBond();if(!s.forgetting_){s.advertiseRequested_=true;s.advertise();}break;
     case BLE_GAP_EVENT_PASSKEY_ACTION:
+        s.securityPending_=false;
         if(event->passkey.params.action!=BLE_SM_IOACT_NUMCMP||!s.state_.phone.pairWindowOpen||!s.displayAvailable(nowMs())||nowMs()>=s.windowDeadline_||s.knownBond_) {
             ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;
         }

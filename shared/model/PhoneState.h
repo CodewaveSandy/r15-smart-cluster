@@ -6,6 +6,7 @@ enum class PhoneUnavailable {Service, Status, VehicleSession, ReturnChannel};
 struct PhoneState {
     PhoneUnavailable unavailable=PhoneUnavailable::Service;
     Quality quality=Quality::Unavailable;
+    std::array<char,33> displayName{}; // Optional untrusted current-connection label.
     bool bleBench=false,pairWindowOpen=false,commandFailed=false;
     bool forgetting=false; // Display-local pending command; never serialized.
     bool paired=false,connected=false,pairingRequested=false,pairingApproved=false;
@@ -16,6 +17,8 @@ inline bool valid(const PhoneState& state){
     if(unsigned(state.quality)>unsigned(Quality::Stale))return false;
     if(!state.available())return true;
     if(state.paired&&state.pairWindowOpen)return false;
+    if(state.displayName.back())return false;
+    bool ended=false;for(char c:state.displayName){if(!c){ended=true;continue;}if(ended||c<32||c>126)return false;}
     if(state.connected&&!state.paired)return false;
     if(state.paired&&state.pairingRequested)return false;
     if(state.pairingApproved&&!state.pairingRequested)return false;
