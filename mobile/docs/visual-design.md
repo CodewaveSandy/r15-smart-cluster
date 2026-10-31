@@ -6,6 +6,8 @@ Approved by the user: 2026-10-30. Status: design baseline, not implemented UI.
 
 ## Approved first-connection refinement
 
+User refinement (2026-10-31): omit the device-count and illustrative-position caption below the radar.
+
 Current user refinement (2026-10-30): discovery is a centered popup displaying only advertised names starting with the exact `R15 Cluster` prefix. Show all retained matches together inside one radar, with complete names split across two fitted lines. Icons adapt to the result count and occupy stable, scattered, non-overlapping positions within the circle; this is decorative placement, not measured radio proximity. Dense results support pinch-to-zoom and full-name tooltips/semantics. No paging, large cards or Device details buttons. Tapping an icon/name stops scanning and starts the applicable pairing path. The sweep remains animated across recurring real scan windows, respecting reduced motion. This supersedes the bottom-sheet/result-card treatment in the image below for discovery only.
 
 Approved 2026-10-30: the first-time/disconnected-without-trust landing and discovery modal use this refinement of Concept 01.

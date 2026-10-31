@@ -294,13 +294,6 @@ class _PreviewPairingSheetState extends State<PreviewPairingSheet>
                   scanning: _scanning,
                   onSelect: _select,
                 ),
-                if (_devices.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_devices.length} R15 Cluster devices · Positions are illustrative',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
                 if (!_scanning && _devices.isEmpty && _error == null)
                   const Text(
                     'No R15 Cluster devices found. Power on your cluster and search again.',
