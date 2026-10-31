@@ -86,3 +86,7 @@ Record decisions in the authoritative guide above rather than scattering status 
 ## Physical BLE milestone (2026-10-31)
 
 App implementation follows [the firmware handoff](esp32-connection-handoff.md): optional name write, OS numeric comparison, one retained GATT owner, semantic link events, separate bond/link/application truth, saved-peer foreground reconnect, finite recovery and explicit Disconnect/Forget-selection semantics. Firmware is unchanged. Format/static analysis and arm64 Android build/install/launch passed; a real R15 Cluster appeared on the radar. Core physical first-pair/name/live-link and board-restart/relaunch reconnect acceptance passed with the user; remaining fault/extended checks are listed in [development](development.md). Automated suites remain deferred.
+
+## Home and bottom navigation (2026-10-31)
+
+Concept 01 My bike Home is implemented with side-profile artwork, observed connection status, speed/gear/fuel/bike battery tiles and Where to next. The concept's My bike/Navigate bottom tabs switch pages without replacing the BLE/session owner. Cluster connection is a secondary page opened from the settings icon/status pill and returns to the prior tab. Existing first-time landing and pairing remain intact. Telemetry remains unavailable; Navigate contains no map/search/provider implementation. Static analysis/build and actual phone visual/navigation evidence are recorded in [development](development.md). No firmware or dependency changes and no automated suites.

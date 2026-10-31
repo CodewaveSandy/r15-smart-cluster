@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/widgets/brand_mark.dart';
 import '../domain/phone_status.dart';
 import '../application/ble_connection.dart';
 import '../application/preview_session.dart';
+import '../../../app/theme/companion_theme.dart';
 import 'preview_pairing_sheet.dart';
 import 'connection_landing.dart';
 
+/// Existing pairing/connection intents, also available from the Home drawer.
 class PhonePage extends StatelessWidget {
-  const PhonePage({required this.status, this.session, this.ble, super.key});
+  const PhonePage({
+    required this.status,
+    this.session,
+    this.ble,
+    this.embedded = false,
+    super.key,
+  });
   final PhoneStatus status;
   final PreviewSession? session;
   final BleConnection? ble;
+  final bool embedded;
 
   void _connect(BuildContext context) {
     if (ble?.hasSelection == true) {
@@ -43,226 +51,117 @@ class PhonePage extends StatelessWidget {
     final busy =
         status.connection == ClusterConnection.connecting ||
         (session?.busy ?? ble?.busy ?? false);
-    final unavailable = status.connection == ClusterConnection.unavailable;
+    final hasSelection = session?.hasTrust == true || ble?.hasSelection == true;
+    final error = session?.error ?? ble?.error;
     final colors = Theme.of(context).colorScheme;
-    if (!connected && session?.hasTrust != true && ble?.hasSelection != true) {
+    final theme = Theme.of(context).textTheme;
+    if (!connected && !hasSelection) {
       return ConnectionLanding(
         onConnect: () => _connect(context),
         busy: busy,
-        error:
-            session?.error ??
-            ble?.error ??
-            (unavailable ? 'Cluster connection unavailable' : null),
+        error: error,
       );
     }
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: [
-                        Icon(Icons.two_wheeler_outlined, color: colors.primary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'R15 Companion',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
+    final content = SingleChildScrollView(
+      padding: const EdgeInsets.all(CompanionTokens.pagePadding),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: CompanionTokens.contentWidth,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 24),
+              Icon(
+                connected ? Icons.bluetooth_connected : Icons.bluetooth,
+                size: 60,
+                color: colors.primary,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                status.clusterName ?? 'Your cluster',
+                textAlign: TextAlign.center,
+                style: theme.headlineMedium,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                connected
+                    ? (status.bluetoothLinkOnly
+                          ? 'Bluetooth connected'
+                          : 'Cluster connected')
+                    : busy
+                    ? 'Connecting to your cluster…'
+                    : 'Cluster disconnected',
+                textAlign: TextAlign.center,
+                style: theme.titleMedium,
+              ),
+              const SizedBox(height: 24),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ble?.bonded == true || session?.hasTrust == true
+                            ? 'Pairing saved'
+                            : 'Pairing unavailable',
+                        style: theme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        status.bluetoothLinkOnly
+                            ? 'Your saved Bluetooth pairing lets this phone reconnect. Bike readings, navigation, notifications and music are not available yet.'
+                            : 'The development preview connection is separate from the physical cluster. Feature availability depends on the active session.',
+                        style: theme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Center(child: BrandMark()),
-                        const SizedBox(height: 40),
-                        Text(
-                          connected
-                              ? (status.bluetoothLinkOnly
-                                    ? 'Your cluster is nearby.'
-                                    : 'Ready for your next ride.')
-                              : status.bluetoothLinkOnly
-                              ? 'Your cluster is disconnected.'
-                              : 'Your ride. Connected.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          connected
-                              ? '${status.clusterName ?? 'Your cluster'} · ${status.bluetoothLinkOnly ? 'Bluetooth connected' : 'Connected'}'
-                              : busy
-                              ? 'Connecting to your cluster…'
-                              : unavailable
-                              ? 'Cluster connection unavailable'
-                              : status.bluetoothLinkOnly
-                              ? '${status.clusterName ?? 'Your cluster'} · ${ble?.bonded == true ? 'Bond saved' : 'Bond unavailable'} · Disconnected'
-                              : 'Connect your cluster to bring navigation to your ride.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(color: colors.onSurfaceVariant),
-                        ),
-                        if (status.bluetoothLinkOnly && connected)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 12),
-                            child: Text(
-                              "Bluetooth link only. Application authorization, navigation, notifications and music are pending.",
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        const SizedBox(height: 32),
-                        if (session != null || ble != null) ...[
-                          if (session?.hasTrust == true || ble?.bonded == true)
-                            const Text(
-                              'PAIRED CLUSTER',
-                              textAlign: TextAlign.center,
-                            ),
-                          if ((session?.error ?? ble?.error) != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Text(
-                                (session?.error ?? ble?.error)!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: colors.error),
-                              ),
-                            ),
-                          const SizedBox(height: 12),
-                        ],
-                        if (connected) ...[
-                          Card.filled(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.navigation_outlined,
-                                    color: colors.primary,
-                                    size: 32,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Navigation',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(_navigationLabel),
-                                  const SizedBox(height: 20),
-                                  FilledButton.icon(
-                                    onPressed:
-                                        status.navigation ==
-                                            FeatureReadiness.ready
-                                        ? () => Navigator.of(context).push(
-                                            MaterialPageRoute<void>(
-                                              builder: (context) => Scaffold(
-                                                appBar: AppBar(
-                                                  title: const Text(
-                                                    'Navigation',
-                                                  ),
-                                                ),
-                                                body: const Center(
-                                                  child: Padding(
-                                                    padding: EdgeInsets.all(24),
-                                                    child: Text(
-                                                      'Destination search and maps are coming next.',
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        : null,
-                                    icon: const Icon(Icons.arrow_forward),
-                                    label: const Text('Open navigation'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (session != null || ble != null) ...[
-                            TextButton(
-                              onPressed: busy
-                                  ? null
-                                  : () {
-                                      if (ble != null) {
-                                        ble!.disconnect();
-                                      } else {
-                                        session!.disconnect();
-                                      }
-                                    },
-                              child: const Text('Disconnect'),
-                            ),
-                            TextButton(
-                              onPressed: busy ? null : () => _forget(context),
-                              child: Text(
-                                ble != null
-                                    ? 'Forget app selection'
-                                    : 'Forget preview',
-                              ),
-                            ),
-                          ],
-                        ] else ...[
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 18,
-                                horizontal: 24,
-                              ),
-                            ),
-                            onPressed: busy ? null : () => _connect(context),
-                            icon: const Icon(Icons.add_link),
-                            label: Text(
-                              busy
-                                  ? 'Connecting…'
-                                  : unavailable
-                                  ? 'Retry connection'
-                                  : 'Connect cluster',
-                            ),
-                          ),
-                          if (session?.hasTrust == true ||
-                              ble?.hasSelection == true)
-                            TextButton(
-                              onPressed: busy ? null : () => _forget(context),
-                              child: Text(
-                                ble != null
-                                    ? 'Forget app selection'
-                                    : 'Forget preview',
-                              ),
-                            ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Keep your cluster switched on and nearby.',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+              ),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(error, style: TextStyle(color: colors.error)),
                 ),
-              ],
-            ),
+              const SizedBox(height: 24),
+              if (connected)
+                OutlinedButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () {
+                          if (ble != null) {
+                            ble!.disconnect();
+                          } else {
+                            session?.disconnect();
+                          }
+                        },
+                  icon: const Icon(Icons.link_off),
+                  label: const Text('Disconnect'),
+                )
+              else
+                FilledButton.icon(
+                  onPressed: busy ? null : () => _connect(context),
+                  icon: const Icon(Icons.add_link),
+                  label: Text(busy ? 'Connecting…' : 'Connect cluster'),
+                ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: busy ? null : () => _forget(context),
+                child: Text(
+                  ble != null ? 'Forget app selection' : 'Forget preview',
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+    return embedded ? content : Scaffold(body: SafeArea(child: content));
   }
 
   Future<void> _forget(BuildContext context) async {
@@ -297,15 +196,4 @@ class PhonePage extends StatelessWidget {
       }
     }
   }
-
-  String get _navigationLabel => switch (status.navigation) {
-    FeatureReadiness.ready => 'Choose where your next ride takes you.',
-    FeatureReadiness.notImplemented => 'Navigation is coming next.',
-    FeatureReadiness.unsupported =>
-      'Navigation is not supported by this cluster.',
-    FeatureReadiness.permissionRequired =>
-      'Location permission is needed for navigation.',
-    FeatureReadiness.unavailable => 'Navigation is currently unavailable.',
-    FeatureReadiness.stale => 'Waiting for a fresh navigation update.',
-  };
 }

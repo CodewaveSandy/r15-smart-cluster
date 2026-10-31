@@ -41,6 +41,8 @@ Selecting Connect leads to a separate matching-code/approval state before any co
 
 ### My bike
 
+Implemented Home refinement (2026-10-31): follow Concept 01's My bike hierarchy with a local side-profile bike illustration, connection pill, quality-bearing speed/gear/fuel/bike-battery tiles and Where to next card. Use the concept's two bottom icon tabs, My bike and Navigate, with a blue selected icon/label/underline. There is no drawer. The header connection shortcut and status pill open the same connection page. Navigate currently explains pending destination/map services; it never shows a fake route. Connection changes leave saved-device Home usable; Forget app selection restores first-time landing. At large text the metric grid becomes one column and all content scrolls.
+
 Bike name and confirmed connection status above a prominent bike illustration. A reusable 2 x 2 telemetry section initially presents speed, gear, fuel and bike battery voltage, followed by the Where to next card and the two-destination navigation bar. Fields are independent, quality-bearing observations with units and source. Unsupported/unavailable/stale values show an explicit placeholder/status; connected does not mean telemetry is supported. Bike battery voltage is distinct from phone battery.
 
 The board's 0 km/h, N, 64% and 12.6 V are design samples only. Current firmware/app contracts do not provide all these readings to the phone. Development fixtures are explicitly labelled and isolated from the normal app. Home remains usable when disconnected and during reconnection; do not repeatedly force onboarding after link loss.

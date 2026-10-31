@@ -6,7 +6,7 @@ import '../features/phone/domain/phone_status.dart';
 import '../features/phone/application/ble_connection.dart';
 import '../features/phone/data/ble_pairing.dart';
 import '../features/phone/application/preview_session.dart';
-import '../features/phone/presentation/phone_page.dart';
+import 'companion_home.dart';
 import '../features/phone/presentation/ble_access_gate.dart';
 import 'theme/companion_theme.dart';
 import 'widgets/opening_screen.dart';
@@ -73,11 +73,11 @@ class _StartupState extends State<_Startup> {
               ? AnimatedBuilder(
                   animation: _ble!,
                   builder: (context, _) =>
-                      PhonePage(status: _ble!.status, ble: _ble),
+                      CompanionHome(status: _ble!.status, ble: _ble),
                 )
               : AnimatedBuilder(
                   animation: widget.session!,
-                  builder: (context, _) => PhonePage(
+                  builder: (context, _) => CompanionHome(
                     status: widget.session!.status,
                     session: widget.session,
                   ),

@@ -8,9 +8,16 @@ abstract final class CompanionTokens {
   static const controlRadius = 14.0;
   static const openingDuration = Duration(milliseconds: 900);
   static const pulseDuration = Duration(milliseconds: 1600);
+  static const homeHeroAspectRatio = 1.72;
+  static const telemetryGap = 10.0;
 }
 
 abstract final class CompanionTheme {
+  static Color connectedColor(Brightness brightness) =>
+      brightness == Brightness.dark
+      ? const Color(0xff8adf98)
+      : const Color(0xff226d37);
+
   static ThemeData forBrightness(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final colors =
