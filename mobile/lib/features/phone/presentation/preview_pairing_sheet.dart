@@ -9,11 +9,12 @@ import '../application/preview_session.dart';
 import '../data/nearby_platform.dart';
 import '../data/preview_transport.dart';
 import 'discovery_radar.dart';
-import '../data/ble_pairing.dart';
+import '../application/ble_connection.dart';
 
 class PreviewPairingSheet extends StatefulWidget {
-  const PreviewPairingSheet({this.session, super.key});
+  const PreviewPairingSheet({this.session, this.ble, super.key});
   final PreviewSession? session;
+  final BleConnection? ble;
   @override
   State<PreviewPairingSheet> createState() => _PreviewPairingSheetState();
 }
@@ -29,6 +30,7 @@ class _PreviewPairingSheetState extends State<PreviewPairingSheet>
   Timer? _rescan;
   int _generation = 0;
   bool _foreground = true;
+  bool _cancelled = false;
   final Map<String, int> _lastSeen = {};
   int _round = 0;
   @override
@@ -137,7 +139,17 @@ class _PreviewPairingSheetState extends State<PreviewPairingSheet>
         _error = null;
       });
       try {
-        final bonded = await BlePairing().pair(device);
+        if (widget.ble == null) {
+          throw StateError('Physical BLE controller unavailable');
+        }
+        await widget.ble!.select(device);
+        final bonded = widget.ble!.live;
+        if (!bonded) {
+          throw PlatformException(
+            code: 'bond',
+            message: widget.ble!.error ?? 'Bluetooth link was not confirmed.',
+          );
+        }
         if (mounted) {
           setState(() {
             if (bonded) {
@@ -161,6 +173,7 @@ class _PreviewPairingSheetState extends State<PreviewPairingSheet>
           _busy = false;
           _pairing = false;
         });
+        if (!_cancelled && widget.ble?.live == true) Navigator.pop(context);
       }
       return;
     }
@@ -242,7 +255,7 @@ class _PreviewPairingSheetState extends State<PreviewPairingSheet>
                 const Icon(Icons.bluetooth_connected, size: 64),
                 const SizedBox(height: 16),
                 Text(
-                  'Bluetooth paired with $_bondedName',
+                  'Bluetooth link connected with $_bondedName',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
@@ -315,8 +328,22 @@ class _PreviewPairingSheetState extends State<PreviewPairingSheet>
                 ),
               const SizedBox(height: 24),
               OutlinedButton(
-                onPressed: _pairing ? null : () => Navigator.pop(context),
-                child: Text(_bondedName == null ? 'Cancel' : 'Done'),
+                onPressed: _pairing
+                    ? (_code == null && widget.ble != null
+                          ? () async {
+                              _cancelled = true;
+                              await widget.ble!.disconnect();
+                              if (context.mounted) Navigator.pop(context);
+                            }
+                          : null)
+                    : () => Navigator.pop(context),
+                child: Text(
+                  _pairing && _code == null
+                      ? 'Stop connection'
+                      : _bondedName == null
+                      ? 'Cancel'
+                      : 'Done',
+                ),
               ),
             ],
           ),

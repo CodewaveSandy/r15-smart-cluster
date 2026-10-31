@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../../app/widgets/brand_mark.dart';
 import '../domain/phone_status.dart';
+import '../application/ble_connection.dart';
 import '../application/preview_session.dart';
 import 'preview_pairing_sheet.dart';
 import 'connection_landing.dart';
 
 class PhonePage extends StatelessWidget {
-  const PhonePage({required this.status, this.session, super.key});
+  const PhonePage({required this.status, this.session, this.ble, super.key});
   final PhoneStatus status;
   final PreviewSession? session;
+  final BleConnection? ble;
 
   void _connect(BuildContext context) {
+    if (ble?.hasSelection == true) {
+      ble!.reconnect();
+      return;
+    }
     if (session?.hasTrust == true) {
       session!.reconnect();
       return;
@@ -25,7 +31,7 @@ class PhonePage extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: PreviewPairingSheet(session: session),
+          child: PreviewPairingSheet(session: session, ble: ble),
         ),
       ),
     );
@@ -36,15 +42,16 @@ class PhonePage extends StatelessWidget {
     final connected = status.connection == ClusterConnection.connected;
     final busy =
         status.connection == ClusterConnection.connecting ||
-        (session?.busy ?? false);
+        (session?.busy ?? ble?.busy ?? false);
     final unavailable = status.connection == ClusterConnection.unavailable;
     final colors = Theme.of(context).colorScheme;
-    if (!connected && session?.hasTrust != true) {
+    if (!connected && session?.hasTrust != true && ble?.hasSelection != true) {
       return ConnectionLanding(
         onConnect: () => _connect(context),
         busy: busy,
         error:
             session?.error ??
+            ble?.error ??
             (unavailable ? 'Cluster connection unavailable' : null),
       );
     }
@@ -84,7 +91,11 @@ class PhonePage extends StatelessWidget {
                         const SizedBox(height: 40),
                         Text(
                           connected
-                              ? 'Ready for your next ride.'
+                              ? (status.bluetoothLinkOnly
+                                    ? 'Your cluster is nearby.'
+                                    : 'Ready for your next ride.')
+                              : status.bluetoothLinkOnly
+                              ? 'Your cluster is disconnected.'
                               : 'Your ride. Connected.',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineMedium
@@ -93,28 +104,38 @@ class PhonePage extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           connected
-                              ? '${status.clusterName ?? 'Your cluster'} · Connected'
+                              ? '${status.clusterName ?? 'Your cluster'} · ${status.bluetoothLinkOnly ? 'Bluetooth connected' : 'Connected'}'
                               : busy
                               ? 'Connecting to your cluster…'
                               : unavailable
                               ? 'Cluster connection unavailable'
+                              : status.bluetoothLinkOnly
+                              ? '${status.clusterName ?? 'Your cluster'} · ${ble?.bonded == true ? 'Bond saved' : 'Bond unavailable'} · Disconnected'
                               : 'Connect your cluster to bring navigation to your ride.',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyLarge
                               ?.copyWith(color: colors.onSurfaceVariant),
                         ),
+                        if (status.bluetoothLinkOnly && connected)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 12),
+                            child: Text(
+                              "Bluetooth link only. Application authorization, navigation, notifications and music are pending.",
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         const SizedBox(height: 32),
-                        if (session != null) ...[
-                          if (session!.hasTrust)
+                        if (session != null || ble != null) ...[
+                          if (session?.hasTrust == true || ble?.bonded == true)
                             const Text(
                               'PAIRED CLUSTER',
                               textAlign: TextAlign.center,
                             ),
-                          if (session!.error != null)
+                          if ((session?.error ?? ble?.error) != null)
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Text(
-                                session!.error!,
+                                (session?.error ?? ble?.error)!,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: colors.error),
                               ),
@@ -174,14 +195,26 @@ class PhonePage extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (session != null) ...[
+                          if (session != null || ble != null) ...[
                             TextButton(
-                              onPressed: busy ? null : session!.disconnect,
+                              onPressed: busy
+                                  ? null
+                                  : () {
+                                      if (ble != null) {
+                                        ble!.disconnect();
+                                      } else {
+                                        session!.disconnect();
+                                      }
+                                    },
                               child: const Text('Disconnect'),
                             ),
                             TextButton(
                               onPressed: busy ? null : () => _forget(context),
-                              child: const Text('Forget preview'),
+                              child: Text(
+                                ble != null
+                                    ? 'Forget app selection'
+                                    : 'Forget preview',
+                              ),
                             ),
                           ],
                         ] else ...[
@@ -202,10 +235,15 @@ class PhonePage extends StatelessWidget {
                                   : 'Connect cluster',
                             ),
                           ),
-                          if (session?.hasTrust == true)
+                          if (session?.hasTrust == true ||
+                              ble?.hasSelection == true)
                             TextButton(
                               onPressed: busy ? null : () => _forget(context),
-                              child: const Text('Forget preview'),
+                              child: Text(
+                                ble != null
+                                    ? 'Forget app selection'
+                                    : 'Forget preview',
+                              ),
                             ),
                           const SizedBox(height: 16),
                           Text(
@@ -231,9 +269,13 @@ class PhonePage extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Forget Mac preview?'),
-        content: const Text(
-          'Remove this saved pairing? You can find and pair with your cluster again.',
+        title: Text(
+          ble != null ? 'Forget app selection?' : 'Forget Mac preview?',
+        ),
+        content: Text(
+          ble != null
+              ? 'This clears only the app selection. To remove trust, also forget this phone on the cluster and remove the cluster in Android Bluetooth settings.'
+              : 'Remove this saved pairing? You can find and pair with your cluster again.',
         ),
         actions: [
           TextButton(
@@ -247,7 +289,13 @@ class PhonePage extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) await session?.forget();
+    if (confirmed == true) {
+      if (ble != null) {
+        await ble!.forget();
+      } else {
+        await session?.forget();
+      }
+    }
   }
 
   String get _navigationLabel => switch (status.navigation) {

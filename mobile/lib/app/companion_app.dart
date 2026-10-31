@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../features/phone/domain/phone_status.dart';
+import '../features/phone/application/ble_connection.dart';
+import '../features/phone/data/ble_pairing.dart';
 import '../features/phone/application/preview_session.dart';
 import '../features/phone/presentation/phone_page.dart';
 import '../features/phone/presentation/ble_access_gate.dart';
@@ -36,11 +38,13 @@ class _Startup extends StatefulWidget {
 
 class _StartupState extends State<_Startup> {
   Timer? _timer;
+  BleConnection? _ble;
   bool _showHome = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.session == null) _ble = BleConnection(BlePairing());
     // Brief branding only; this does not claim to initialize phone services.
     _timer = Timer(CompanionTokens.openingDuration, () {
       if (mounted) setState(() => _showHome = true);
@@ -50,6 +54,7 @@ class _StartupState extends State<_Startup> {
   @override
   void dispose() {
     _timer?.cancel();
+    _ble?.dispose();
     super.dispose();
   }
 
@@ -57,11 +62,19 @@ class _StartupState extends State<_Startup> {
   Widget build(BuildContext context) => _showHome
       ? BleAccessGate(
           onReady: () {
+            _ble?.accessReady();
             if (widget.session?.hasTrust == true) widget.session!.reconnect();
           },
-          onBlocked: widget.session?.pauseForAccess,
+          onBlocked: () {
+            _ble?.accessBlocked();
+            widget.session?.pauseForAccess();
+          },
           child: widget.session == null
-              ? PhonePage(status: widget.status)
+              ? AnimatedBuilder(
+                  animation: _ble!,
+                  builder: (context, _) =>
+                      PhonePage(status: _ble!.status, ble: _ble),
+                )
               : AnimatedBuilder(
                   animation: widget.session!,
                   builder: (context, _) => PhonePage(

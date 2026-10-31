@@ -14,6 +14,7 @@ import java.util.concurrent.Executors
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
 import java.io.File
 import java.security.KeyStore
 import java.util.UUID
@@ -33,13 +34,19 @@ class MainActivity : FlutterActivity() {
     private var interactive = true
     private var pendingAddress: String? = null
     private var accessOnly = false
-    private var bonding: BleBond? = null
+    private var linkEvents: EventChannel.EventSink? = null
+    private lateinit var bonding: BleBond
     private val found = linkedMapOf<String, Map<String, Any>>()
     private val recentlySeen = linkedMapOf<String, Long>()
     private val adapter get() = (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        bonding = BleBond(this) { linkEvents?.success(it) }
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.r15cluster/ble-link").setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink) { linkEvents = events; events.success(bonding.snapshot()) }
+            override fun onCancel(arguments: Any?) { linkEvents = null }
+        })
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.r15cluster/nearby").setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
@@ -47,18 +54,23 @@ class MainActivity : FlutterActivity() {
                         if (scan != null) finish(found.values.toList())
                         result.success(null)
                     }
+                    "linkStatus" -> result.success(bonding.snapshot())
+                    "disconnectLink" -> { bonding.disconnect(); result.success(null) }
+                    "forgetSelection" -> { bonding.forgetSelection(); result.success(null) }
                     "bond" -> {
                         if (pending != null) { result.error("busy", "A Bluetooth operation is already running.", null); return@setMethodCallHandler }
                         val address = call.argument<String>("address") ?: error("Missing device")
+                        val saved = call.argument<Boolean>("saved") == true
+                        val name = call.argument<String>("name") ?: "R15 Cluster"
                         val seenAt = recentlySeen[address]
-                        if (seenAt == null || SystemClock.elapsedRealtime() - seenAt > 20000) { result.error("device", "Search again before selecting this device.", null); return@setMethodCallHandler }
-                        pending = result; accessOnly = false
-                        val operation = BleBond(this) { bonded, error ->
-                            bonding = null
-                            if (error == null) finish(mapOf("bonded" to bonded)) else finishError("bond", error)
+                        if (!saved && (seenAt == null || SystemClock.elapsedRealtime() - seenAt > 20000 || !name.startsWith("R15 Cluster"))) {
+                            result.error("device", "Search again before selecting this device.", null); return@setMethodCallHandler
                         }
-                        bonding = operation
-                        operation.start(adapter.getRemoteDevice(address))
+                        if (accessStatus()["enabled"] != true) { result.error("access", "Restore Bluetooth and Nearby devices access first.", null); return@setMethodCallHandler }
+                        pending = result; accessOnly = false
+                        bonding.connect(address, name, saved) { error ->
+                            if (error == null) finish(bonding.snapshot()) else finishError("bond", error)
+                        }
                     }
                     "access" -> result.success(accessStatus())
                     "requestAccess" -> {
@@ -240,5 +252,5 @@ class MainActivity : FlutterActivity() {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12))) }
         return String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
     }
-    override fun onDestroy() { bonding?.cancel(); finishError("cancelled", "Discovery stopped."); storage.shutdown(); super.onDestroy() }
+    override fun onDestroy() { bonding.dispose(); linkEvents = null; finishError("cancelled", "Discovery stopped."); storage.shutdown(); super.onDestroy() }
 }
