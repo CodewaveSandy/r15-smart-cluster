@@ -1,6 +1,6 @@
 # Companion work instructions
 
-Follow repository RULES.md and AGENTS.md. Read docs/README.md, docs/architecture.md, docs/implementation-plan.md and the relevant protocol/journey/security guides here before changing this app.
+Follow repository RULES.md and AGENTS.md. Read mobile/README.md, mobile/docs/architecture.md and mobile/docs/protocol.md; start background work from mobile/docs/background-sync.md. Journey, security, status and approved UI are consolidated in mobile/docs/architecture.md.
 
 Flutter/Dart shares application/UI logic; Kotlin/Swift own platform integrations. Keep domain types free of Flutter/plugins. Compose concrete dependencies explicitly; add abstractions only for actual responsibilities. No service locator, speculative packages, fake success, sensitive logs or empty feature folders.
 

@@ -15,4 +15,4 @@ Regenerate with Python and the tool-only Pillow version pinned in tools/animatio
 python3 scripts/generate-animation-assets.py
 ```
 
-Normal builds do not need Pillow. R15 artwork is a generated visual recreation, not verified official master artwork. See [lifecycle behavior](../../docs/power-lifecycle.md) and [resource accounting](../../docs/resource-budgets.md). Actual panel timing, transient drawing memory and retained shutdown power remain hardware verification gates.
+Normal builds do not need Pillow. R15 artwork is a generated visual recreation, not verified official master artwork. See [lifecycle behavior](../../docs/ui.md#power-lifecycle) and [resource accounting](../../docs/architecture.md#resource-accounting-and-target-verification). Actual panel timing, transient drawing memory and retained shutdown power remain hardware verification gates.

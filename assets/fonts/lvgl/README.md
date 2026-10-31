@@ -23,4 +23,4 @@ Text fonts include ASCII, degree, middle dot, multiplication sign and em dash. L
 
 Typography roles are centralized in embedded/ui/Typography.h. These C files are intentional runtime assets; do not edit glyph data manually. Flash fit must be measured in the eventual firmware build. Mac Retina interpolation improves enlarged preview presentation but does not increase the physical panel's resolution or font coverage.
 
-Audit payload and compiled host object sections with `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json`. All font/icon bitmaps total 88,972 bytes with the angular numeral subsets; this is not the total application image. See [resource accounting](../../../docs/resource-budgets.md).
+Audit payload and compiled host object sections with `python3 scripts/audit-resources.py --build-dir build/lvgl --output build/lvgl/previews/resource-audit.json`. All font/icon bitmaps total 88,972 bytes with the angular numeral subsets; this is not the total application image. See [resource accounting](../../../docs/architecture.md#resource-accounting-and-target-verification).
