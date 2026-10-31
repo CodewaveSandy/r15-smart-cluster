@@ -44,6 +44,8 @@ void Header::update(const ClusterState& s,const ViewOptions& v,const Palette& p,
     text(clock_,v.time); text(date_,v.date);
     show(qs_,presentation.quickShifter); ink(qs_,p.accent);
     show(vva_,presentation.vva); ink(vva_,p.amber);
+    show(phone_,v.iconTest||(s.phoneConnected.available()&&s.phoneConnected.value));
+    show(phoneBattery_,v.iconTest||(s.phoneConnected.available()&&s.phoneConnected.value));
     statusLamp(phone_,s.phoneConnected,true,p.accent,p,v.iconTest);
     if(batteryChanged||connectionChanged) batteryText_.update(phoneBattery_,presentation::phoneBatteryText(s.phoneConnected,s.phoneBatteryPercent).value);
     ink(phoneBattery_,p.ink);

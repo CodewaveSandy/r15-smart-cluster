@@ -95,7 +95,13 @@ extern "C" void app_main() {
         }
         else if(now-lastName>=200) {
             lastName=now;const auto snapshot=phone.snapshot(now);
-            if(snapshot.phone.available()&&snapshot.phone.pairingRequested&&snapshot.phone.displayName[0]) {
+            if(snapshot.phone.available()&&snapshot.phone.connected) {
+                cluster::phonemeta::Packet metadata;metadata.vehicle=packet.session;metadata.connection=snapshot.phone.connectionId;
+                metadata.sequence=++nameSequence;metadata.uptime=std::uint32_t(now);metadata.data=snapshot.metadata;
+                const auto bytes=cluster::phonemeta::encode(metadata);
+                // 36 + 80 bytes fit the FIFO; mutually exclusive with status/name.
+                uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+            } else if(snapshot.phone.available()&&snapshot.phone.pairingRequested&&snapshot.phone.displayName[0]) {
                 cluster::pairidentity::Packet identity;identity.vehicle=packet.session;identity.pairing=snapshot.pairing;
                 identity.sequence=++nameSequence;identity.uptime=std::uint32_t(now);identity.label=snapshot.phone.displayName;
                 const auto bytes=cluster::pairidentity::encode(identity);

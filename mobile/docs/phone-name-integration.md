@@ -2,6 +2,8 @@
 
 Implemented 2026-10-31; firmware builds and host tests are evidence, not phone/panel acceptance. Companion implementation remains on the second laptop; no mobile sources were edited here.
 
+Connected name, battery and clock updates now have a separate [authenticated endpoint and app handoff](phone-connected-metadata-handoff.md). The enrollment endpoint below remains unchanged.
+
 ## Companion → vehicle BLE
 
 The cluster cannot infer “Samsung S25 Ultra” from the current numeric-comparison event. The app supplies a display label on the same GATT connection it uses to pair:

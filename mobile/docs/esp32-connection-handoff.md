@@ -20,7 +20,7 @@ Vehicle owns BLE and bond NVS; display owns the modal and communicates over UART
 
 Canonical contracts:
 
-- [Phone-name UUIDs, payload and UART boundary](../../docs/phone-name-integration.md).
+- [Phone-name UUIDs, payload and UART boundary](phone-name-integration.md).
 - [Bench wiring, pairing, reconnect, Forget and diagnostics](../../docs/phone-uart-bench.md).
 - [Mobile architecture](architecture.md), [journey](user-journey.md), [security](security.md) and [transport plan](protocol.md).
 

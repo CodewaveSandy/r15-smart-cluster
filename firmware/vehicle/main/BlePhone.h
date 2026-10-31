@@ -1,5 +1,6 @@
 #pragma once
 #include "shared/protocol/PhoneLink.h"
+#include "shared/protocol/PhoneMetadata.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/portmacro.h"
@@ -19,7 +20,7 @@ void ble_store_config_init(void);
 namespace cluster::board {
 class BlePhone {
 public:
-    struct Snapshot {PhoneState phone;std::uint32_t pairing=0,code=0;};
+    struct Snapshot {PhoneState phone;std::uint32_t pairing=0,code=0;phonemeta::Data metadata;};
     bool initialize();
     bool post(phonelink::Request request);
     void poll(bool displayFresh);
@@ -27,6 +28,8 @@ public:
 private:
     static BlePhone* instance_;
     static int gap(ble_gap_event*,void*);
+    static int metadataAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
+    std::uint64_t metadataAt_=0;
     static int nameAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
     bool securityPending_=false;std::uint64_t securityDue_=0;
     static int storeWrite(int,const union ble_store_value*);static int storeDelete(int,const union ble_store_key*);

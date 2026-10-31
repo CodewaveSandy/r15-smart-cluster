@@ -27,10 +27,13 @@ bool BlePhone::initialize() {
     // Display label only, deliberately not an authorization or vehicle command.
     static const ble_uuid128_t nameService=BLE_UUID128_INIT(0x10,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
     static const ble_uuid128_t nameCharacteristic=BLE_UUID128_INIT(0x11,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
-    static ble_gatt_chr_def characteristics[2]{};
+    static const ble_uuid128_t metadataCharacteristic=BLE_UUID128_INIT(0x12,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static ble_gatt_chr_def characteristics[3]{};
     static ble_gatt_svc_def services[2]{};
     characteristics[0].uuid=&nameCharacteristic.u;characteristics[0].access_cb=nameAccess;
     characteristics[0].flags=BLE_GATT_CHR_F_WRITE;
+    characteristics[1].uuid=&metadataCharacteristic.u;characteristics[1].access_cb=metadataAccess;
+    characteristics[1].flags=BLE_GATT_CHR_F_WRITE|BLE_GATT_CHR_F_WRITE_ENC|BLE_GATT_CHR_F_WRITE_AUTHEN;
     services[0].type=BLE_GATT_SVC_TYPE_PRIMARY;services[0].uuid=&nameService.u;services[0].characteristics=characteristics;
     if(ble_gatts_count_cfg(services)||ble_gatts_add_svcs(services))return false;
     ble_store_config_init();write_=ble_hs_cfg.store_write_cb;delete_=ble_hs_cfg.store_delete_cb;
@@ -50,6 +53,15 @@ int BlePhone::nameAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt
     // Finish the ATT response before beginning security on the host's next turn.
     if(s.securityPending_)s.securityDue_=now+20;
     s.publish();return 0;
+}
+int BlePhone::metadataAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt* context,void*) {
+    auto& s=*instance_;const auto now=nowMs();ble_gap_conn_desc desc{};
+    if(context->op!=BLE_GATT_ACCESS_OP_WRITE_CHR||handle!=s.connection_||!s.state_.phone.available()||!s.state_.phone.connected||s.forgetting_||s.storageFault_||
+       ble_gap_conn_find(handle,&desc)||!desc.sec_state.encrypted||!desc.sec_state.authenticated||!desc.sec_state.bonded||desc.sec_state.key_size!=16)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    phonemeta::Payload bytes{};phonemeta::Data data;
+    if(OS_MBUF_PKTLEN(context->om)!=bytes.size()||os_mbuf_copydata(context->om,0,bytes.size(),bytes.data())||!phonemeta::decodePayload(bytes,data))return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    if(s.metadataAt_&&now-s.metadataAt_<1000)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    s.state_.metadata=data;s.metadataAt_=now;s.publish();return 0;
 }
 void BlePhone::fault(const char* source,int code,int type) {
     if(!faultLogged_)std::printf("@BLE FAULT source=%s code=%d type=%d\n",source,code,type);
@@ -75,7 +87,12 @@ void BlePhone::updateBond() {
     if(rc!=0)fault("bond-read",rc);
 }
 void BlePhone::publish() {
-    portENTER_CRITICAL(&mux_);published_=state_;publishedAt_=nowMs();portEXIT_CRITICAL(&mux_);
+    portENTER_CRITICAL(&mux_);published_=state_;publishedAt_=nowMs();
+    if(published_.metadata.epoch&&metadataAt_&&publishedAt_>=metadataAt_) {
+        const auto epoch=std::uint64_t(published_.metadata.epoch)+(publishedAt_-metadataAt_)/1000;
+        published_.metadata.epoch=epoch<=4102444799u?std::uint32_t(epoch):0;
+        if(!published_.metadata.epoch)published_.metadata.offset=0;
+    }portEXIT_CRITICAL(&mux_);
 }
 BlePhone::Snapshot BlePhone::snapshot(std::uint64_t now) {
     portENTER_CRITICAL(&mux_);auto result=published_;const auto sampled=publishedAt_;portEXIT_CRITICAL(&mux_);
@@ -86,6 +103,11 @@ BlePhone::Snapshot BlePhone::snapshot(std::uint64_t now) {
         if(sampled&&!healthLogged_)std::printf("@BLE FAULT source=host-health age_ms=%llu\n",static_cast<unsigned long long>(now>=sampled?now-sampled:0));
         healthLogged_=true;result.phone.quality=Quality::Unavailable;
     } else healthLogged_=false;
+    if(result.metadata.epoch&&sampled&&now>=sampled) {
+        const auto epoch=std::uint64_t(result.metadata.epoch)+(now-sampled)/1000;
+        result.metadata.epoch=epoch<=4102444799u?std::uint32_t(epoch):0;
+        if(!result.metadata.epoch)result.metadata.offset=0;
+    }
     if(!result.phone.available()){result.pairing=result.code=0;result.phone={};result.phone.bleBench=true;}
     return result;
 }
@@ -147,6 +169,7 @@ void BlePhone::process() {
             else beginSecurity();
         }
     }
+    if(metadataAt_&&now-metadataAt_>=90000){state_.metadata={};metadataAt_=0;}
     Queued queued;
     for(unsigned i=0;i<4&&xQueueReceive(queue_,&queued,0)==pdTRUE;++i) {
         const auto request=queued.request;
@@ -199,6 +222,7 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
     switch(event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if(event->connect.status){s.advertiseRequested_=true;s.advertise();break;}
+        s.state_.metadata={};s.metadataAt_=0;s.state_.phone.connectionId=esp_random();if(!s.state_.phone.connectionId)s.state_.phone.connectionId=1;
         s.connection_=event->connect.conn_handle;s.advertiseRequested_=false;s.approved_=false;s.state_.phone.displayName={};
         if(ble_gap_conn_find(s.connection_,&desc)!=0){ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;}
         // A reconnecting phone may still present an unresolved private address
@@ -212,6 +236,7 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
         break;
     case BLE_GAP_EVENT_DISCONNECT:
         std::printf("@BLE LINK disconnected reason=%d\n",int(event->disconnect.reason));
+        s.state_.metadata={};s.metadataAt_=0;s.state_.phone.connectionId=0;
         s.securityPending_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_.phone.displayName={};s.state_.phone.connected=false;
         s.state_.phone.pairingRequested=s.state_.phone.pairingApproved=false;s.state_.phone.pairingCode={};s.state_.pairing=s.state_.code=0;s.approved_=false;
         s.updateBond();if(!s.forgetting_){s.advertiseRequested_=true;s.advertise();}break;

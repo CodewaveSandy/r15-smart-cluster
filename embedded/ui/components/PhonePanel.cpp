@@ -1,4 +1,5 @@
 #include "PhonePanel.h"
+#include <cstdio>
 #include "../WidgetPrimitives.h"
 #include "../Icons.h"
 #include "embedded/application/PhoneMenu.h"
@@ -24,6 +25,7 @@ PhonePanel::PhonePanel(lv_obj_t* parent):root_(box(parent,PhoneLayout::bounds)) 
     card_=outlined(root_.get(),PhoneLayout::device);
     phone_=createIcon(card_,20,24,Icon::Phone);
     name_=label(card_,72,10,650,"Phone unavailable",fonts::heading);
+    lv_label_set_long_mode(name_,LV_LABEL_LONG_DOT);lv_obj_set_height(name_,fonts::heading->line_height);
     status_=label(card_,72,46,650,"Status unavailable",fonts::value);
     for(unsigned i=0;i<3;++i) {
         rows_[i]=outlined(root_.get(),PhoneLayout::row(i));
@@ -70,15 +72,18 @@ void PhonePanel::update(const PhoneState& state,const ViewOptions& view,const Pa
     ink(title_,p.ink);ink(subtitle_,p.muted);ink(back_,p.muted);
     paint(card_,p.panel);outlineColor(card_,p.line);
     const bool ready=state.available()&&valid(state);
-    text(name_,!ready?"Phone service unavailable":state.pairingRequested?"Pair this phone?":state.paired?"Rider phone":"Connect your phone");
-    text(status_,!ready?"Waiting for phone service":state.pairingRequested?(state.pairingApproved?"Waiting for phone to finish pairing":state.pairingCode.data()):state.connected?"Connected - automatic reconnect enabled":state.paired?"Saved phone - reconnects when available":state.pairingCode[0]?state.pairingCode.data():"Open R15 Companion and select Connect cluster");
+    char battery[40];
+    if(state.batteryPercent>=0)std::snprintf(battery,sizeof battery,"Battery %d%%",state.batteryPercent);
+    else std::snprintf(battery,sizeof battery,"Battery unavailable");
+    text(name_,!ready?"Phone service unavailable":state.pairingRequested?"Pair this phone?":state.paired?(state.displayName[0]?state.displayName.data():"Phone name unavailable"):"Connect your phone");
+    if(!state.bleBench)text(status_,!ready?"Waiting for phone service":state.pairingRequested?(state.pairingApproved?"Waiting for phone to finish pairing":state.pairingCode.data()):state.connected?battery:state.paired?"Saved phone - reconnects when available":state.pairingCode[0]?state.pairingCode.data():"Open R15 Companion and select Connect cluster");
     if(state.bleBench) {
         const char* unavailable=state.unavailable==PhoneUnavailable::ReturnChannel?"Return UART not confirmed - check TX43 to GPIO18":
             state.unavailable==PhoneUnavailable::Status?"Waiting for vehicle phone-status packets":
             state.unavailable==PhoneUnavailable::VehicleSession?"Waiting for matching vehicle session":"Vehicle BLE service unavailable";
         text(status_,!ready?unavailable:state.forgetting?"Disconnecting and forgetting phone...":state.commandFailed?"Request failed. Try again.":
             state.pairingRequested?(state.pairingApproved?"Waiting for phone confirmation":state.pairingCode.data()):
-            state.connected?"Authenticated BLE bond connected":state.paired?"Saved BLE bond - reconnect from phone":
+            state.connected?battery:state.paired?"Saved BLE bond - reconnect from phone":
             state.pairWindowOpen?"Pairing enabled for 60 seconds - connect from BLE app":"Select Pair phone, then use a BLE test app");
     }
     ink(name_,p.ink);ink(status_,ready&&state.connected?p.accent:p.muted);ink(phone_,ready&&state.connected?p.accent:p.muted);

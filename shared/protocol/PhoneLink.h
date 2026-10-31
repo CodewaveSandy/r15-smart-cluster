@@ -20,20 +20,21 @@ inline Bytes encode(const Packet& p) {
     b[7]=std::uint8_t(p.result);put(b,8,p.vehicle);put(b,12,p.display);put(b,16,p.sequence);put(b,20,p.request);
     put(b,24,p.pairing);put(b,28,p.code);b[32]=std::uint8_t(p.action);
     b[33]=p.kind==Kind::Status?std::uint8_t(p.phone.quality):0;put(b,36,p.uptime);
+    if(p.kind==Kind::Status)put(b,40,p.phone.connectionId);
     put(b,44,gearlink::crc(b.data(),44));return b;
 }
 inline bool decode(const Bytes& b,Packet& result) {
-    if(b[0]!='R'||b[1]!='1'||b[2]!='5'||b[3]!='P'||b[4]!=1||(b[5]!=1&&b[5]!=2)||b[6]>63||b[7]>2||b[32]>5||b[34]||b[35]||get(b,40)||get(b,44)!=gearlink::crc(b.data(),44))return false;
+    if(b[0]!='R'||b[1]!='1'||b[2]!='5'||b[3]!='P'||b[4]!=1||(b[5]!=1&&b[5]!=2)||b[6]>63||b[7]>2||b[32]>5||b[34]||b[35]||get(b,44)!=gearlink::crc(b.data(),44))return false;
     Packet p;p.kind=Kind(b[5]);p.result=Result(b[7]);p.action=Action(b[32]);
     p.vehicle=get(b,8);p.display=get(b,12);p.sequence=get(b,16);p.request=get(b,20);p.pairing=get(b,24);p.code=get(b,28);p.uptime=get(b,36);
     if(!p.vehicle)return false;
     if(p.kind==Kind::Control) {
-        if(!p.display||b[6]||b[7]||b[33]||p.code||(p.action==Action::Heartbeat?p.request!=0:p.request==0))return false;
+        if(get(b,40)||!p.display||b[6]||b[7]||b[33]||p.code||(p.action==Action::Heartbeat?p.request!=0:p.request==0))return false;
         if((p.action==Action::Approve||p.action==Action::Reject)?p.pairing==0:p.pairing!=0)return false;
     } else {
         if(p.result==Result::None?(p.request||p.action!=Action::Heartbeat):(!p.display||!p.request||p.action==Action::Heartbeat))return false;
         if(b[33]!=unsigned(Quality::Available)&&b[33]!=unsigned(Quality::Unavailable)&&b[33]!=unsigned(Quality::Stale))return false;
-        p.phone.quality=Quality(b[33]);p.phone.bleBench=true;
+        p.phone.connectionId=get(b,40);p.phone.quality=Quality(b[33]);p.phone.bleBench=true;
         if(!p.phone.available()&&(b[6]||p.pairing||p.code))return false;
         p.phone.paired=b[6]&1;p.phone.connected=b[6]&2;p.phone.pairingRequested=b[6]&4;p.phone.pairingApproved=b[6]&8;
         p.phone.pairWindowOpen=b[6]&16;p.phone.commandFailed=b[6]&32;

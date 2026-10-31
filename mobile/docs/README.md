@@ -7,6 +7,8 @@ Updated: 2026-10-30. Flutter Android/iOS companion with an implemented Android f
 
 | Guide | Authority |
 | --- | --- |
+| [Connected phone metadata handoff](phone-connected-metadata-handoff.md) | App work for authenticated phone name, battery percentage and time/date sync |
+| [Phone-name integration](phone-name-integration.md) | Enrollment name UUID/payload, pairing modal and UART contract |
 | [Real ESP32 connection handoff](esp32-connection-handoff.md) | Next Android task: phone-name write, real pairing, retained BLE link, saved reconnect and manual acceptance |
 | [Architecture](architecture.md) | Ownership, dependency direction, native boundaries and build separation |
 | [User journey](user-journey.md) | Unified Phone experience, permissions and failure behavior |

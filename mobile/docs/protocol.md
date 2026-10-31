@@ -1,6 +1,6 @@
 # Phone protocol and transport plan
 
-Status: production/firmware protocol requirements only. An isolated [Wi-Fi Mac preview contract](mac-preview-connection.md) is implemented for development; it is not the final BLE/Wi-Fi or UART wire format. The full application protocol remains unfrozen. Separately reviewed physical BLE enrollment-label UUIDs/payload are implemented per [phone-name integration](../../docs/phone-name-integration.md); they are not an application session service. Phone network framing and inter-MCU UART framing are separate contracts sharing normalized semantics; do not require identical envelopes.
+Status: production/firmware protocol requirements only. An isolated [Wi-Fi Mac preview contract](mac-preview-connection.md) is implemented for development; it is not the final BLE/Wi-Fi or UART wire format. The full application protocol remains unfrozen. Separately reviewed physical BLE enrollment-label UUIDs/payload are implemented per [phone-name integration](phone-name-integration.md); they are not an application session service. Phone network framing and inter-MCU UART framing are separate contracts sharing normalized semantics; do not require identical envelopes.
 
 ## Transport policy
 

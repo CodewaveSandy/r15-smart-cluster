@@ -12,7 +12,8 @@ The current implementation is a C++17/LVGL 9.2.2/SDL2 host preview for an 800 x 
 | [Display firmware](../firmware/display/README.md) | V3.0 board provenance, native ESP-IDF desk-test build, user-operated flash and recovery |
 | [Hardware connections](hardware-connections.md) | Confirmed power path, engine-off bike power-on evidence and missing wiring details |
 | [Vehicle USB input test](../firmware/vehicle/README.md) | Configurable N–6, turn/high-beam inputs, separate ESP32 firmware and Mac serial preview |
-| [Pairing phone-name integration](phone-name-integration.md) | Companion-facing name UUID/payload, UART metadata and pairing modal |
+| [Connected phone metadata/app handoff](../mobile/docs/phone-connected-metadata-handoff.md) | Authenticated name, battery and clock sync; companion implementation and manual acceptance |
+| [Pairing phone-name integration](../mobile/docs/phone-name-integration.md) | Companion-facing name UUID/payload, UART metadata and pairing modal |
 | [Vehicle BLE pairing bench](phone-uart-bench.md) | Extra return wire, both firmware flash commands, Android test and bounded sideband contract |
 | [Architecture](architecture.md) | MCU ownership, source structure, state/concurrency, proposed UART and hardware boundaries |
 | [UI style](lvgl-style-guide.md) | Approved layouts, typography, themes, instruments and warnings |

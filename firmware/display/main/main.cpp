@@ -82,6 +82,7 @@ extern "C" void app_main() {
         const auto now=nowMs();
         if(!wallClock.available(now)&&now-clockRequest>=5000){std::printf("@CLOCK REQUEST\n");clockRequest=now;}
         vehicleUart.poll(now);
+        if(live)vehicleUart.synchronizeClock(wallClock,now);
         const auto clicks=vehicleUart.takeClicks();
         if(live) {
             state=vehicleUart.state(now);

@@ -510,6 +510,9 @@ int main(int argc,char** argv) {
                         phone.pairWindowOpen=scene==1;phone.pairingRequested=scene==2||scene==3;
                         phone.pairingApproved=scene==3;if(phone.pairingRequested){std::strcpy(phone.pairingCode.data(),"012345");std::strcpy(phone.displayName.data(),"Samsung S25 Ultra");}
                         phone.paired=scene==4||scene==5;phone.connected=scene==5;phone.commandFailed=scene==6;
+                        if(phone.connected){std::strcpy(phone.displayName.data(),"Samsung S25 Ultra");phone.batteryPercent=73;}
+                        sample.phoneConnected={phone.connected,phone.quality};
+                        sample.phoneBatteryPercent=phone.connected?Signal<int>{73,Quality::Available}:Signal<int>{};
                         view.phoneForgetConfirmation=false;view.phoneFocus=0;
                         dashboard.update(sample,view,life,base+11000+scene*1000);
                         capture(output/("ble-phone-"+std::to_string(scene)+"-"+suffix+".bmp"));
