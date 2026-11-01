@@ -1,6 +1,6 @@
 # Companion architecture, status and approved UI
 
-Updated: 2026-10-31. Current Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Background service, real vehicle telemetry, GPS/navigation/maps and native iOS integration are pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).
+Updated: 2026-11-01. Current Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Android background service and telemetry consumption remain pending; the vehicle now supplies the c013–c015 discrete-input telemetry/health contract described in Protocol and the background handoff. GPS/navigation/maps and native iOS integration remain pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).
 
 ## Ownership and dependency boundaries
 
@@ -71,12 +71,12 @@ Core Android first pair/name/live-link, saved reconnect after board power cycle,
 | Gate | Deliverable | Completion evidence/dependency |
 | --- | --- | --- |
 | M1 / joint B1 | [Background BLE continuity](background-sync.md#m1-implement-background-ble-continuity-first): service owns existing GATT/metadata, notification/Stop, native background recovery | Current firmware suffices; 60-minute untethered locked-screen run, Activity recreation, loss/recovery and Stop behavior; no pairing/UI regression |
-| M2 / joint B2 | Real bidirectional telemetry against a frozen authenticated capability/notification contract | Firmware contract and actual available sources required; real phone delivery, independent expiry/session rejection, subscription recovery and bounded load |
+| M2 / joint B2 | Consume the supplied c013–c015 firmware capability/telemetry/health contract in the M1 service | Firmware implementation is ready; app decoder/subscription/expiry and physical delivery/load checks are pending |
 | M3a | Select map/routing provider and validate licensed embedded delivery plus two-MCU bandwidth/cache/render feasibility | Primary provider docs, costs/keys/attribution/offline limits and actual target measurements before SDK commitment |
 | M3b / joint B3 | Search, destination/route overview, active location/navigation independent of UI, reroute/arrival/End ride and reviewed cluster transfer | M1/M2 foundation plus provider/firmware contract; real locked-screen GPS and display behavior, stale/cancel/offline recovery and measured energy |
 | Later | Supported notification/media features, separate iOS implementation and release evaluation | Scoped permission/accessory contracts, independent native device evidence and explicit signing/distribution authorization |
 
-M1 can start independently in mobile now; firmware developer follows [F1](../../docs/background-sync.md#work-independently-f1-continuity-baseline). M2/M3 wire changes require coordinated protocol review, not mobile-side invention or unrequested firmware changes. The initial firmware milestone may need no source change. No implementation is implied by these plans.
+M1 can start independently in mobile now; firmware developer follows [F1](../../docs/background-sync.md#work-independently-f1-continuity-baseline). Current M2 uses the supplied frozen firmware contract; later M3 wire changes require coordinated protocol review, not mobile-side invention or unrequested firmware changes. The initial firmware milestone may need no source change. No implementation is implied by these plans.
 
 ### Preserve at every stage
 

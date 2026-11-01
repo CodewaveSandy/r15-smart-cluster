@@ -1,18 +1,23 @@
 #include "BlePhone.h"
 #include "esp_timer.h"
+#include "host/ble_att.h"
+#include "host/ble_hs_mbuf.h"
+#include <algorithm>
 #include "esp_random.h"
 #include "shared/protocol/PairingIdentity.h"
 #include "nvs_flash.h"
 #include <cstring>
 #include "sdkconfig.h"
 static_assert(CONFIG_BT_NIMBLE_SM_LVL==3&&CONFIG_BT_NIMBLE_SM_SC_ONLY==1,"Authenticated SC-only pairing is required");
+static_assert(CONFIG_BT_NIMBLE_MAX_CONNECTIONS==1&&CONFIG_BT_NIMBLE_MAX_BONDS==1,"Phone service owns exactly one connection and saved bond");
 #ifdef CONFIG_BT_NIMBLE_SM_LEGACY
 #error Legacy pairing must remain disabled
 #endif
 namespace cluster::board {
 BlePhone* BlePhone::instance_=nullptr;
 namespace {std::uint64_t nowMs(){return std::uint64_t(esp_timer_get_time()/1000);}}
-bool BlePhone::initialize() {
+bool BlePhone::initialize(std::uint32_t boot) {
+    if(!boot)return false;boot_=boot;
     instance_=this;state_.phone.bleBench=true;published_=state_;
     // Preserve prior bonds: storage failure does not authorize erasing NVS.
     if(nvs_flash_init()!=ESP_OK||nimble_port_init()!=ESP_OK)return false;
@@ -24,16 +29,24 @@ bool BlePhone::initialize() {
     ble_hs_cfg.sm_their_key_dist=BLE_SM_PAIR_KEY_DIST_ENC|BLE_SM_PAIR_KEY_DIST_ID;
     ble_svc_gap_init();ble_svc_gatt_init();
     if(ble_svc_gap_device_name_set("R15 Cluster")!=0)return false;
-    // Display label only, deliberately not an authorization or vehicle command.
+    // Preserve the untrusted enrollment label; connected endpoints below require authentication.
     static const ble_uuid128_t nameService=BLE_UUID128_INIT(0x10,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
     static const ble_uuid128_t nameCharacteristic=BLE_UUID128_INIT(0x11,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
     static const ble_uuid128_t metadataCharacteristic=BLE_UUID128_INIT(0x12,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
-    static ble_gatt_chr_def characteristics[3]{};
+    static const ble_uuid128_t capabilityCharacteristic=BLE_UUID128_INIT(0x13,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static const ble_uuid128_t telemetryCharacteristic=BLE_UUID128_INIT(0x14,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static const ble_uuid128_t healthCharacteristic=BLE_UUID128_INIT(0x15,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static ble_gatt_chr_def characteristics[6]{};
     static ble_gatt_svc_def services[2]{};
     characteristics[0].uuid=&nameCharacteristic.u;characteristics[0].access_cb=nameAccess;
     characteristics[0].flags=BLE_GATT_CHR_F_WRITE;
     characteristics[1].uuid=&metadataCharacteristic.u;characteristics[1].access_cb=metadataAccess;
     characteristics[1].flags=BLE_GATT_CHR_F_WRITE|BLE_GATT_CHR_F_WRITE_ENC|BLE_GATT_CHR_F_WRITE_AUTHEN;
+    for(unsigned i=2;i<5;++i){characteristics[i].access_cb=streamAccess;characteristics[i].arg=reinterpret_cast<void*>(std::uintptr_t(i));
+        characteristics[i].flags=BLE_GATT_CHR_F_READ|BLE_GATT_CHR_F_READ_ENC|BLE_GATT_CHR_F_READ_AUTHEN;}
+    characteristics[2].uuid=&capabilityCharacteristic.u;characteristics[3].uuid=&telemetryCharacteristic.u;
+    characteristics[3].flags|=BLE_GATT_CHR_F_NOTIFY;characteristics[3].val_handle=&telemetryHandle_;
+    characteristics[4].uuid=&healthCharacteristic.u;
     services[0].type=BLE_GATT_SVC_TYPE_PRIMARY;services[0].uuid=&nameService.u;services[0].characteristics=characteristics;
     if(ble_gatts_count_cfg(services)||ble_gatts_add_svcs(services))return false;
     ble_store_config_init();write_=ble_hs_cfg.store_write_cb;delete_=ble_hs_cfg.store_delete_cb;
@@ -55,13 +68,66 @@ int BlePhone::nameAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt
     s.publish();return 0;
 }
 int BlePhone::metadataAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt* context,void*) {
-    auto& s=*instance_;const auto now=nowMs();ble_gap_conn_desc desc{};
-    if(context->op!=BLE_GATT_ACCESS_OP_WRITE_CHR||handle!=s.connection_||!s.state_.phone.available()||!s.state_.phone.connected||s.forgetting_||s.storageFault_||
-       ble_gap_conn_find(handle,&desc)||!desc.sec_state.encrypted||!desc.sec_state.authenticated||!desc.sec_state.bonded||desc.sec_state.key_size!=16)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    auto& s=*instance_;const auto now=nowMs();
+    if(context->op!=BLE_GATT_ACCESS_OP_WRITE_CHR||!s.authenticated(handle)) {
+        phonetelemetry::increment(s.diagnostics_.rejected);return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    }
     phonemeta::Payload bytes{};phonemeta::Data data;
-    if(OS_MBUF_PKTLEN(context->om)!=bytes.size()||os_mbuf_copydata(context->om,0,bytes.size(),bytes.data())||!phonemeta::decodePayload(bytes,data))return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
-    if(s.metadataAt_&&now-s.metadataAt_<1000)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    if(OS_MBUF_PKTLEN(context->om)!=bytes.size()||os_mbuf_copydata(context->om,0,bytes.size(),bytes.data())||!phonemeta::decodePayload(bytes,data)) {
+        phonetelemetry::increment(s.diagnostics_.invalid);return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    }
+    if(s.metadataAt_&&now-s.metadataAt_<1000) {phonetelemetry::increment(s.diagnostics_.rateLimited);return BLE_ATT_ERR_WRITE_NOT_PERMITTED;}
+    if(s.lastMetadata_)s.diagnostics_.maxMetadataGapMs=std::max(s.diagnostics_.maxMetadataGapMs,std::uint32_t(std::min<std::uint64_t>(now-s.lastMetadata_,UINT32_MAX)));
+    s.lastMetadata_=now;phonetelemetry::increment(s.diagnostics_.accepted);
     s.state_.metadata=data;s.metadataAt_=now;s.publish();return 0;
+}
+bool BlePhone::authenticated(std::uint16_t handle) {
+    ble_gap_conn_desc desc{};
+    return ready_&&!storageFault_&&!forgetting_&&state_.phone.available()&&state_.phone.connected&&handle==connection_&&
+        !ble_gap_conn_find(handle,&desc)&&desc.sec_state.encrypted&&desc.sec_state.authenticated&&desc.sec_state.bonded&&desc.sec_state.key_size==16;
+}
+int BlePhone::streamAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt* context,void* arg) {
+    auto& s=*instance_;const auto kind=reinterpret_cast<std::uintptr_t>(arg);
+    if(context->op!=BLE_GATT_ACCESS_OP_READ_CHR||!s.authenticated(handle))return BLE_ATT_ERR_READ_NOT_PERMITTED;
+    if(context->offset)return BLE_ATT_ERR_INVALID_OFFSET;
+    const auto now=nowMs();
+    if(kind==2){const auto b=phonetelemetry::capabilities(s.boot_);return os_mbuf_append(context->om,b.data(),b.size())?BLE_ATT_ERR_INSUFFICIENT_RES:0;}
+    const auto mtu=ble_att_mtu(handle);
+    if(kind==3){if(mtu<phonetelemetry::minimumMtu)return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+        const auto b=s.telemetry(now);return os_mbuf_append(context->om,b.data(),b.size())?BLE_ATT_ERR_INSUFFICIENT_RES:0;}
+    if(kind==4){if(mtu<phonetelemetry::healthMtu)return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+        const auto b=phonetelemetry::diagnostics(s.diagnostics_,s.boot_,s.state_.phone.connectionId,std::uint32_t(now));
+        return os_mbuf_append(context->om,b.data(),b.size())?BLE_ATT_ERR_INSUFFICIENT_RES:0;}
+    return BLE_ATT_ERR_READ_NOT_PERMITTED;
+}
+phonetelemetry::Bytes BlePhone::telemetry(std::uint64_t now) {
+    phonetelemetry::Snapshot sample;sample.boot=boot_;sample.connection=state_.phone.connectionId;
+    sample.sequence=++telemetrySequence_;
+    portENTER_CRITICAL(&mux_);sample.inputs=inputs_;const auto received=inputsAt_;portEXIT_CRITICAL(&mux_);
+    // Acquisition can publish after this host turn's timestamp was captured.
+    const auto observed=nowMs();if(observed>now)now=observed;
+    sample.uptime=std::uint32_t(now);sample.displayFresh=displayAvailable(now);
+    sample.metadataFresh=metadataAt_&&now>=metadataAt_&&now-metadataAt_<90000;
+    if(lastMetadata_&&now>=lastMetadata_)sample.metadataAgeSeconds=phonetelemetry::age((now-lastMetadata_)/1000);
+    if(received&&now>=received)sample.sourceAge=phonetelemetry::age(now-received);
+    return phonetelemetry::encode(sample);
+}
+void BlePhone::resetStream() {
+    subscribed_=notifyPending_=notifyStalled_=false;nextNotify_=notifyAt_=0;lastMetadata_=0;metadataAt_=0;
+}
+void BlePhone::notify(std::uint64_t now) {
+    if(notifyPending_) {
+        if(!notifyStalled_&&now>=notifyAt_&&now-notifyAt_>=1000){notifyStalled_=true;phonetelemetry::increment(diagnostics_.notifyErrors);}
+        return; // Missing completion cannot grow an application notification backlog.
+    }
+    if(!subscribed_||now<nextNotify_||!authenticated(connection_)||ble_att_mtu(connection_)<phonetelemetry::minimumMtu)return;
+    nextNotify_=now+phonetelemetry::intervalMs;
+    const auto bytes=telemetry(now);auto* mbuf=ble_hs_mbuf_from_flat(bytes.data(),bytes.size());
+    if(!mbuf){phonetelemetry::increment(diagnostics_.notifyErrors);return;}
+    notifyPending_=true;notifyStalled_=false;notifyAt_=now;
+    const int rc=ble_gatts_notify_custom(connection_,telemetryHandle_,mbuf); // NimBLE consumes mbuf even on error.
+    if(rc){if(notifyPending_)phonetelemetry::increment(diagnostics_.notifyErrors);notifyPending_=false;}
+    else phonetelemetry::increment(diagnostics_.notifyQueued);
 }
 void BlePhone::fault(const char* source,int code,int type) {
     if(!faultLogged_)std::printf("@BLE FAULT source=%s code=%d type=%d\n",source,code,type);
@@ -75,7 +141,7 @@ int BlePhone::storeDelete(int type,const union ble_store_key* key) {
 }
 void BlePhone::task(void*){nimble_port_run();nimble_port_freertos_deinit();}
 void BlePhone::reset(int reason) {
-    auto& s=*instance_;s.fault("host-reset",reason);s.securityPending_=false;s.forgetting_=false;s.ready_=false;s.advertiseRequested_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_={};s.state_.phone.bleBench=true;s.publish();
+    auto& s=*instance_;s.resetStream();s.fault("host-reset",reason);s.securityPending_=false;s.forgetting_=false;s.ready_=false;s.advertiseRequested_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_={};s.state_.phone.bleBench=true;s.publish();
 }
 void BlePhone::synced() {
     auto& s=*instance_;if(ble_hs_id_infer_auto(0,&s.addressType_)!=0)return;
@@ -112,9 +178,11 @@ BlePhone::Snapshot BlePhone::snapshot(std::uint64_t now) {
     return result;
 }
 bool BlePhone::post(phonelink::Request request) {const Queued queued{request,nowMs()+1000};return initialized_&&xQueueSend(queue_,&queued,0)==pdTRUE;}
-void BlePhone::poll(bool displayFresh) {
+void BlePhone::poll(bool displayFresh,const gearlink::Packet& inputs,std::uint32_t maxSourceGapMs) {
     if(!initialized_)return;
-    portENTER_CRITICAL(&mux_);displayFresh_=displayFresh;displayObservedAt_=nowMs();portEXIT_CRITICAL(&mux_);
+    portENTER_CRITICAL(&mux_);displayFresh_=displayFresh;displayObservedAt_=nowMs();
+    if(inputs.session==boot_){inputs_=inputs;inputsAt_=displayObservedAt_;sourceGap_=maxSourceGapMs;}
+    portEXIT_CRITICAL(&mux_);
     ble_npl_eventq_put(nimble_port_get_dflt_eventq(),&event_);
 }
 bool BlePhone::displayAvailable(std::uint64_t now) {
@@ -160,6 +228,10 @@ void BlePhone::beginSecurity() {
 void BlePhone::process() {
     if(storageFault_){state_.phone.quality=Quality::Unavailable;state_.phone.connected=false;reject();publish();return;}
     const auto now=nowMs();const bool displayFresh=displayAvailable(now);
+    if(processAt_&&now>=processAt_)diagnostics_.maxHostGapMs=std::max(diagnostics_.maxHostGapMs,std::uint32_t(std::min<std::uint64_t>(now-processAt_,UINT32_MAX)));
+    processAt_=now;
+    portENTER_CRITICAL(&mux_);const auto sourceGap=sourceGap_;portEXIT_CRITICAL(&mux_);
+    diagnostics_.maxSourceGapMs=std::max(diagnostics_.maxSourceGapMs,sourceGap);
     if(!displayFresh||now>=windowDeadline_)state_.phone.pairWindowOpen=false;
     if(state_.phone.pairingRequested&&(!displayFresh||now>=pairDeadline_))reject();
     if(securityPending_&&now>=securityDue_) {
@@ -169,7 +241,8 @@ void BlePhone::process() {
             else beginSecurity();
         }
     }
-    if(metadataAt_&&now-metadataAt_>=90000){state_.metadata={};metadataAt_=0;}
+    if(metadataAt_&&now-metadataAt_>=90000){state_.metadata={};metadataAt_=0;phonetelemetry::increment(diagnostics_.expired);
+        std::printf("@BLE SYNC metadata-expired\n");}
     Queued queued;
     for(unsigned i=0;i<4&&xQueueReceive(queue_,&queued,0)==pdTRUE;++i) {
         const auto request=queued.request;
@@ -203,7 +276,7 @@ void BlePhone::process() {
         if(rc)state_.phone.commandFailed=true;
     }
     finishForget(now);
-    if(ready_&&!forgetting_)advertise();publish();
+    if(ready_&&!forgetting_)advertise();notify(now);publish();
 }
 void BlePhone::finishForget(std::uint64_t now) {
     if(!forgetting_)return;
@@ -222,7 +295,8 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
     switch(event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if(event->connect.status){s.advertiseRequested_=true;s.advertise();break;}
-        s.state_.metadata={};s.metadataAt_=0;s.state_.phone.connectionId=esp_random();if(!s.state_.phone.connectionId)s.state_.phone.connectionId=1;
+        s.resetStream();phonetelemetry::increment(s.diagnostics_.connections);
+        s.state_.metadata={};s.state_.phone.connectionId=esp_random();if(!s.state_.phone.connectionId)s.state_.phone.connectionId=1;
         s.connection_=event->connect.conn_handle;s.advertiseRequested_=false;s.approved_=false;s.state_.phone.displayName={};
         if(ble_gap_conn_find(s.connection_,&desc)!=0){ble_gap_terminate(s.connection_,BLE_ERR_REM_USER_CONN_TERM);break;}
         // A reconnecting phone may still present an unresolved private address
@@ -236,7 +310,8 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
         break;
     case BLE_GAP_EVENT_DISCONNECT:
         std::printf("@BLE LINK disconnected reason=%d\n",int(event->disconnect.reason));
-        s.state_.metadata={};s.metadataAt_=0;s.state_.phone.connectionId=0;
+        s.resetStream();phonetelemetry::increment(s.diagnostics_.disconnects);
+        s.state_.metadata={};s.state_.phone.connectionId=0;
         s.securityPending_=false;s.connection_=BLE_HS_CONN_HANDLE_NONE;s.state_.phone.displayName={};s.state_.phone.connected=false;
         s.state_.phone.pairingRequested=s.state_.phone.pairingApproved=false;s.state_.phone.pairingCode={};s.state_.pairing=s.state_.code=0;s.approved_=false;
         s.updateBond();if(!s.forgetting_){s.advertiseRequested_=true;s.advertise();}break;
@@ -260,6 +335,18 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
         }
         s.state_.phone.commandFailed=false;s.state_.phone.connected=true;s.state_.phone.pairWindowOpen=false;s.state_.phone.pairingRequested=s.state_.phone.pairingApproved=false;
         s.state_.phone.pairingCode={};s.state_.pairing=s.state_.code=0;break;
+    case BLE_GAP_EVENT_SUBSCRIBE:
+        if(event->subscribe.conn_handle==s.connection_&&event->subscribe.attr_handle==s.telemetryHandle_) {
+            s.subscribed_=event->subscribe.cur_notify; // CCCD rewrites cannot bypass the 200 ms cadence.
+        }
+        break;
+    case BLE_GAP_EVENT_NOTIFY_TX:
+        if(event->notify_tx.conn_handle==s.connection_&&event->notify_tx.attr_handle==s.telemetryHandle_&&!event->notify_tx.indication) {
+            s.notifyPending_=s.notifyStalled_=false;
+            if(event->notify_tx.status)phonetelemetry::increment(s.diagnostics_.notifyErrors);
+            else phonetelemetry::increment(s.diagnostics_.notifyCompleted);
+        }
+        break;
     case BLE_GAP_EVENT_REPEAT_PAIRING:
         // Never silently discard an existing trusted bond to make pairing work.
         return BLE_GAP_REPEAT_PAIRING_IGNORE;

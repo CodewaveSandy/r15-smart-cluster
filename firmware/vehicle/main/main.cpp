@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "sdkconfig.h"
 #include <cstdio>
+#include <algorithm>
 
 extern "C" void app_main() {
     uart_config_t link{};
@@ -45,10 +46,11 @@ extern "C" void app_main() {
     // Binary packet bytes must never receive stdout's default LF -> CRLF conversion.
     uart_vfs_dev_port_set_tx_line_endings(0,ESP_LINE_ENDINGS_LF);
     cluster::gearlink::Packet packet;packet.session=esp_random();if(!packet.session)packet.session=1;
-    static cluster::board::BlePhone phone;phone.initialize();
+    static cluster::board::BlePhone phone;phone.initialize(packet.session);
     cluster::phonelink::Receiver controls;cluster::phonelink::Gate gate(packet.session);
     std::uint32_t statusSequence=0,nameSequence=0;std::uint64_t lastStatus=0,lastName=0;
     cluster::inputs::Button tripButton,infoButton;
+    std::uint64_t previousSample=0;std::uint32_t maxSourceGap=0;bool sampled=false;
     for(;;) {
         const auto now=std::uint64_t(esp_timer_get_time()/1000);
         bool fault=false;uart_event_t event{};
@@ -65,7 +67,6 @@ extern "C" void app_main() {
                 if(newDisplay&&snapshot.pairing)phone.post({cluster::phonelink::Action::Reject,snapshot.pairing});
             }
         }
-        phone.poll(gate.fresh(now));
         const auto read=[](wiring::Input input)->cluster::Signal<bool> {
             if(input.pin<0)return {};
             return {bool(gpio_get_level(gpio_num_t(input.pin)))==input.activeHigh,cluster::Quality::Available};
@@ -76,9 +77,12 @@ extern "C" void app_main() {
         packet.gear=cluster::inputs::gear(asserted);
         packet.levels=std::uint8_t((wiring::left.pin>=0?gpio_get_level(gpio_num_t(wiring::left.pin)):0)|
             ((wiring::right.pin>=0?gpio_get_level(gpio_num_t(wiring::right.pin)):0)<<1));
-        packet.uptimeMs=std::uint32_t(esp_timer_get_time()/1000);
+        const auto sampledAt=std::uint64_t(esp_timer_get_time()/1000);packet.uptimeMs=std::uint32_t(sampledAt);
         if(tripButton.update(read(wiring::tripButton).value,packet.uptimeMs))++packet.tripPresses;
         if(infoButton.update(read(wiring::infoButton).value,packet.uptimeMs))++packet.infoPresses;
+        if(sampled)maxSourceGap=std::max(maxSourceGap,std::uint32_t(std::min<std::uint64_t>(sampledAt-previousSample,UINT32_MAX)));
+        previousSample=sampledAt;sampled=true;
+        phone.poll(gate.fresh(now),packet,maxSourceGap);
         const auto bytes=cluster::gearlink::encode(packet);
         // No TX ring or wait: 36 bytes fit the 128-byte FIFO and consume
         // 3.125 ms on the wire, versus the 20 ms sampling interval. A partial

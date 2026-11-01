@@ -1,0 +1,18 @@
+# Normative wire examples, not an executable test suite.
+# All integers little endian; telemetry CRC covers bytes 0..59, health 0..75.
+# boot=0x01020304; connection=0x11223344; sender uptime=10000ms.
+capabilities_boot_01020304=523135430100010004030201070000004000c800
+telemetry_no_source_no_metadata=523135540140000004030201443322110100000010270000ffffffff01ff0100010001000202020200000000000000000000000000000000000000002ef01c59
+# Fresh source age20ms; metadata age30s; display fresh; gear6,left/highBeam true,right false;
+# trip=2,info=3,source sequence500,transmit sequence1. Unsupported measurements remain zero/quality2.
+telemetry_gear6_left_highbeam=52313554014007000403020144332211010000001027000014001e0000060001000000010202020200000000000000000200000003000000f4010000fc5b0a16
+# Source age1000ms is stale; metadata age90s is stale; display remains fresh; transmit sequence2.
+telemetry_stale_source_and_metadata=523135540140010004030201443322110200000010270000e8035a0004ff0400040004000202020200000000000000000200000003000000f40100004df603ed
+# accepted3, all other counts0, maximum metadata gap30000ms, host gap21ms, sampling gap20ms.
+health_three_accepted=523135480150000004030201443322111027000003000000000000000000000000000000000000000000000000000000000000000000000000000000307500001500000014000000000000005752ce05
+# Rejection rules: wrong magic/version/length; nonzero reserved bytes; zero boot/connection;
+# incorrect CRC; flags>7; quality>4; available gear>6; non-available gear !=255;
+# bool>1 or true bool without Available; available readings with missing/stale source;
+# metadata-fresh flag with age unknown or >=90s; unsupported measurement slots/qualities altered.
+# Session ordering is a receiver responsibility: old GATT generation, boot/connection mismatch,
+# duplicate/backward sequence/uptime, and expired source must never refresh current readings.

@@ -1,6 +1,7 @@
 #pragma once
 #include "shared/protocol/PhoneLink.h"
 #include "shared/protocol/PhoneMetadata.h"
+#include "shared/protocol/PhoneTelemetry.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/portmacro.h"
@@ -21,13 +22,24 @@ namespace cluster::board {
 class BlePhone {
 public:
     struct Snapshot {PhoneState phone;std::uint32_t pairing=0,code=0;phonemeta::Data metadata;};
-    bool initialize();
+    bool initialize(std::uint32_t boot);
     bool post(phonelink::Request request);
-    void poll(bool displayFresh);
+    void poll(bool displayFresh,const gearlink::Packet& inputs,std::uint32_t maxSourceGapMs);
     Snapshot snapshot(std::uint64_t now);
 private:
     static BlePhone* instance_;
     static int gap(ble_gap_event*,void*);
+    static int streamAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
+    bool authenticated(std::uint16_t handle);
+    phonetelemetry::Bytes telemetry(std::uint64_t now);
+    void notify(std::uint64_t now);
+    void resetStream();
+    phonetelemetry::Diagnostics diagnostics_;
+    gearlink::Packet inputs_;std::uint64_t inputsAt_=0,processAt_=0,lastMetadata_=0;
+    std::uint32_t boot_=0,telemetrySequence_=0,sourceGap_=0;
+    std::uint16_t telemetryHandle_=0;
+    bool subscribed_=false,notifyPending_=false,notifyStalled_=false;
+    std::uint64_t nextNotify_=0,notifyAt_=0;
     static int metadataAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
     std::uint64_t metadataAt_=0;
     static int nameAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);

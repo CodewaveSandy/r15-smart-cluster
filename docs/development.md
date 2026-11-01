@@ -352,3 +352,18 @@ Vehicle completion has a three-second deadline, and the display's completion wai
 The pairing-code UI now uses a large speed-font modal and a prominent optional phone name. Name support requires updating both firmwares and implementing the [companion write contract](../mobile/docs/protocol.md#enrollment-name-c011). Unbonded security initiation waits at most three seconds for optional name metadata; saved-bond reconnect remains immediate. Core real-app name/code behavior is user-confirmed; latest first-pair ordering and the extended fault matrix remain separate acceptance.
 
 The reader also displays `@BLE SECURITY` (peer procedure already active / actual start failure) and `@BLE LINK disconnected reason=...`. A missing `@BLE FAULT` line does not prove that the phone stayed connected: previous firmware had silent security-start termination paths. The peer-first security regression is described in [the name integration contract](../mobile/docs/protocol.md#enrollment-name-c011). Diagnostics never print the comparison code or keys.
+
+
+### Background-sync and phone telemetry handoff
+
+Vehicle firmware supplies new authenticated c013/c014/c015 capability, full discrete-input telemetry and health values; [Protocol](../mobile/docs/protocol.md#background-sync-capabilities-and-telemetry-c013c015) defines every byte. [Mobile background sync](../mobile/docs/background-sync.md#m2-integrate-the-supplied-telemetry-firmware) is the app developer's implementation handoff. No UART or display runtime change is required for this addition; retain a compatible existing display image.
+
+Build the vehicle using `bash scripts/flash-vehicle.sh --build-only`; use the existing guarded user-operated flash workflow and current port. Build-only does not access boards. A factory combined flash can replace NVS; do not promise bond preservation across reflashing. Reconnect/re-enroll explicitly as required rather than disabling security.
+
+For a full continuity observation window, the read-only USB collector accepts 1..7200 seconds:
+
+```sh
+/Users/codewavesandy/.platformio/penv/bin/python tools/vehicle/ble_log.py /dev/cu.YOUR_VEHICLE_PORT --seconds 3900
+```
+
+It sends no data/reset request and prints only bounded `@BLE` diagnostic lines; firmware emits one `@BLE SYNC metadata-expired` line per expiry. Detailed counters/maximum ages are available through authenticated c015 reads by the updated app, not through a new USB command. Ordinary telemetry events are not logged individually, avoiding a new console flood/sampling task. Phone USB/debugging must be disconnected during B1; board USB power/logging remains acceptable for a desk check. Capture numeric app callback gaps and c015 deltas alongside display UART/heap/stack/render diagnostics; absence of serial faults alone is not acceptance.

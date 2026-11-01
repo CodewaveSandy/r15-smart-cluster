@@ -1,6 +1,6 @@
 # Phone protocol: implemented contracts and future gates
 
-Updated: 2026-10-31. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Background service, bidirectional vehicle telemetry, navigation and Wi-Fi map delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
+Updated: 2026-11-01. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Firmware now includes authenticated capabilities/discrete-input telemetry/health endpoints for the background-sync handoff; Android background service/telemetry integration and physical B1/B2 acceptance remain pending. Navigation and Wi-Fi map delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
 
 ## Pairing, reconnect and trust
 
@@ -109,6 +109,106 @@ New R15M v1 UART frames are 80 bytes: magic at 0–3; version at 4; zero 5–7; 
 
 Vehicle extrapolates accepted UTC using monotonic elapsed time while metadata is fresh. Display synchronizes its existing clock service from current matching frames; automatic timezone follows the phone offset, manual timezone and persisted date/12-hour preferences remain respected. After disconnect/metadata expiry the last validated clock keeps ticking on display uptime. Cold power still requires a new real sync; no RTC retention or timestamp persistence is claimed. USB bench sync remains available; the most recently received valid source applies.
 
+
+## Background-sync capabilities and telemetry (c013–c015)
+
+Implemented in vehicle firmware for this handoff; Android integration and physical B1/B2 acceptance are pending. Added to the existing service `813b1240-8fd9-4d67-a53b-9f0a2531c010`. c011/c012 and every UART packet remain unchanged. Portable codec: `shared/protocol/PhoneTelemetry.h`; normative non-executable examples: `shared/protocol/phone-telemetry-v1-vectors.txt`.
+
+| Characteristic UUID | Properties | Value / prerequisite |
+| --- | --- | --- |
+| `813b1240-8fd9-4d67-a53b-9f0a2531c013` | Read | 20-byte R15C capability snapshot, default MTU sufficient |
+| `813b1240-8fd9-4d67-a53b-9f0a2531c014` | Read + Notify | 64-byte R15T full snapshot, negotiated MTU >=67 |
+| `813b1240-8fd9-4d67-a53b-9f0a2531c015` | Read | 80-byte R15H health snapshot, negotiated MTU >=83 |
+
+All accesses require the current firmware-confirmed authenticated/bonded encrypted link with a 16-byte key and a healthy ready service. ATT read permission flags and callback checks both enforce this; writes to the new values are not supported. c014 notifications additionally check this security state before every send. CCCD enable alone proves no authorization. This is read-only vehicle observation, with no bike control, phone-to-vehicle command, navigation input or map capability. GATT attributes may move after a firmware update: discover by UUID, never hardcode handles; handle Android service-change/rediscovery through the serialized owner, never hidden cache-refresh APIs or automatic trust erasure.
+
+Request MTU 96 (or greater) and use the actual successful callback value. With MTU 67..82 telemetry works but health is unavailable. Below 67, c014 reads fail and notifications are suppressed; existing c012 still works at MTU >=47. c014/c015 intentionally reject nonzero Read Blob offsets and insufficient MTU (invalid offset / invalid value length); do not splice changing snapshots across long reads. Capability reads, telemetry reads/notifications and health reads are separate operations, not chunks of one message. No extra length prefix, JSON or string terminator.
+
+### R15C capability snapshot (20 bytes)
+
+| Bytes | Meaning |
+| --- | --- |
+| 0–3 | ASCII R15C |
+| 4, 5 | Major 1, minor 0 |
+| 6, 7 | Maximum active connections 1; reserved zero |
+| 8–11 | Vehicle boot session, nonzero; changes on MCU reboot, not merely reconnect |
+| 12–15 | Feature bits: bit0 connected metadata, bit1 discrete-input telemetry, bit2 health reads; current mask 7. Higher bits reserved |
+| 16–17 | Telemetry value size 64, uint16 |
+| 18–19 | Minimum notification interval 200ms, uint16 |
+
+No CRC on R15C; it is read through authenticated ATT. Feature bit1 does not claim speed/RPM/fuel/voltage support or completed app/bench acceptance. Reject unsupported major versions and incompatible lengths; tolerate only explicitly understood capabilities. This boot token is session identity, not a stable permanent device identity or phone pairing proof.
+
+### R15T telemetry snapshot (64 bytes)
+
+Every notification/read is a full latest snapshot. Vehicle sampling remains at its existing ~20ms loop; BLE sends at most once per 200 ms (5Hz), with no replay queue and no change-triggered extra burst. Rewriting CCCD cannot bypass the cadence. No CCCD subscription -> no notifications. Subscribe on every reconnect with Android local notification registration and CCCD `0x0001`, await its write callback, then read c014 for a baseline. A current notification may precede the baseline read callback; apply the same ordering rules to both rather than forcing a delayed read over newer data.
+
+| Bytes | Meaning |
+| --- | --- |
+| 0–3 | ASCII R15T |
+| 4, 5 | Version 1, exact length 64 |
+| 6 | bit0 return-display heartbeat fresh; bit1 accepted c012 snapshot fresh; bit2 acquisition source fresh; bits3–7 zero |
+| 7 | Reserved zero |
+| 8–11 | Vehicle boot session, must match c013 |
+| 12–15 | Random nonzero current BLE connection token; changes on a new link |
+| 16–19 | Transmit/read sequence, uint32 modulo 2^32; increments for both reads and notifications, gaps allowed |
+| 20–23 | Sender uptime at snapshot, ms modulo 2^32 |
+| 24–25 | Acquisition age ms: 0..65534 saturated; 65535 means no source yet |
+| 26–27 | Seconds since last accepted c012 snapshot in this connection: 0..65534 saturated; 65535 means none yet |
+| 28, 29 | Gear quality; gear 0=N, 1..6 when Available, otherwise 255 |
+| 30, 31 | Left-turn quality; phase bool 0/1 |
+| 32, 33 | Right-turn quality; phase bool 0/1 |
+| 34, 35 | High-beam quality; bool 0/1 |
+| 36–39 | Speed, RPM, fuel, bike-voltage qualities respectively; all Unsupported (2) in this version |
+| 40–47 | Unsupported measurement slots, all zero; never interpret as valid speed/RPM/fuel/voltage |
+| 48–51, 52–55 | Boot-scoped Trip/Info press counters, uint32 modulo 2^32; baseline only after connect/recovery, no replayed actions |
+| 56–59 | Acquisition sample sequence, uint32 modulo 2^32 |
+| 60–63 | CRC-32/ISO-HDLC over bytes 0–59 (same parameters as R15G) |
+
+Quality encoding: Available=0, Unavailable=1, Unsupported=2, Invalid=3, Stale=4. Unknown/stale gear is not N. Non-Available bool values are zero and must not imply inactive. At source age >=1000ms all input qualities become Stale; no source means Unavailable, unknown age/counters zero. Unsupported measurement slots stay zero regardless of source age. Left/right values are observed source phase, not intent; do not blink them a second time. These are configured GPIO bench observations, not newly validated/calibrated bike signals.
+
+Metadata-fresh means a valid c012 snapshot was accepted less than 90 seconds ago, even if its individual fields are unavailable. At exactly 90 seconds it is false; accepted metadata resets its age only, never acquisition age. Display-fresh is specifically the return UART heartbeat, not proof of the entire display/render path or forward UART. Phone telemetry remains valid independently of display loss if acquisition remains fresh. No permanent session secrets, phone identity or payload text are exposed.
+
+Receiver rules: bind every callback to the current GATT generation. Compare boot with capabilities and latch the connection token from the first valid current snapshot; cross-check c015 when read. A token change within one GATT is a session fault requiring refresh/reconnect, not permission to accept an old queued callback. For same boot/connection accept only transmit sequence deltas in 1..0x7fffffff; uptime deltas may be zero (multiple reads in one millisecond), otherwise must be <0x80000000. CRC or malformed frames never refresh anything. Source sequence can remain unchanged briefly; receipt of another read/heartbeat never makes an old acquisition fresh. Apply source age, conservative transport/callback age from the timed baseline below and local monotonic elapsed time: inputs expire at 1000ms total age even while BLE is connected. Also mark the stream stale if no valid packet for 1000ms. Use monotonic time for local freshness, not phone/vehicle wall-clock subtraction. On reboot/reconnect clear the old baseline and require current capabilities/subscription/full snapshot. No backlog replay.
+
+### Bounding delayed delivery with a timed baseline
+
+Receipt age alone cannot detect a burst of old callbacks buffered while Android slept. Establish a conservative mapping between vehicle uptime and Android monotonic time using an authenticated c014 read: record local dispatch `t0`, local callback `t1`, and packet sender uptime `uB`. Use the actual GATT dispatch time, not time spent waiting in the operation queue. For this initial handoff accept a timing baseline only when its round trip is <=500ms (an engineering limit to validate on hardware); longer/failed reads leave data timing uncertain and readings stale until a usable baseline arrives. Do not disconnect/erase trust just because timing confidence is absent.
+
+For a same-session packet with unwrapped sender uptime `uP`, a conservative total source-age bound at local monotonic time `t` is `sourceAge + max(0, (t - t0) - (uP - uB))`, plus timestamp-quantization and measured clock-drift uncertainty. The earliest possible local send time is `t0 + (uP - uB)`, so this includes the baseline RTT uncertainty, packet transport/Android callback delay and subsequent local age. Do not use wall-clock subtraction or assume phone/vehicle clock rates are identical. Reject backwards/ambiguous uptime and sequence; short uptime deltas of zero remain valid for reads in the same millisecond. Refresh the timed c014 baseline at least every 30 seconds through the serialized queue; if it expires, timing becomes uncertain/stale until refreshed. Account for measured drift over each baseline interval in the freshness margin, and report unexplained drift/delay during B1 rather than declaring fresh data from receipt alone.
+
+Until a baseline exists, decoded notifications can update diagnostics but must not assert fresh input. Retain at most the newest pending snapshot, never a backlog. A notification newer than the read may arrive before its callback: establish the time anchor from the read without overwriting a newer valid snapshot, then apply the conservative age bound to that newest snapshot. Baseline refresh is clock-confidence maintenance, not a second measurement stream; delayed read results cannot rewind sequence/state. Inputs expire when the conservative total source-age bound reaches 1000 ms or no valid packet has arrived for 1000 ms, whichever is earlier. Metadata/link freshness remains independent.
+
+### R15H health snapshot (80 bytes)
+
+Diagnostic reads are optional, recommended every 10 seconds during B1/B2 only; do not poll per frame. No application notification queue is added. NimBLE `NOTIFY_TX` in the pinned stack reports the attempt result synchronously, not Android receipt or radio-level delivery. One pending-call guard plus bounded NimBLE buffers prevents an application backlog; allocation/send failures count errors, drop that sample and retry a new latest sample at the next cadence. A missing result leaves further notifications blocked, observed as stream expiry; explicitly reconnect rather than creating competing GATT calls.
+
+| Bytes | Meaning |
+| --- | --- |
+| 0–3, 4, 5 | ASCII R15H; version1; length80 |
+| 6–7 | Reserved zero |
+| 8–11, 12–15, 16–19 | Boot token, current connection token, sender uptime ms |
+| 20–23 | Accepted c012 writes |
+| 24–27 | Metadata writes refused by application state/security checks |
+| 28–31 | Malformed c012 payloads reaching callback |
+| 32–35 | Rate-limited c012 writes |
+| 36–39 | c012 expirations |
+| 40–43, 44–47 | Successful physical GATT connects; disconnect events (not authenticated session counts) |
+| 48–51 | Notification calls accepted by NimBLE |
+| 52–55 | Successful NimBLE notify-attempt callbacks; not phone acknowledgements |
+| 56–59 | Allocation/send/result/stall errors; not an exact RF loss count |
+| 60–63 | Maximum gap ms between accepted metadata writes within a connection |
+| 64–67 | Maximum BLE host work-service gap ms |
+| 68–71 | Maximum acquisition loop sample gap ms |
+| 72–75 | Reserved zero |
+| 76–79 | CRC-32/ISO-HDLC over bytes 0–75 |
+
+Counters/maxima are boot-scoped and saturate at uint32 max; reconnect does not clear them, reboot does. Maximum metadata gap excludes time before the first accepted write and disconnect downtime, but includes a >90-second lapse followed by a new accepted write. Current age in c014 exposes an ongoing lapse before it closes. Errors rejected by NimBLE security/ATT before callbacks are not counted in application rejection counters. Observe deltas against each current boot baseline, not absolute expected zeros across unrelated fault exercises. Maxima update when their service/sample resumes. No heap/resource-performance claim follows from these counters.
+
+### Physical acceptance and compatibility
+
+Old app c011/c012 behavior remains supported; no new endpoint is required just to retain that flow. New app must gracefully mark telemetry/health unsupported on older firmware while preserving existing connection/metadata. On the current firmware, validate capabilities before enabling new decoding. The app's Home gear may now use a real Available observation; speed/fuel/bike voltage remain Unsupported, not 0/N/phone battery/GPS substitutions. Broader navigation/GPS/map and Wi-Fi bits are absent; do not expose them as ready.
+
+B1 requires 60-minute untethered locked-screen bidirectional activity: accepted c012 counts/age plus current c014 packets/source age and health counter deltas. B2 adds real bench input changes, invalid/no gear, source/stream expiry, old/duplicate/malformed rejection, notification unsubscribe/resubscribe, board independent resets, reconnect and concurrent UI/input load. Physical results, Android service lifecycle and resource measurements remain pending; builds and normative examples are not acceptance.
 
 ## Transport policy
 
