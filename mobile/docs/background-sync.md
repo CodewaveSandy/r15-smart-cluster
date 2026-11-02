@@ -1,5 +1,7 @@
 # Android background-sync strategy and work plan
 
+For the next location/map phase, follow the [complete integration handoff](../../docs/map-phase-1.md), particularly the separate sharing intent, location foreground-service lifecycle and firmware-first gates. Existing M1/M2 and B1/B2 acceptance are not superseded.
+
 Updated: 2026-11-02. Status: Android M1/M2 source integration implemented; Dart analysis and native Kotlin compilation checked locally. Android APK packaging and physical B1/B2 acceptance remain pending for this revision. Firmware handoff remains implemented/build-verified. Start here for mobile implementation independently of firmware work. Read mobile/AGENTS.md, [architecture](architecture.md#companion-architecture-status-and-approved-ui), [current protocol](protocol.md) and [development](development.md). Firmware work starts at [the firmware plan](../../docs/background-sync.md). The shared first acceptance gate is B1 in that plan.
 
 ## Outcome and current gap

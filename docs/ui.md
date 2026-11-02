@@ -1,5 +1,7 @@
 # UI, Settings and lifecycle
 
+For the upcoming map page, [phase 1 display behavior](map-phase-1.md#5-map-transfer-and-display-behavior) specifies loading, cached-map replacement, fresh/stale position, coverage, physical controls and warning/lifecycle precedence. These device states remain implementation work.
+
 Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation, retained clock sources and full hardware integration remain pending; phone/USB clock sync, persisted formats and connected phone metadata are implemented.
 
 ## Visual authority

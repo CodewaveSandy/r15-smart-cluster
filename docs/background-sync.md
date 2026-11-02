@@ -1,5 +1,7 @@
 # Firmware background-sync strategy and work plan
 
+Next map work follows the [phase 1 firmware-first handoff](map-phase-1.md#6-firmware-first-implementation-order), then Android integration. It adds a separate proposed protocol extension; existing background-sync/B1/B2 gates remain applicable.
+
 Updated: 2026-11-01. Status: firmware continuity diagnostics and authenticated discrete-input telemetry are implemented/build-verified; mobile integration and physical B1/B2 remain pending. Start here for firmware work. App developers start at [the mobile plan](../mobile/docs/background-sync.md). [Current BLE protocol](../mobile/docs/protocol.md) is the single wire-contract authority; [bench wiring](development.md#vehicle-ble-uart-bench) remains authoritative for physical connections.
 
 ## Outcome and current baseline

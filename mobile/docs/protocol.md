@@ -237,3 +237,137 @@ Maintain language-neutral fixtures alongside the first normative specification. 
 ## Development bridge boundary
 
 Mac c001/c002 endpoint discovery, TLS bootstrap and HTTP sessions are separate from physical c010/c011/c012. Never apply Mac session success to ESP32 feature readiness. Run and security details are in [development](development.md#mac-preview-adapter).
+
+## Phase 1 map extension — implementation specification
+
+**Proposed v1 contract; not implemented or physically accepted.** Implement firmware first, inspect normative byte vectors and freeze the implemented revision before Android work. [Phase 1 handoff](../../docs/map-phase-1.md) owns the workflow, UI, location policy, resources and acceptance. This section owns the proposed bytes. Existing c011–c015, including c013's strict feature mask/version, and existing UART frames are unchanged. No navigation/route/ETA fields exist in this extension.
+
+All multibyte integers below are little-endian; signed values use two's complement. CRC is CRC-32/ISO-HDLC (reflected polynomial `0xEDB88320`, initial/final XOR `0xFFFFFFFF`; check ASCII `123456789` → `0xCBF43926`). SHA-256 is 32 raw bytes in standard digest order. Reserved fields/bits must be zero. Unknown versions, enum values, invalid lengths and noncanonical fields are rejected before application. CRC is corruption detection, not authentication.
+
+### GATT endpoints and downstream readiness
+
+Same c010 service and UUID prefix `813b1240-8fd9-4d67-a53b-9f0a2531`: c016 capability READ, c017 command WRITE WITH RESPONSE, c018 status READ + NOTIFY (CCCD). Each suffix means the full UUID ending `c016`, `c017` or `c018`. All operations, including CCCD, require the current authenticated LE Secure Connections bond and 16-byte key. Never allow enrollment/unsecured map commands. No second connection/GATT owner or write-without-response path.
+
+Request MTU247; actual MTU must be ≥96. c017 value limit is `min(240, actualMTU - 3, advertisedMaxValue)` bytes. Do not assume requested MTU succeeded. Subscribe c018 and read a baseline before BEGIN; bounded status reads recover coalesced/lost notifications through the same serialized ATT queue. One pending status snapshot is sufficient; status never queues a history of fixes. Missing ATT callback retains the existing eight-second close-before-recovery rule.
+
+`R15K` capability is exactly 64 bytes:
+
+| Offset | Field |
+| --- | --- |
+| 0 | ASCII `R15K` (4 bytes) |
+| 4,5 | Version u8=1, length u8=64 |
+| 6,7 | Flags u8: bit0 map-ready, bit1 timed-location supported, bit2 location supported; reserved u8=0 |
+| 8,12,16 | Vehicle boot u32, current BLE connection token u32, display boot u32 |
+| 20 | Maximum complete package bytes u32, ≤65536 |
+| 24,26,27 | Maximum roads u16 ≤2048; maximum points/road u8=8; maximum name bytes u8=23 |
+| 28,30 | Maximum c017 value u16 ≤240; minimum MTU u16=96 |
+| 32,34 | Bulk encoded-UART bytes/sec u16 ≤4096; minimum location send period ms u16=500 |
+| 36,38 | Location TTL ms u16=2000; maximum horizontal accuracy cm u16=5000 |
+| 40–59 | Reserved zero |
+| 60 | CRC32 of bytes 0–59 |
+
+Flags are readiness, not evidence of a live fix. Readiness requires fresh downstream capability (≤1500ms), supported display firmware and successful active/staging reservation. Unavailable resources clear flags; never promise the host's memory ceiling. Advertised positive resource ceilings may be lower; an unsupported package fails before transfer, without dropping roads. On BLE, vehicle/connection IDs are current/nonzero; display ID can be zero only when unavailable. Every new connection rereads capability. A display reboot or expired return heartbeat immediately clears readiness and invalidates pending transfer/time state.
+
+Display sends this same capability record through the UART tunnel once/second and after resource/boot changes. It reports its own nonzero boot ID and current vehicle ID learned from legacy input; connection token may be zero before phone connection. Such UART announcements describe resources only and never authorize a phone. The vehicle verifies the current display/return-link context and fills its own current boot/secured BLE token for c016; the display still independently checks each command against current legacy vehicle/phone session. Unknown/missing session state rejects commands. No hardcoded true-ready capability.
+
+### Complete regional package: R15B v1
+
+Header exactly 64 bytes, followed by variable road records; total ≤advertised maximum and ≤65536. No trailing bytes, compression, native structs or route data.
+
+| Offset | Field |
+| --- | --- |
+| 0 | ASCII `R15B` |
+| 4,5,6 | Major u8=1, minor u8=0, header length u16=64 |
+| 8,12 | Origin latitude E7 i32, longitude E7 i32 |
+| 16,20,24,28 | South, west, north, east E7 i32 |
+| 32,34 | Road count u16 (1..advertised maximum), flags u16=0 |
+| 36 | Body byte count u32 = exact total minus64 |
+| 40 | OSM source UTC seconds u32; dataset provenance, never GPS age |
+| 44 | CRC32 of complete body |
+| 48–63 | Reserved zero |
+
+Road record: kind u8 (`0 Local, 1 Arterial, 2 Water, 3 Path, 4 Service`), point count u8 (2..8), name length u8 (0..23), reserved u8=0; then exactly name-length printable ASCII bytes `0x20..0x7E` (no padding/NUL), then point-count pairs of east i16/north i16 metres. Require a non-space character for a nonempty name, and at least two distinct points. Points must be within ±20000m and the geographic bounds within rounding tolerance; count/length arithmetic must be overflow-safe and exhaust the body exactly.
+
+WGS84 coordinates: latitude within ±85°, longitude within ±180°, south<north/west<east, origin inside bounds; no antimeridian crossing. Bounds must project no more than5000m from origin in either axis. Projection: `east = R*cos(originLatRad)*(lonRad-originLonRad)`, `north = R*(latRad-originLatRad)`, R=`6371008.8m`; nearest integer with exact half away from zero. Allow1m projected boundary rounding tolerance. Both producers/consumers use these rules; never reproject old metre coordinates under a new origin. Full package SHA-256 is carried by BEGIN. Manifest/provenance/ODbL notices accompany distribution but are not arbitrary UART text.
+
+### c017 command: R15X v1
+
+Header32 + body + CRC32, total `36 + bodyLength`:
+
+| Offset | Field |
+| --- | --- |
+| 0 | ASCII `R15X` |
+| 4,5,6,7 | Version u8=1; type u8; header length u8=32; flags u8=0 |
+| 8,12,16 | Current vehicle boot, BLE connection token, display boot (u32 each, nonzero) |
+| 20 | Map generation u32; nonzero for BEGIN/DATA/COMMIT/CANCEL, zero for other types |
+| 24 | Request sequence u32, nonzero |
+| 28,30 | Body length u16; reserved u16=0 |
+| 32 | Body, then CRC32 over header+body |
+
+| Type | Value | Exact body |
+| --- | --- | --- |
+| TIME_REQUEST | 1 | Phone dispatch elapsed milliseconds T0 u64 |
+| TIME_CONFIRM | 2 | TIME_REQUEST sequence u32 + echoed T0 u64 + phone callback elapsed milliseconds T1 u64 (20 bytes) |
+| BEGIN | 3 | Complete package length u32 + complete SHA-256 (36 bytes) |
+| DATA | 4 | Contiguous byte offset u32 + 1..200 package bytes, reduced for actual MTU/advertised value |
+| COMMIT | 5 | Empty |
+| CANCEL | 6 | Empty |
+| LOCATION | 7 | Location body below (40 bytes) |
+| STOP | 8 | Empty |
+
+Control requests use one increasing sequence stream, LOCATION another. Unsigned forward delta must be1..`0x7FFFFFFF`; use a new nonzero sequence across wrap. Byte-identical retry of the immediately last control request is idempotent and returns its current status; same sequence with different bytes fails. Duplicates never refresh source age or transfer inactivity. Location duplicates/backward packets are discarded. Nonidentical control requests wait for prior display acknowledgement; LOCATION can interleave/coalesce and does not overwrite last-control ACK. Cancel/STOP wins over queued DATA. Generations do not repeat in a connection. On boot/reconnect all sequence/anchor/staging context is invalid; old IDs cannot revive data.
+
+BEGIN is accepted only if idle/previous transfer cancelled and resources/length are valid. A busy different BEGIN reports BUSY, preserving staging. Only display acceptance of a DATA offset advances `nextOffset`; identical retry is harmless, overlapping/conflicting/out-of-order data fails without partial activation. COMMIT requires all bytes and validates SHA, package CRC, fields and decoded scene before atomic activation. Validation is bounded/incremental outside LVGL draw callbacks. BEGIN matching the full stored validated active SHA may return ACTIVE without retransmission, rebinding that content to the new generation/session. CRC alone cannot authorize reuse. CANCEL discards the matching staging generation, retaining active map. STOP clears staging/timing/location and marks sharing stopped, retaining active roads. A fresh TIME_REQUEST after STOP starts a new sharing session; no old fix is eligible.
+
+Location body (all offsets relative to body):
+
+| Offset | Field |
+| --- | --- |
+| 0,8 | Fix elapsed ms u64; actual phone dispatch elapsed ms u64 |
+| 16,20 | Latitude E7 i32; longitude E7 i32 |
+| 24 | Horizontal accuracy cm u32 (`0xFFFFFFFF` unknown) |
+| 28,30 | Course centidegrees u16 (0..35999); course accuracy centidegrees u16 (0..18000); each `0xFFFF` unknown |
+| 32 | Speed cm/s u16 (0..65534), `0xFFFF` unknown |
+| 34 | Flags u8: bit0 precise permission, bit1 OS mock fix; others zero |
+| 35 | Quality u8: 0 Unavailable, 1 Available, 2 Stale, 3 Invalid, 4 Unsupported |
+| 36 | Reserved u32=0 |
+
+Available requires valid coordinates/fix≤dispatch, precise flag, nonmock source and known accuracy≤5000cm; source age must already be<2000ms at dispatch. Latitude/longitude zero is valid when Available. Non-Available uses fix=0, coordinates=0, accuracy=`0xFFFFFFFF`, unknown course/course-accuracy/speed; dispatch still contains actual elapsed time. Non-Available promptly removes live marker but never refreshes it. Receiver rechecks age; Available alone cannot prove freshness. Direction arrow additionally requires known course/accuracy≤4500 and speed≥200cm/s; otherwise a neutral position dot. Phone speed never supplies vehicle speed. Reject malformed/unsupported combinations; stale valid packets cannot refresh a marker.
+
+### c018 display status: R15S v1
+
+Exactly80 bytes; read/notify convey the same latest authoritative display snapshot. Before a valid downstream status, return state UNSUPPORTED with zero display fields; vehicle must not invent accepted offsets/activation. A local ingress failure may return an ATT error but cannot advance display ACK. Connection-stale cached status cannot be relabelled as current.
+
+| Offset | Field |
+| --- | --- |
+| 0 | ASCII `R15S` |
+| 4,5,6,7 | Version1, length80, transfer state, error (u8 each) |
+| 8,12,16 | Vehicle boot, BLE token, display boot (u32 each) |
+| 20,24 | Current/last transfer generation u32; last acknowledged control sequence u32 |
+| 28,32 | Next contiguous display-accepted offset u32; declared total bytes u32 |
+| 36 | Active map generation u32, zero if none |
+| 40 | Current display elapsed ms u64 |
+| 48,56 | Echoed phone TIME_REQUEST T0 u64; display elapsed ms DB sampled when handling that request u64 |
+| 64 | Last accepted location sequence u32 |
+| 68,69 | Location state u8; command credit u8 (0 or1) |
+| 70–71 | Reserved zero |
+| 72 | Active package body CRC32 u32, diagnostic only; zero if none |
+| 76 | CRC32 of bytes0..75 |
+
+Transfer state: `0 UNSUPPORTED, 1 EMPTY, 2 RECEIVING, 3 VERIFYING, 4 ACTIVE, 5 FAILED, 6 CANCELLED`. FAILED/CANCELLED may retain an active map (`activeGeneration` nonzero); transfer state never alone determines visible coverage. Errors: `0 NONE, 1 MALFORMED, 2 UNSUPPORTED, 3 SESSION, 4 RESOURCE, 5 BOUNDS, 6 OFFSET, 7 HASH, 8 TIMEOUT, 9 BUSY, 10 TIMING`. Location state: `0 NO_ANCHOR, 1 NO_FIX, 2 FRESH, 3 STALE, 4 LOW_ACCURACY, 5 OUTSIDE_COVERAGE, 6 STOPPED, 7 INVALID`. A source that cannot qualify may be reported non-Available; UI can use phone permission observations for finer explanation. Credit1 authorizes one control request, never unlimited queued packets; LOCATION is rate-limited separately. ACK offset progress is received bytes/total, not “map ready”; VERIFYING follows100%, ACTIVE follows full validation and publication. Status updates on transitions/ACK, coalesces location-only changes to≤2Hz, and is read on a2s map-ACK timeout before byte-identical retry. Transfer inactivity15s measures newly accepted bytes only.
+
+### End-to-end location time anchor
+
+Phone records T0 at actual TIME_REQUEST dispatch (not enqueue). Display records DB when it handles the request, returns echoT0/DB and ACK sequence. Phone records T1 at the matching status callback. Require current IDs, matching pending request, nondecreasing phone elapsed time and `0≤T1−T0≤500ms`. TIME_CONFIRM supplies request sequence/T0/T1; display accepts only its matching pending request within2s of DB. Replay/conflicting confirm fails. Refresh every25s; anchor expires30s after DB. A retry is byte-identical and cannot manufacture a newer DB for an old request.
+
+Accepted anchor `(DB,T1)` intentionally uses the phone callback upper bound. For a fix F and current display time D, conservative age is `max(0, (D−DB) + (T1−F)) + uncertainty`, evaluated with checked signed wide arithmetic (never unsigned underflow). This upper-bounds age because callback occurred after the display sample. Initial uncertainty≥2ms + ceil((D−DB)*1000/1000000), enlarged for observed successive-anchor disagreement; provisional drift requires hardware measurement. If monotonic continuity/uncertainty cannot be established, hide marker. Require conservative age<2000ms AND time since receipt of the last valid newer location<2000ms, fresh link/session/anchor, eligible quality/accuracy and active coverage. Never chain two independent receipt TTLs into a four-second “live” fix. UTC/c012 timestamps are unrelated to this calculation.
+
+### UART tunnel: R15Q v1
+
+Mandatory bounded demultiplexing prevents arbitrary map bytes being parsed as legacy frame magic. Preserve legacy packets byte-for-byte; replace independent parallel byte-feeding with one demultiplexer. Recognized legacy frames follow their existing fixed-length checks; a recognized R15Q record is isolated, decoded or dropped as a whole. Never feed its payload back into legacy parsers, including on CRC failure.
+
+Wire record: ASCII `R15Q`, escaped inner fragment, zero delimiter. Inner fragment: version u8=1; direction u8 (`1 vehicle→display`, `2 display→vehicle`); message sequence u16; complete inner-message length u16 (1..240); fragment offset u16; fragment length u8 (1..48); three reserved zero bytes; payload; CRC32 over those12 header bytes+payload. Message sequence is transport-local, independent of R15X. Fragment offset/length must stay inside total; assembly is contiguous, identical duplicates only, with a fixed240-byte destination and timeout2s. Fragment record timeout500ms, maximum decoded64 bytes, maximum wire133 bytes including prefix/delimiter. Overflow/malformed record is discarded to delimiter with bounded work; no unbounded scan/queue.
+
+Escape every byte after prefix, including header/CRC: raw `0x00`, `0x52` (ASCII R), `0x7D` become `0x7D` followed by byte XOR `0x20`; all others literal. Only those canonical escape pairs are valid. This excludes embedded legacy magic from an encoded payload. Sender never interleaves bytes of two records. Fragments of different message sequences may interleave only into explicitly bounded assembly slots: at most one control/map and one latest LOCATION vehicle→display; one status and one capability display→vehicle. Identify slot from first fragment's inner magic/type before allocation; later fragments require matching direction/sequence/total/offset. No heap allocation from arbitrary totals. Full inner CRC/format/session must also pass after reassembly.
+
+Inner records are R15X commands, R15S statuses or R15K capability announcements above. Direction/type mismatch is invalid. Vehicle does not ACK map bytes before display acceptance. Timeout/drop retries are the original full command, not cross-session fragment resume. Serialize UART writes in one bounded nonblocking owner: legacy acquisition/status/control first, timed LOCATION/control next, map DATA last. Bulk limit4096 encoded UART bytes/sec, ≤one low-priority fragment ahead of critical traffic; current RX-ring/flush limits must be refactored for this framing. No baud/pin change is authorized. Measure acquisition/return-path latency and heap/stack headroom under sustained transfer before asserting readiness. [Firmware implementation/acceptance order](../../docs/map-phase-1.md#6-firmware-first-implementation-order).

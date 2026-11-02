@@ -1,5 +1,7 @@
 # System architecture, status and roadmap
 
+The [phase 1 map/location handoff](map-phase-1.md) specifies the next firmware-first integration: bounded regional geometry, real phone fixes and atomic map activation. Native map transport/location remain unimplemented; the existing Kolkata renderer is host evidence only.
+
 Updated: 2026-11-01. Shared host/native display UI, vehicle discrete inputs, return UART, authenticated BLE pairing/reconnect and phone metadata/clock synchronization are implemented. Core pairing/reconnect and phone metadata behavior are user bench-confirmed. The vehicle now also implements authenticated discrete-input telemetry/capabilities/health for the app handoff. Android background/telemetry integration, full vehicle measurements, Wi-Fi and navigation/maps remain pending; extended hardware/load acceptance remains separate. [Implementation status and gates](architecture.md#current-status-and-roadmap) distinguish host evidence from hardware readiness.
 
 The project is a personal Yamaha R15 V4 instrument cluster using an Elecrow 7-inch 800 x 480 HMI. The reported display module is ESP32-S3-WROOM-1-N4R8 with 4 MB flash and 8 MB PSRAM. Delivered PCB V3.0 is confirmed from user photos (2026-10-22). Esptool reports ESP32-S3 revision v0.2, 4 MB flash and embedded 8 MB PSRAM. Vehicle MCU and mechanical/environmental suitability remain unconfirmed. Commercialization, additional bikes and accessories are outside the immediate prototype scope.
