@@ -10,7 +10,9 @@ Start independent app work with [background-sync strategy and plan](docs/backgro
 
 Start with [development](docs/development.md), then [architecture](docs/architecture.md#companion-architecture-status-and-approved-ui), [implementation plan](docs/architecture.md#current-status-and-roadmap) and the [documentation index](README.md#documentation).
 
-Connect your Android phone with USB debugging enabled, then from the repository root:
+For development on a Mac without Android Studio/Flutter, push changes to GitHub and run `bash scripts/install-mobile-apk.sh` to download the Actions APK and install over USB. See [cloud builds, Mac installation and signing](docs/development.md#build-on-github-install-from-the-mac) for one-time GitHub CLI setup.
+
+For local Flutter builds/hot reload, connect your Android phone with USB debugging enabled, then from the repository root:
 
 ```sh
 bash scripts/preview-mobile.sh

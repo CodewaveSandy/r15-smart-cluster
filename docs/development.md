@@ -60,7 +60,9 @@ After flashing, run the `--vehicle-serial` preview above using the same port. St
 
 ## Phone app and Mac connection
 
-Requires the pinned Flutter SDK and an authorized physical Android phone connected for installation/debugging. These launchers run from the repository root.
+For a Mac without the local mobile toolchain, every push builds a mobile debug APK in GitHub Actions. Run `bash scripts/install-mobile-apk.sh` to wait/download/install it using the existing USB ADB; see [setup and signing](../mobile/docs/development.md#build-on-github-install-from-the-mac). Firmware builds remain local and separate.
+
+The local Flutter launchers below require the pinned Flutter SDK and an authorized physical Android phone connected for installation/debugging. These launchers run from the repository root.
 
 | Command | What it does |
 | --- | --- |

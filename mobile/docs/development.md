@@ -33,6 +33,41 @@ flutter build ios --simulator --no-pub
 
 Keep generated native project source and locks in Git. Keep SDKs/caches, build products, captures, isolated stores and credentials out. Do not build/install a mobile toolchain on the firmware Mac merely to verify unrelated firmware/docs.
 
+## Build on GitHub, install from the Mac
+
+The `Mobile APK` workflow (`.github/workflows/mobile-apk.yml`) runs on every push, on all branches, and can also be started from GitHub Actions → Mobile APK → Run workflow. It builds only `mobile/` on a standard Ubuntu runner with Java 17 and the Flutter version in `mobile/.flutter-version`. It restores locked dependencies, checks Dart formatting/static analysis and builds a universal debug APK. No automated suites or firmware builds run. The `r15-companion-debug` artifact contains the APK, SHA-256 checksum and source commit/run metadata; retention is seven days. Public-repository standard runner compute is free; artifact/cache storage has separate limits. Download before expiration or rerun the workflow.
+
+The Mac needs GitHub CLI and your existing platform tools, with no Android Studio, Flutter, JDK or full Android SDK required for this path:
+
+```sh
+# One-time lightweight CLI setup (if not already installed):
+brew install gh
+gh auth login --hostname github.com
+
+# After committing/pushing through your normal Git workflow:
+bash scripts/install-mobile-apk.sh
+# Optional explicit branch, run or USB device:
+bash scripts/install-mobile-apk.sh --branch main
+bash scripts/install-mobile-apk.sh --run YOUR_RUN_ID --device YOUR_USB_SERIAL
+bash scripts/install-mobile-apk.sh --download-only
+```
+
+The script selects the newest workflow run on the current local branch, prints its remote branch/commit/link, waits for completion and refuses failed builds rather than falling back to an old success. It installs the remote commit shown, including when local changes are unpushed. Immediately after pushing, Actions registration may take a moment; retry if no run exists. For an exact revision use `--run`. Concurrent pushes can supersede queued runs; a canceled run fails explicitly. GitHub CLI downloads/extracts the ZIP into a fresh ignored `build/mobile-actions/run-...` directory, then the script verifies the APK checksum. Downloads accumulate locally; remove old directories manually when no longer needed. Artifact downloads require GitHub authentication even for a public repo. Missing/expired artifacts fail explicitly.
+
+Default ADB: `$HOME/Desktop/learning/platform-tools/adb`; override with `R15_ADB=/absolute/path/to/adb`. Default repository: `CodewaveSandy/r15-smart-cluster`; override with `R15_GITHUB_REPO=OWNER/REPO`. Connect a data-capable USB cable, unlock the phone, enable USB debugging and approve the Mac. Only authorized USB devices are eligible; multiple phones require `--device`. Installation uses `adb install -r` and never uninstalls, clears data or silently accepts downgrades. Open the app manually afterward. Cloud builds have no local hot reload and do not inject Mac-preview bootstrap credentials.
+
+### Stable development signing
+
+The workflow accepts repository Actions secret `ANDROID_DEBUG_KEYSTORE_BASE64`, containing a standard Android debug keystore (alias `androiddebugkey`, key/store passwords `android`). Prefer the key used for the APK already on your phone, recovered from the old development machine's `~/.android/debug.keystore` if available. Upload it without committing it or printing it:
+
+```sh
+base64 < /path/to/debug.keystore | gh secret set ANDROID_DEBUG_KEYSTORE_BASE64 --repo CodewaveSandy/r15-smart-cluster
+```
+
+Without the secret, Android generates a development key and Actions caches it for reuse. Caches are evictable and branch-scoped; this fallback cannot guarantee the same signer across branches or cache loss. The persistent secret gives stable signing across runs. A different key from the installed app causes `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. Recover/use the original key to preserve app data; if it is irretrievable, uninstalling is a separate deliberate user action that clears app data/selection/trust and requires setup again. The install script never performs that removal. Debug APKs/keys are for development; release signing remains unconfigured. Public artifacts contain no Mac bridge bootstrap or signing keystore.
+
+Workflow/script syntax and static checks can be performed locally without mobile tooling. The first actual Actions build, artifact download and phone installation remain separate verification gates until run; no cloud-build or device success is implied by adding this workflow.
+
 ## Current evidence and remaining checks
 
 | Milestone | Recorded evidence |

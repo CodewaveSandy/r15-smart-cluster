@@ -1,0 +1,78 @@
+name: Mobile APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize builds so the initial shared debug-key cache cannot race.
+concurrency:
+  group: mobile-apk
+  cancel-in-progress: false
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+      - name: Restore development signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-signing-v1
+      - name: Use persistent development signing key when configured
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$HOME/.android"
+          if [[ -n "$DEBUG_KEYSTORE_BASE64" ]]; then
+            printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+            chmod 600 "$HOME/.android/debug.keystore"
+          elif [[ ! -f "$HOME/.android/debug.keystore" ]]; then
+            echo '::warning::Generating a new debug key. Configure ANDROID_DEBUG_KEYSTORE_BASE64 for stable updates across cache eviction/branches.'
+          fi
+      - name: Restore locked dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib
+      - name: Static analysis
+        run: flutter analyze --no-pub
+      - name: Build universal development APK
+        run: flutter build apk --debug --no-pub
+      - name: Record APK checksum and source
+        run: |
+          cd build/app/outputs/flutter-apk
+          sha256sum app-debug.apk > SHA256SUMS
+          printf 'commit=%s\nrun=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > build-info.txt
+      - name: Upload development APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: r15-companion-debug
+          path: |
+            mobile/build/app/outputs/flutter-apk/app-debug.apk
+            mobile/build/app/outputs/flutter-apk/SHA256SUMS
+            mobile/build/app/outputs/flutter-apk/build-info.txt
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
