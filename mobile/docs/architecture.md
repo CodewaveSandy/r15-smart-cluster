@@ -1,6 +1,6 @@
 # Companion architecture, status and approved UI
 
-Updated: 2026-11-01. Current Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Android background service and telemetry consumption remain pending; the vehicle now supplies the c013–c015 discrete-input telemetry/health contract described in Protocol and the background handoff. GPS/navigation/maps and native iOS integration remain pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).
+Updated: 2026-11-02. Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Native foreground ownership and c013–c015 telemetry integration are implemented in source; latest APK packaging and physical B1/B2 background/telemetry acceptance remain pending. GPS/navigation/maps and native iOS integration remain pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).
 
 ## Ownership and dependency boundaries
 
@@ -16,13 +16,15 @@ Flutter/Dart shares UI/domain logic; Kotlin/Swift own platform-specific services
 
 Independent Flutter/Gradle/Xcode and CMake/ESP-IDF builds permit independent releases. Protocol compatibility/capabilities must be explicit. Domain values carry quality/source/units and import no Flutter/OS SDKs. Widgets render immutable state and emit intents; application owners coordinate bounded cancellable work; adapters own packets, provider APIs, permissions and storage. Use constructor composition, not a service locator/event bus or unused repository hierarchy. Add feature folders and dependencies only when consumed. Measure/coalesce changing observations rather than rebuilding the entire app/map.
 
-`lib/app/` owns composition, selected page and theme; `features/phone/` contains connection/access domain, application, data and presentation; `features/home/domain/bike_telemetry.dart` contains independent quality-bearing bike readings. `CompanionHome` owns tabs, not GATT. Bike readings remain unavailable until real telemetry exists. Startup's cancellable 900 ms branding timer owns no radio work. Fonts are local Inter Medium/SemiBold and Chakra Petch branding with OFL licenses; mobile copies stay synchronized with root font sources.
+`lib/app/` owns composition, selected page and theme; `features/phone/` contains connection/access domain, application, data and presentation; `features/home/domain/bike_telemetry.dart` contains independent quality-bearing bike readings. `CompanionHome` owns tabs, not GATT. Only real Available gear from current authenticated telemetry populates Home; speed/RPM/fuel/bike voltage remain Unsupported in this firmware. Startup's cancellable 900 ms branding timer owns no radio work. Fonts are local Inter Medium/SemiBold and Chakra Petch branding with OFL licenses; mobile copies stay synchronized with root font sources.
 
 ## Current native lifetime and target ownership
 
-`BleBond` currently owns one Android physical GATT through an Activity. `BleConnection` observes semantic events and owns foreground retry/cancellation; `MainActivity.onDestroy` disposes BLE. `PhoneMetadataSource` samples local label, battery and clock/timezone without owning GATT/storage. Operations are serialized, callbacks are generation-guarded, snapshots are regenerated at dispatch, refresh is 30 seconds with minimum 1.1-second spacing, and optional work stops on disposal/timeout. These are best-effort background updates, not a service implementation.
+`ClusterSyncService` is the started Android `connectedDevice` foreground service and owns one application-context `BleBond`, one reconnect timer and notification/Stop action. `MainActivity` binds for semantic commands/current snapshots; observer detach, UI disposal and Activity destruction leave active sync running. Dart `BleConnection` no longer schedules reconnects or disconnects on background/disposal. `PhoneMetadataSource` still samples current name/battery/time at dispatch with 30-second/event cadence, 1.1-second minimum spacing and independent 90-second expiry.
 
-[Background M1](background-sync.md#m1-implement-background-ble-continuity-first) moves the sole owner to a native foreground service independent of Flutter/Activity lifetime. Until implemented, foreground-only reconnect remains the actual behavior. A future Dart/provider navigation engine needs an explicit lifetime independent of the UI engine. No platform callback may retain a stale Activity/EventSink/widget or call LVGL.
+Discovery, enrollment, MTU, metadata, capabilities, CCCD, timed telemetry baseline and optional health reads share one serialized ATT owner. Callback GATT/characteristic identity, boot/connection tokens, CRC/fields, unsigned ordering and conservative monotonic ages gate readings. One pending/latest notification is retained; no counter actions are replayed. Service-change invalidates refs before serialized rediscovery; missing callbacks close the old GATT before recovery. Native retries use 1/2/4/8-second rounds plus 30-second cooldown and preserve authentication/remote-termination stops. Explicit Stop persists until deliberate Connect; bonds remain.
+
+The service is `START_NOT_STICKY`, without boot/background-start exemptions or a permanent wake lock. Reopen in the foreground after process death, Active apps Stop, Settings force-stop or reboot; ordinary UI background/recents removal does not request a stop, with OEM behavior still requiring acceptance. [Implemented policy and timing limits](background-sync.md#implemented-android-policy-and-remaining-acceptance) are authoritative. M1/M2 source integration is not B1/B2 acceptance. A future navigation engine still needs service-owned lifetime independent of Flutter pages.
 
 `PreviewSession` is a separate Mac BLE-discovery/TLS session, with protected trust and bounded IPC to the simulator; it is not physical ESP32 application authorization. [Protocol](protocol.md) defines physical c011/c012; [development](development.md#mac-preview-adapter) defines c001/c002 and bridge operations. Never combine their success flags into feature readiness.
 
@@ -32,7 +34,7 @@ Startup checks required BLE permission/radio access and rechecks on foreground r
 
 First-time riders see the approved bike landing and real bounded radar. Only case-sensitive `R15 Cluster` prefix matches are shown, all retained results together with stable decorative placement, fitted full two-line names, pinch zoom and reduced-motion behavior. Positions do not measure proximity. Selecting a result stops scanning and begins the actual OS numeric comparison; name/address/advertisement match is not trust. Keep one real GATT after successful pairing.
 
-Saved riders enter My bike Home: truthful connection status, bike art, speed/gear/fuel/bike-voltage placeholders and Where to next. My bike/Navigate bottom tabs retain the same connection owner; status/settings opens the connection page and Back restores the previous tab. Navigate currently explains pending services. No fake map or sample 0/N/fuel/voltage is permitted in normal runtime. Light/dark, small screens, large text and reduced motion stay supported.
+Saved riders enter My bike Home: truthful connection status, bike art, real Available gear and honest speed/fuel/bike-voltage placeholders and Where to next. My bike/Navigate bottom tabs retain the same connection owner; status/settings opens the connection page and Back restores the previous tab. Navigate currently explains pending services. No fake map or sample 0/N/fuel/voltage is permitted in normal runtime. Light/dark, small screens, large text and reduced motion stay supported.
 
 Keep saved bond, live BLE, authenticated endpoint acceptance, field freshness, telemetry readiness and navigation readiness distinct. Disconnect/Stop preserves trust; app Forget clears the selection and explains Android plus cluster cleanup. Partial/asymmetric trust failures remain visible. Do not silently re-pair, erase trust or promise remote Forget.
 
@@ -50,7 +52,7 @@ Pin Flutter/native tools/dependencies, commit locks/generated project source and
 
 ## Current status and roadmap
 
-Updated: 2026-10-31. This is current status, not a chronological changelog. [Development](development.md#current-evidence-and-remaining-checks) holds concise evidence. No automated tests/suites may be authored/restored/run until requested; use formatting/static analysis, affected builds and real-device manual checks.
+Updated: 2026-11-02. This is current status, not a chronological changelog. [Development](development.md#current-evidence-and-remaining-checks) holds concise evidence. No automated tests/suites may be authored/restored/run until requested; use formatting/static analysis, affected builds and real-device manual checks.
 
 ### Implemented baseline
 
@@ -58,11 +60,12 @@ Updated: 2026-10-31. This is current status, not a chronological changelog. [Dev
 | --- | --- |
 | Foundation | Pinned Flutter/Android and generated iOS shell; explicit composition and local fonts/artwork |
 | Access/discovery | Android startup/resume permission/radio checks; real exact-prefix radar with bounded scanning/results/cancellation |
-| Pairing/link | OS numeric comparison, enrollment name, one retained GATT, saved selection, foreground finite reconnect, explicit Disconnect/Forget-selection |
-| Home | Approved Concept 01 My bike/Navigate tabs, bike art, truthful connection; independent unavailable bike readings |
+| Pairing/link | OS numeric comparison, enrollment name, one retained GATT, saved selection, native background retry/cooldown, explicit Disconnect/Stop/Forget-selection |
+| Home | Approved Concept 01 My bike/Navigate tabs, bike art, truthful connection; independent quality-bearing readings; real gear and Unsupported measurements |
 | Phone metadata | Authenticated c012 name, actual phone battery, UTC/local offset; MTU/callback ordering, retries, periodic/event coalescing and expiry |
+| Background/telemetry | Foreground connection owner, notification/Stop, strict capability/telemetry/health decoding and timed expiry; APK packaging and B1/B2 pending |
 | Mac preview | Separate BLE discovery/TLS application session with protected saved trust and host IPC |
-| Not implemented | Android foreground service/background recovery, real bike telemetry, GPS/route/map provider, embedded navigation delivery, broader phone services, native iOS integrations |
+| Not implemented | Automatic process recovery, GPS/route/map provider, embedded navigation delivery, broader phone services, native iOS integrations |
 
 Core Android first pair/name/live-link, saved reconnect after board power cycle, Disconnect/Connect, relaunch and connected metadata are physically user-confirmed. Extended faults, locked-screen runtime, performance/energy and iOS are separate gates. Old completed handoff instructions are consolidated into [protocol](protocol.md); they are not upcoming tasks.
 
@@ -71,12 +74,12 @@ Core Android first pair/name/live-link, saved reconnect after board power cycle,
 | Gate | Deliverable | Completion evidence/dependency |
 | --- | --- | --- |
 | M1 / joint B1 | [Background BLE continuity](background-sync.md#m1-implement-background-ble-continuity-first): service owns existing GATT/metadata, notification/Stop, native background recovery | Current firmware suffices; 60-minute untethered locked-screen run, Activity recreation, loss/recovery and Stop behavior; no pairing/UI regression |
-| M2 / joint B2 | Consume the supplied c013–c015 firmware capability/telemetry/health contract in the M1 service | Firmware implementation is ready; app decoder/subscription/expiry and physical delivery/load checks are pending |
+| M2 / joint B2 | Consume the supplied c013–c015 firmware capability/telemetry/health contract in the M1 service | App decoder/subscription/expiry are source-integrated; APK packaging and physical delivery/load checks are pending |
 | M3a | Select map/routing provider and validate licensed embedded delivery plus two-MCU bandwidth/cache/render feasibility | Primary provider docs, costs/keys/attribution/offline limits and actual target measurements before SDK commitment |
 | M3b / joint B3 | Search, destination/route overview, active location/navigation independent of UI, reroute/arrival/End ride and reviewed cluster transfer | M1/M2 foundation plus provider/firmware contract; real locked-screen GPS and display behavior, stale/cancel/offline recovery and measured energy |
 | Later | Supported notification/media features, separate iOS implementation and release evaluation | Scoped permission/accessory contracts, independent native device evidence and explicit signing/distribution authorization |
 
-M1 can start independently in mobile now; firmware developer follows [F1](../../docs/background-sync.md#work-independently-f1-continuity-baseline). Current M2 uses the supplied frozen firmware contract; later M3 wire changes require coordinated protocol review, not mobile-side invention or unrequested firmware changes. The initial firmware milestone may need no source change. No implementation is implied by these plans.
+M1/M2 source integration is ready for APK packaging and joint acceptance; firmware developer follows [F1](../../docs/background-sync.md#work-independently-f1-continuity-baseline). Current M2 uses the supplied frozen firmware contract; later M3 wire changes require coordinated protocol review, not mobile-side invention or unrequested firmware changes. The initial firmware milestone may need no source change. Source integration, APK packaging and physical acceptance are separate evidence gates.
 
 ### Preserve at every stage
 

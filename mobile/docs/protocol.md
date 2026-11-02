@@ -1,6 +1,6 @@
 # Phone protocol: implemented contracts and future gates
 
-Updated: 2026-11-01. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Firmware now includes authenticated capabilities/discrete-input telemetry/health endpoints for the background-sync handoff; Android background service/telemetry integration and physical B1/B2 acceptance remain pending. Navigation and Wi-Fi map delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
+Updated: 2026-11-02. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Firmware now includes authenticated capabilities/discrete-input telemetry/health endpoints for the background-sync handoff; Android background service/telemetry source integration is implemented; latest APK packaging and physical B1/B2 acceptance remain pending. Navigation and Wi-Fi map delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
 
 ## Pairing, reconnect and trust
 
@@ -97,8 +97,8 @@ A valid snapshot with all fields unavailable begins `01 00 FF 00` followed by 40
 1. Keep the existing first-pair name → numeric comparison flow. For saved peers preserve immediate security/reconnect.
 2. Discover the new characteristic on every live connection, including saved reconnect. Negotiate ATT MTU of at least 47 before this write (44-byte value plus 3-byte ATT overhead); serialize MTU/discovery/write operations through real callbacks. Do not interfere with the enrollment name's three-second deadline. An unsupported MTU/endpoint must leave the existing connection functional and report metadata unavailable.
 3. Wait for OS bonding/security completion. BONDED alone can precede firmware security completion; if the new write is temporarily refused, retry with bounded delays (for example 1/2/4 seconds) while the same GATT is current. Do not restart pairing or request another enrollment window. A successful authenticated write confirms that this metadata endpoint accepted the secured current connection; it does not establish future navigation/application services.
-4. Immediately send a full snapshot after each successful new connection/reconnect. Send every 30 seconds while connected, and on foreground resume, phone time/timezone change or battery change, coalescing events to remain at least one second apart. Use lifecycle-safe Android battery/time observations; handle permission/API limitations explicitly. No new background-service promise is implied.
-5. Cancel work, callbacks and queued snapshots on disconnect, Bluetooth loss, selection change or disposal. Guard every callback with the current GATT/generation. Recreate metadata from current phone observations on reconnect; never replay a previous connection's pending snapshot.
+4. Immediately send a full snapshot after each successful new connection/reconnect. Send every 30 seconds while connected, and on foreground resume, phone time/timezone change or battery change, coalescing events to remain at least one second apart. Use lifecycle-safe Android battery/time observations; handle permission/API limitations explicitly. The Android foreground service now owns this scheduling independently of Activity/Flutter lifetime; physical locked-screen acceptance remains pending.
+5. Cancel work, callbacks and queued snapshots on disconnect, Bluetooth loss, selection change or service disposal. Disposing the UI observer does not stop the started Android sync service. Guard every callback with the current GATT/generation. Recreate metadata from current phone observations on reconnect; never replay a previous connection's pending snapshot.
 6. Older firmware without the endpoint must continue the existing pairing/connection behavior. Do not repeatedly rediscover or fail the connection just because metadata is unsupported.
 
 ## Connected metadata UART (R15M)
@@ -112,7 +112,7 @@ Vehicle extrapolates accepted UTC using monotonic elapsed time while metadata is
 
 ## Background-sync capabilities and telemetry (c013–c015)
 
-Implemented in vehicle firmware for this handoff; Android integration and physical B1/B2 acceptance are pending. Added to the existing service `813b1240-8fd9-4d67-a53b-9f0a2531c010`. c011/c012 and every UART packet remain unchanged. Portable codec: `shared/protocol/PhoneTelemetry.h`; normative non-executable examples: `shared/protocol/phone-telemetry-v1-vectors.txt`.
+Implemented in vehicle firmware and integrated in Android source; latest APK packaging and physical B1/B2 acceptance are pending. See [implemented Android ownership/timing policy](background-sync.md#implemented-android-policy-and-remaining-acceptance). Added to the existing service `813b1240-8fd9-4d67-a53b-9f0a2531c010`. c011/c012 and every UART packet remain unchanged. Portable codec: `shared/protocol/PhoneTelemetry.h`; normative non-executable examples: `shared/protocol/phone-telemetry-v1-vectors.txt`.
 
 | Characteristic UUID | Properties | Value / prerequisite |
 | --- | --- | --- |

@@ -137,7 +137,7 @@ class MyBikePage extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 status.connection == ClusterConnection.connected
-                    ? 'Bike readings are not available yet.'
+                    ? 'Only supported, fresh cluster readings are shown.'
                     : 'Connect your cluster to receive available bike readings.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.onSurfaceVariant,
@@ -287,9 +287,12 @@ class _TelemetryTile extends StatelessWidget {
       ReadingUnit.gear => '',
       ReadingUnit.percent => '%',
       ReadingUnit.volts => 'V',
+      ReadingUnit.revolutionsPerMinute => 'rpm',
     };
     final value = available
-        ? (reading.unit == ReadingUnit.volts
+        ? (reading.unit == ReadingUnit.gear && reading.value == 0
+              ? 'N'
+              : reading.unit == ReadingUnit.volts
               ? reading.value!.toStringAsFixed(1)
               : reading.value!.toStringAsFixed(0))
         : '—';

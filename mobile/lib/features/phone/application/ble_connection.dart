@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
+import '../../home/domain/bike_telemetry.dart';
 import '../data/ble_pairing.dart';
 import '../data/nearby_platform.dart';
 import '../domain/phone_status.dart';
 
-/// Foreground connection policy. Native Android owns the one physical GATT.
+/// Flutter observes the native service; no page/isolate owns the physical link.
 class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   BleConnection(this._platform) {
     WidgetsBinding.instance.addObserver(this);
@@ -16,28 +17,33 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
       onError: (Object _) {
         error = 'Bluetooth status is unavailable. Restore access and retry.';
         _live = false;
+        telemetry = const BikeTelemetry.unavailable();
         notifyListeners();
       },
     );
   }
   final BlePairing _platform;
   StreamSubscription<Map<String, dynamic>>? _subscription;
-  Timer? _retry;
   NearbyDevice? _selected;
   bool _live = false, _bonded = false, _busy = false;
-  bool _savedAttempt = false, _retryAllowed = true;
+  bool _commandPending = false, _serviceActive = false;
   bool _foreground = true, _access = false, _stopped = false, _disposed = false;
-  int _attempt = 0, _generation = 0;
+  bool _autoRequested = false;
+  int _generation = 0;
+  Completer<void>? _connectionResult;
+  bool _nativeStarted = false;
   String? error;
+  BikeTelemetry telemetry = const BikeTelemetry.unavailable();
   PhoneMetadataState _metadata = PhoneMetadataState.notConnected;
   bool get hasSelection => _selected != null;
-  bool get busy => _busy;
+  bool get busy => _busy || _commandPending;
   bool get live => _live;
   bool get bonded => _bonded;
+  bool get serviceActive => _serviceActive;
   PhoneStatus get status => PhoneStatus(
     connection: _live
         ? ClusterConnection.connected
-        : _busy
+        : busy
         ? ClusterConnection.connecting
         : error != null
         ? ClusterConnection.unavailable
@@ -49,17 +55,22 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     notifications: FeatureReadiness.notImplemented,
     music: FeatureReadiness.notImplemented,
   );
+
   void _observe(Map<String, dynamic> value) {
     if (_disposed) return;
-    final wasLive = _live;
     final address = value['address'];
     final name = value['name'];
     _selected = address is String && name is String
         ? NearbyDevice(address: address, name: name)
         : null;
     _bonded = value['bonded'] == true;
-    _retryAllowed = value['retryAllowed'] != false;
     _live = value['state'] == 'connected';
+    _serviceActive = value['serviceActive'] == true;
+    _stopped = value['stopped'] == true;
+    _busy =
+        value['state'] == 'connecting' ||
+        value['state'] == 'pairing' ||
+        value['reconnecting'] == true;
     _metadata = _live
         ? switch (value['metadataState']) {
             'synced' => PhoneMetadataState.synced,
@@ -68,70 +79,81 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
             _ => PhoneMetadataState.unavailable,
           }
         : PhoneMetadataState.notConnected;
+    telemetry = _live
+        ? telemetryFromNative(value['telemetry'])
+        : const BikeTelemetry.unavailable();
     error = value['error'] as String?;
-    if (_live) {
-      _attempt = 0;
-      _retry?.cancel();
+    if (_busy || _serviceActive) _nativeStarted = true;
+    if (_live ||
+        (error != null && value['reconnecting'] != true) ||
+        (_nativeStarted && _stopped && !_serviceActive)) {
+      final result = _connectionResult;
+      if (result != null && !result.isCompleted) result.complete();
     }
     notifyListeners();
-    if (wasLive && !_live && !_busy) _schedule();
   }
 
   Future<void> accessReady() async {
     _access = true;
-    try {
-      _observe(await _platform.status());
-    } on Object {
-      return;
-    }
-    onForeground();
+    await onForeground();
   }
 
   Future<void> onForeground() async {
-    if (!_foreground || !_access || _stopped || _busy || _live) return;
-    // Refresh OS bond state, including after Android Bluetooth settings edits.
+    if (!_foreground || !_access || _disposed) return;
     try {
       _observe(await _platform.status());
     } on Object {
       return;
     }
-    if (hasSelection && _bonded && !_live && !_busy) {
-      _schedule();
+    // One foreground bootstrap only. All subsequent retry/cooldown policy is
+    // native, including while this observer or Flutter engine does not exist.
+    if (_foreground &&
+        _access &&
+        !_disposed &&
+        !_autoRequested &&
+        !_stopped &&
+        !busy &&
+        !_live &&
+        !_serviceActive &&
+        hasSelection &&
+        _bonded) {
+      _autoRequested = true;
+      await _connect(_selected!, saved: true);
     }
   }
 
   void accessBlocked() {
     _access = false;
-    _retry?.cancel();
     ++_generation;
     _busy = false;
+    _commandPending = false;
+    telemetry = const BikeTelemetry.unavailable();
     _platform.disconnect().catchError((Object _) {});
   }
 
   Future<void> select(NearbyDevice device) async {
-    if (_busy) return;
-    _retry?.cancel();
-    _stopped = false;
-    _attempt = 0;
+    if (busy) return;
     await _connect(device, saved: false);
   }
 
   Future<void> reconnect() async {
-    if (_busy || !hasSelection) return;
-    _stopped = false;
-    _attempt = 0;
-    _retry?.cancel();
+    if (busy || !hasSelection) return;
     await _connect(_selected!, saved: true);
   }
 
   Future<void> _connect(NearbyDevice device, {required bool saved}) async {
     final generation = ++_generation;
-    _busy = true;
-    _savedAttempt = saved;
+    _commandPending = true;
+    _nativeStarted = false;
+    final outcome = Completer<void>();
+    _connectionResult = outcome;
+    _stopped = false;
     error = null;
     notifyListeners();
     try {
+      // Acknowledges command delivery. Native events establish actual state.
       await _platform.pair(device, saved: saved);
+      await outcome.future.timeout(const Duration(seconds: 55));
     } on Object catch (failure) {
       if (_disposed || generation != _generation) return;
       error = failure is PlatformException
@@ -139,75 +161,43 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
           : 'Bluetooth connection failed.';
     } finally {
       if (!_disposed && generation == _generation) {
-        _busy = false;
+        _commandPending = false;
+        _connectionResult = null;
         notifyListeners();
-        if (saved && !_live) _schedule();
       }
     }
   }
 
-  void _schedule() {
-    if (_disposed ||
-        !_retryAllowed ||
-        _stopped ||
-        !_foreground ||
-        !_access ||
-        _busy ||
-        _live ||
-        !_bonded ||
-        !hasSelection ||
-        _retry?.isActive == true) {
-      return;
-    }
-    if (_attempt >= 4) {
-      error ??= 'Reconnect stopped. Check cluster power and bonds, then tap Retry connection.';
-      notifyListeners();
-      return;
-    }
-    final seconds = 1 << _attempt++;
-    _retry = Timer(
-      Duration(seconds: seconds),
-      () => _connect(_selected!, saved: true),
-    );
-  }
-
   Future<void> disconnect() async {
     _stopped = true;
-    _retry?.cancel();
     ++_generation;
+    _commandPending = false;
     _busy = false;
     await _platform.disconnect();
+    _observe(await _platform.status());
   }
 
   Future<void> forget() async {
     await disconnect();
     await _platform.forgetSelection();
+    _observe(await _platform.status());
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
-    if (_foreground) {
-      onForeground();
-    } else {
-      _retry?.cancel();
-      // An OS pairing prompt may pause Flutter: preserve deliberate first pairing.
-      if (_busy && _savedAttempt && state != AppLifecycleState.inactive) {
-        ++_generation;
-        _busy = false;
-        _platform.disconnect().catchError((Object _) {});
-      }
-    }
+    if (_foreground) onForeground();
   }
 
   @override
   void dispose() {
     _disposed = true;
+    final result = _connectionResult;
+    if (result != null && !result.isCompleted) result.complete();
     ++_generation;
-    _retry?.cancel();
     _subscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    _platform.disconnect().catchError((Object _) {});
+    // Detaching the UI must never send Disconnect to the started service.
     super.dispose();
   }
 }

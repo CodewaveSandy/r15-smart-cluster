@@ -3,8 +3,7 @@ package dev.r15cluster.r15_companion
 import android.Manifest
 import android.bluetooth.*
 import android.bluetooth.le.*
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.content.pm.PackageManager
 import android.os.*
 import android.security.keystore.KeyGenParameterSpec
@@ -35,16 +34,49 @@ class MainActivity : FlutterActivity() {
     private var pendingAddress: String? = null
     private var accessOnly = false
     private var linkEvents: EventChannel.EventSink? = null
-    private lateinit var bonding: BleBond
+    private var sync: ClusterSyncService? = null
+    private var syncBound = false
+    private var observingLink = false
+    private val linkObserver: (Map<String, Any?>) -> Unit = { linkEvents?.success(it) }
+    private val syncConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            sync = (binder as ClusterSyncService.LocalBinder).service
+            if (observingLink) sync?.observer = linkObserver
+            linkEvents?.success(linkSnapshot())
+        }
+        override fun onServiceDisconnected(name: ComponentName) {
+            sync = null
+            linkEvents?.success(linkSnapshot())
+        }
+    }
+    private fun linkSnapshot(): Map<String, Any?> {
+        sync?.let { return it.snapshot() }
+        val prefs = getSharedPreferences("ble-selection", MODE_PRIVATE)
+        val address = prefs.getString("address", null)
+        val bonded = try { address != null && adapter?.getRemoteDevice(address)?.bondState == BluetoothDevice.BOND_BONDED } catch (_: Exception) { false }
+        return mapOf("state" to "disconnected", "address" to address, "name" to prefs.getString("name", null),
+            "bonded" to bonded, "metadataState" to "notConnected", "serviceActive" to false,
+            "stopped" to prefs.getBoolean("stopped", false), "telemetry" to mapOf("state" to "notConnected"))
+    }
+    private fun explainNotification() {
+        if (Build.VERSION.SDK_INT < 33 || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        val prefs = getSharedPreferences("ble-access", MODE_PRIVATE)
+        if (prefs.getBoolean("notificationAsked", false)) return
+        prefs.edit().putBoolean("notificationAsked", true).apply()
+        android.app.AlertDialog.Builder(this).setTitle("Keep cluster sync visible")
+            .setMessage("Allow notifications to see connection status and Stop sync while your phone is locked. If denied, Android may only show the service in Active apps.")
+            .setPositiveButton("Continue") { _, _ -> requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 104) }
+            .setNegativeButton("Later", null).show()
+    }
     private val found = linkedMapOf<String, Map<String, Any>>()
     private val recentlySeen = linkedMapOf<String, Long>()
     private val adapter get() = (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        bonding = BleBond(this) { linkEvents?.success(it) }
+        syncBound = bindService(Intent(this, ClusterSyncService::class.java), syncConnection, Context.BIND_AUTO_CREATE)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.r15cluster/ble-link").setStreamHandler(object : EventChannel.StreamHandler {
-            override fun onListen(arguments: Any?, events: EventChannel.EventSink) { linkEvents = events; events.success(bonding.snapshot()) }
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink) { linkEvents = events; events.success(linkSnapshot()) }
             override fun onCancel(arguments: Any?) { linkEvents = null }
         })
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.r15cluster/nearby").setMethodCallHandler { call, result ->
@@ -54,11 +86,21 @@ class MainActivity : FlutterActivity() {
                         if (scan != null) finish(found.values.toList())
                         result.success(null)
                     }
-                    "linkStatus" -> result.success(bonding.snapshot())
-                    "disconnectLink" -> { bonding.disconnect(); result.success(null) }
-                    "forgetSelection" -> { bonding.forgetSelection(); result.success(null) }
+                    "linkStatus" -> result.success(linkSnapshot())
+                    "disconnectLink" -> {
+                        sync?.stopSync() ?: run {
+                            getSharedPreferences("ble-selection", MODE_PRIVATE).edit().putBoolean("stopped", true).apply()
+                            stopService(Intent(this, ClusterSyncService::class.java))
+                        }
+                        result.success(null)
+                    }
+                    "forgetSelection" -> {
+                        sync?.forget() ?: getSharedPreferences("ble-selection", MODE_PRIVATE).edit().clear().putBoolean("stopped", true).apply()
+                        result.success(null)
+                    }
                     "bond" -> {
                         if (pending != null) { result.error("busy", "A Bluetooth operation is already running.", null); return@setMethodCallHandler }
+                        if (!observingLink) { result.error("foreground", "Open the app before starting cluster sync.", null); return@setMethodCallHandler }
                         val address = call.argument<String>("address") ?: error("Missing device")
                         val saved = call.argument<Boolean>("saved") == true
                         val name = call.argument<String>("name") ?: "R15 Cluster"
@@ -67,10 +109,13 @@ class MainActivity : FlutterActivity() {
                             result.error("device", "Search again before selecting this device.", null); return@setMethodCallHandler
                         }
                         if (accessStatus()["enabled"] != true) { result.error("access", "Restore Bluetooth and Nearby devices access first.", null); return@setMethodCallHandler }
-                        pending = result; accessOnly = false
-                        bonding.connect(address, name, saved) { error ->
-                            if (error == null) finish(bonding.snapshot()) else finishError("bond", error)
-                        }
+                        explainNotification()
+                        val intent = Intent(this, ClusterSyncService::class.java).setAction(ClusterSyncService.CONNECT)
+                            .putExtra("address", address).putExtra("name", name).putExtra("saved", saved)
+                            .putExtra("diagnostics", call.argument<Boolean>("diagnostics") == true)
+                        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+                        // Acknowledge the command only; service events report the real result.
+                        result.success(null)
                     }
                     "access" -> result.success(accessStatus())
                     "requestAccess" -> {
@@ -252,6 +297,20 @@ class MainActivity : FlutterActivity() {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12))) }
         return String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
     }
-    override fun onResume() { super.onResume(); if (::bonding.isInitialized) bonding.refreshMetadata() }
-    override fun onDestroy() { bonding.dispose(); linkEvents = null; finishError("cancelled", "Discovery stopped."); storage.shutdown(); super.onDestroy() }
+    override fun onResume() {
+        super.onResume(); observingLink = true
+        sync?.observer = linkObserver
+        sync?.refresh(); linkEvents?.success(linkSnapshot())
+    }
+    override fun onPause() {
+        observingLink = false
+        if (sync?.observer === linkObserver) sync?.observer = null
+        super.onPause()
+    }
+    override fun onDestroy() {
+        if (sync?.observer === linkObserver) sync?.observer = null
+        if (syncBound) unbindService(syncConnection)
+        sync = null; syncBound = false; linkEvents = null
+        finishError("cancelled", "Discovery stopped."); storage.shutdown(); super.onDestroy()
+    }
 }

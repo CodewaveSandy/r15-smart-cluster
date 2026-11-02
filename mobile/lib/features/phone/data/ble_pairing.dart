@@ -16,6 +16,7 @@ class BlePairing {
       'address': device.address,
       'name': device.name,
       'saved': saved,
+      'diagnostics': const bool.fromEnvironment('R15_LINK_DIAGNOSTICS'),
     });
   }
 

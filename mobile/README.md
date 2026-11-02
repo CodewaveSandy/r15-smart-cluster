@@ -4,7 +4,7 @@ Flutter application in the R15 Smart Cluster monorepo. Android first, future iOS
 
 ## Current state
 
-Android implements real BLE discovery/pairing, saved-peer foreground reconnect, Concept 01 My bike/Navigate tabs and authenticated phone name/battery/time metadata. Bike telemetry is honestly unavailable and Navigate has no map provider yet. Native Android foreground service/background recovery, GPS/navigation/maps, Wi-Fi provisioning, optional phone services and native iOS integrations remain pending.
+Android implements BLE discovery/pairing, a native foreground connection service/retry owner, Concept 01 My bike/Navigate tabs, authenticated phone name/battery/time metadata and strict c013–c015 discrete-input telemetry integration. Real Available gear feeds Home; speed/RPM/fuel/bike voltage remain unsupported and Navigate has no map provider. The latest background/telemetry APK packaging and physical B1/B2 acceptance remain pending; GPS/navigation/maps, Wi-Fi provisioning, optional phone services and native iOS integrations are separate future work.
 
 Start independent app work with [background-sync strategy and plan](docs/background-sync.md); firmware work starts at [the firmware plan](../docs/background-sync.md). Current contracts are consolidated in [protocol](docs/protocol.md), and the separate Mac development adapter is in [development](docs/development.md#mac-preview-adapter).
 

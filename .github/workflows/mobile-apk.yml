@@ -3,6 +3,11 @@ name: Mobile APK
 on:
   push:
   workflow_dispatch:
+    inputs:
+      link_diagnostics:
+        description: Enable 10-second BLE health polling/logs for B1/B2 bench checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,6 +21,8 @@ jobs:
   android:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      LINK_DIAGNOSTICS: ${{ inputs.link_diagnostics || false }}
     defaults:
       run:
         working-directory: mobile
@@ -59,12 +66,12 @@ jobs:
       - name: Static analysis
         run: flutter analyze --no-pub
       - name: Build universal development APK
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug --no-pub --dart-define=R15_LINK_DIAGNOSTICS="$LINK_DIAGNOSTICS"
       - name: Record APK checksum and source
         run: |
           cd build/app/outputs/flutter-apk
           sha256sum app-debug.apk > SHA256SUMS
-          printf 'commit=%s\nrun=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > build-info.txt
+          printf 'commit=%s\nrun=%s\ndiagnostics=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$LINK_DIAGNOSTICS" > build-info.txt
       - name: Upload development APK
         uses: actions/upload-artifact@v4
         with:

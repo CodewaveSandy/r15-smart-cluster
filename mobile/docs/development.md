@@ -1,6 +1,6 @@
 # Companion development, verification and Mac adapter
 
-Updated: 2026-10-31. Android is the implemented physical path; iOS shell/device integration remains separate. Read [background-sync](background-sync.md) for the next implementation task and [protocol](protocol.md) for current wire behavior. No automated test files/suites may be created/restored/run in this phase. Use builds/static analysis, numeric diagnostics and manual device checks; preserve runtime validation and normative vectors.
+Updated: 2026-11-02. Android is the implemented physical path; iOS shell/device integration remains separate. Read [background-sync](background-sync.md) for the next implementation task and [protocol](protocol.md) for current wire behavior. No automated test files/suites may be created/restored/run in this phase. Use builds/static analysis, numeric diagnostics and manual device checks; preserve runtime validation and normative vectors.
 
 ## Toolchain and launch
 
@@ -84,6 +84,24 @@ Still manually verify the latest combined first-pair ordering; reject/cancel/tim
 
 Record revision/build/configuration, device/OS, image hashes where available, exact steps, duration, power/debug state, numeric native state/write outcomes, gaps/recovery and failures. Capture phone UI in dark/light, small-screen/large-text and reduced motion as affected. Never include pairing codes, keys, labels/addresses, phone contents, routes or raw payloads. Debugger/USB-connected runs cannot establish untethered pocket behavior.
 
+## Background-sync integration verification
+
+2026-11-02: `ClusterSyncService`/M1 and c013–c015/M2 are source-integrated; no firmware source was changed. Flutter 3.47.7/Dart 3.13.5 formatting and `flutter analyze --no-pub` passed. All Android Kotlin sources compiled with the cached pinned Kotlin 2.4.0 compiler, Java 17 and official Android API 36 compile jar plus cached Flutter/AndroidX classes. Cached pinned aapt2 9.1.0 compiled/linked the app resources against API 36, using a temporary manifest copy with the standard application placeholder/namespace resolved; Kotlin then compiled against those generated resource IDs. These checks do **not** establish the full Gradle/Flutter/plugin manifest merge, DEX/APK packaging or runtime acceptance. SDK platform download/check outputs and verified pre-edit source backups remain ignored under `build/`; no Android Studio/full SDK was installed. Pinned Flutter defaults resolve Android min SDK 24, target/compile SDK 36; confirm the final merged APK in Actions.
+
+The published capabilities, no-source/fresh/stale telemetry and health vectors were inspected manually in a Java REPL against the Kotlin decoder. Observed exact boot/token, gear 6, lamp phases, press counters, unsupported slots, source/metadata ages and health counters matched the normative examples. A timed read with 20ms RTT produced a conservative 43ms source-age bound; a later observation became Stale, duplicate sequence was refused and a corrupt packet decoded to no value. Additional REPL inspection confirmed notification-before-read anchoring without rewinding the newest receipt, uint32 sequence/uptime rollover, invalid quality with a valid CRC rejected, and connection-token mismatch raising a session fault. No executable test files/suites were created or run. These spot checks are not the full negative/fault matrix or hardware acceptance.
+
+An isolated ignored web preview built from the actual Home widget was used for manual inspection of dark neutral gear, light real gear 6, light stale/Unsupported tiles at 2x text (390 × 844), and dark unavailable/Unsupported tiles on a 320 × 568 screen, including scrolling. This is presentation evidence only, with explicit preview observations; no native BLE was simulated as device success. Android notification permission/Stop, Activity recreation, live gear/lamps/counters, radio/range/board reset, saved security recovery and the full untethered 60-minute B1/B2 matrix remain pending. No iOS, GPS/navigation, energy/resource or bike acceptance is claimed.
+
+Push the reviewed changes through the normal Git workflow to build the actual Android APK in Actions, then install with `bash scripts/install-mobile-apk.sh`. Connect while visible; check the foreground notification and real cluster metadata/gear, then lock/untether the phone for B1/B2. Record Actions run/commit, APK hash, flashed firmware hashes, phone/OS, notification/Nearby permissions and battery settings with numeric observations.
+
+For a cloud diagnostic build, use GitHub Actions → Mobile APK → Run workflow and enable `link_diagnostics` (ordinary push builds leave it off). Local diagnostic builds pass `--dart-define=R15_LINK_DIAGNOSTICS=true` to `flutter build apk --debug --no-pub`. The artifact build-info records the diagnostics flag. This enables ten-second serialized c015 polling and numeric `R15BleLink` age/gap/RTT/drift-budget/counter logs while sync is active. Normal builds read one health baseline only. Collect with the existing platform tools:
+
+```sh
+~/Desktop/learning/platform-tools/adb logcat -s R15BleLink:I
+```
+
+Logs expose no pairing codes/keys, device names/addresses or raw payloads. Health attempts are not delivery acknowledgements. Keep raw captures untracked and inspect source/receipt age independently from metadata/link/service state. The provisional 1000ppm + 2ms clock uncertainty budget is enlarged by observed anchor timing changes and still needs physical validation. Service recovery after process death/force-stop/reboot requires reopening the app; explicit Stop remains stopped until Connect. See [implemented policy](background-sync.md#implemented-android-policy-and-remaining-acceptance).
+
 ## Physical connection diagnostics
 
 Only one app may occupy the vehicle BLE slot. Disconnect nRF Connect before the companion run. For a new phone open cluster Settings → Phone → Pair phone; saved bonds do not require this. Check real OS approval and numeric GATT/bond results; an absent fault log does not prove a live connection. Firmware accepts `BLE_HS_EALREADY` as a peer-started security procedure rather than disconnecting it. Never fix a failure by weakening MITM, auto-approving codes or erasing NVS/bonds.
@@ -94,7 +112,7 @@ Firmware-side log collection (actual port may change):
 /Users/codewavesandy/.platformio/penv/bin/python tools/vehicle/ble_log.py /dev/cu.usbmodem1101
 ```
 
-The existing app logs numeric `R15BleLink` GATT/MTU/bond/write outcomes without payloads. Existing foreground reconnect uses four attempts with 1/2/4/8-second delays; background cancels retries. Remote-termination/authentication statuses 19/5/137 stop automatic retry, but are not definitive diagnosis. Explicit Retry remains available. Optional callback timeout blocks optional GATT work until reconnect. [M1](background-sync.md) defines the intended service-owned replacement; it is not implemented yet.
+The existing app logs numeric `R15BleLink` GATT/MTU/bond/write outcomes without payloads. The native foreground service owns four reconnect delays of 1/2/4/8 seconds and a 30-second cooldown while active access/bond/radio remain valid. Remote-termination/authentication statuses 19/5/137 stop automatic retry, but are not definitive diagnosis. Explicit Retry remains available. An eight-second missing ATT callback closes that GATT before service-owned recovery. [M1](background-sync.md) records the implemented policy and pending physical acceptance.
 
 ## Mac preview adapter
 
