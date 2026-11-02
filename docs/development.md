@@ -58,6 +58,48 @@ These commands target the separate vehicle ESP32, not the display. See the [vehi
 
 After flashing, run the `--vehicle-serial` preview above using the same port. Stop the preview before flashing again. Manual BOOT/reset recovery is described in the vehicle guide.
 
+## LVGL map render preview
+
+```sh
+bash scripts/preview.sh --map-preview
+# Headless, deterministic 800 × 480 captures plus runtime diagnostics:
+SDL_VIDEODRIVER=dummy bash scripts/preview.sh --map-preview --render build/lvgl/map-previews
+```
+
+This is a separate native LVGL 9.2.2/SDL executable (`r15-map-preview`), not a screenshot mockup and not board firmware. It uses the existing Header, compact PrimaryReadout, TellTaleRow and LifecycleOverlay components above a vector MapPanel. The normal dashboard/settings launcher and firmware entry points are unchanged. It does not load/save preferences, open serial/radios, call a provider, or request location. Synthetic local-metre geometry and route progress live only in `simulator/lvgl/MapDemo.h`; the screen always labels the map/sample route and never populates bike speed/gear or wall-clock time from the animation.
+
+| Control | Preview behavior |
+| --- | --- |
+| D / Tab | Midnight↔Daylight / Street↔Track instrument configuration |
+| Space / R | Pause/resume the sample position / restart the route |
+| V | Follow↔whole-route overview; both are north-up |
+| + or = / − | Three fixed follow zoom levels |
+| X / U | Stale position (hide marker/pause guidance) / unavailable map |
+| W | Simultaneous sample engine/coolant warnings in the preserved tell-tale row |
+| O / Esc | Existing two-second ignition lifecycle / quit the preview |
+
+Follow pans a fixed local-plane viewport with the current sample pose; overview fits the entire route. Cached roads and the route remain visible when position is stale, but the marker/ETA guidance is withdrawn; unavailable map hides the scene. Data validity, clipping, road/route geometry, theme styles and fixed capacities are separate from the host animation. No provider, global geographic projection, route search, real maneuver generation, BLE/UART map contract, persistent tile cache, heading-up camera or physical-board performance is established by this preview.
+
+Verification on 2026-11-02: host builds passed with warning flags enabled. Deterministic captures cover both themes/instrument configurations, follow/overview, moved pose, close zoom, arrival, stale/unavailable, simultaneous warnings and boot/shutdown with warning interruption. LVGL diagnostics reported zero warnings; repeated identical paused frames produced zero flushes in all four theme/layout combinations. The synthetic fixture has 20 roads, seven route points and originally used a 2,956-byte bounded scene value; the real-area importer now uses a 196,876-byte-capacity scene (the host and renderer retain their own copies). These sizes exclude LVGL objects/draw tasks/framebuffers/fonts; they are not ESP32 heap/FPS evidence. Native GUI controls for restart/pause, overview, theme/layout and warnings/stale position were manually inspected. No automated test files/suites were created or run. Physical display build/flash, resource measurements, map delivery, provider licensing and B3 acceptance remain pending.
+
+### Real Kolkata OpenStreetMap roads
+
+```sh
+# First use only: one small Overpass download if the raw snapshot is absent.
+python3 scripts/import-osm-map.py --download
+# Reopening the preview is offline; it never contacts a map server:
+bash scripts/preview.sh --kolkata-map
+SDL_VIDEODRIVER=dummy bash scripts/preview.sh --kolkata-map --render build/lvgl/kolkata-map-previews
+```
+
+The selected central-Kolkata bounding box is south/west/north/east `22.546,88.337,22.574,88.365` (roughly 3.1 × 2.9 km), with a local rendering origin at `22.56,88.351`. This is one selected area, not all of Kolkata. Actual OSM road names/geometry include Chowringhee/Jawaharlal Nehru Road, Park Street, Esplanade roads, Mayo Road and surrounding lanes. There is **no calculated route, maneuver/ETA, GPS marker or simulated movement** in this mode. Arrows pan in 100m steps, R recenters, V toggles area overview, +/− zoom, D changes theme; Tab/U/W/O/Esc retain layout/unavailable/sample-warning/lifecycle/quit controls. The synthetic `--map-preview` remains separate.
+
+`import-osm-map.py` uses Python standard-library tools only. It caches the source at ignored `build/maps/kolkata/osm-roads.json`, projects a small-area spherical approximation into local metres, clips to the bounding box, simplifies with a 2m tolerance and splits polylines into at most eight points. All supported fetched road/path classes are retained; service roads and paths are visually omitted at overview scale and drawn thinner close up. Named arterial roads are prioritized; duplicate/overlapping labels are suppressed with a fixed eight-label limit. No road class is a claim of legal motorcycle access. An import exceeding 2,048 chunks fails explicitly instead of silently losing geometry. Road names prefer `name:en`; unsupported characters are normalized/omitted and names longer than 23 ASCII characters are shortened, with counts recorded in provenance. Full Bengali labels require a separate font/text plan.
+
+The host text adapter loads `kolkata.r15map` outside rendering, checks format/version/file size/counts/coordinates/names and atomically supplies a validated scene. The generated `.provenance.json` records query, geographic bounds/origin, OSM timestamp, simplification, counts and source SHA-256; the `.LICENSE.txt` records ODbL/copyright. Source/derived map data remain ODbL data, not firmware assets or public domain. Keep provenance/licence with any redistributed map extract. The screen displays © OpenStreetMap contributors and the copyright/licence URL; a tiny locally generated Inter copyright glyph avoids adding a full Unicode font. The import command reuses an existing source and does not poll Overpass during interaction. Use an explicitly different `--source`/`--output` for a fresh snapshot. The default download is a bounded Overpass POST with a project User-Agent, a timeout and an 8 MiB source ceiling.
+
+Verified 2026-11-02 snapshot: OSM timestamp `2026-11-02T15:08:51Z`, source SHA-256 `38e7324cfa61598decd972af89135a4008736e9a7ae4fc07ed270805804c04b5`; 1,384 input ways -> 1,435 chunks / 4,494 points, with 35 normalized/shortened names. The host scene capacity is 196,876 bytes, and the host/renderer retain separate copies. Host C++ builds and 800 × 480 rendering in both themes/instrument configurations passed; LVGL warnings and unchanged-frame flushes were zero. Map/overview/pan/zoom, labels, unavailable scenes, warning visibility and lifecycle captures were manually inspected. No automated suites, physical display flash, GPS, live routing or phone/UART map transfer occurred. MCU memory/CPU/scanout suitability remains unverified.
+
 ## Phone app and Mac connection
 
 For a Mac without the local mobile toolchain, every push builds a mobile debug APK in GitHub Actions. Run `bash scripts/install-mobile-apk.sh` to wait/download/install it using the existing USB ADB; see [setup and signing](../mobile/docs/development.md#build-on-github-install-from-the-mac). Firmware builds remain local and separate.

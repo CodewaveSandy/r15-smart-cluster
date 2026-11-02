@@ -171,6 +171,12 @@ Optional pairing labels use a narrowly scoped write-only vehicle GATT service an
 Connected phone metadata is now vehicle-validated through an authenticated BLE write, then forwarded over bounded CRC-protected R15M frames tied to the vehicle boot and BLE connection. Display owns clock synchronization and rendering. See [metadata contract and app handoff](../mobile/docs/protocol.md#connected-metadata-c012); core physical metadata acceptance is user-confirmed; extended fault/load acceptance remains pending.
 
 
+## Host map rendering prototype
+
+The isolated `r15-map-preview` target now composes the existing instrument/tell-tale/lifecycle components with an owner-thread `MapPanel`. It draws bounded local-metre road polylines, route, labels and position geometry through the existing LVGL line/triangle draw primitives. It adds no map widget dependency, network/file operations, RTOS task, full-screen texture or runtime SVG renderer. A validated fixed-capacity `shared/model/MapScene.h` value holds at most 2,048 road chunks × eight points and a 32-point route; invalid input is rejected before scene replacement, and primitive segments are clipped to the map viewport. This is a rendering model, not a frozen geographic/wire protocol.
+
+Producers are the explicitly fictional host fixture and a host-only importer for a small central-Kolkata OSM snapshot. The importer projects geographic coordinates into a local plane, clips/simplifies/splits geometry and retains provenance/ODbL notices; the renderer never fetches/parses OSM. Basemap-only scenes have no route or position marker. The expanded 196,876-byte scene capacity is a host prototype ceiling, not an approved MCU stack/cache allocation; firmware needs measured smaller visible-area chunks. Current preview evidence is recorded in [development](development.md#lvgl-map-render-preview); the renderer is not linked by the native display firmware entry point. Real provider/data rights, geographic projection, camera/label quality, route-generation/freshness semantics, bounded delivery/cache and ESP32 memory/render/scanout coexistence still need coordinated design and bench evidence before F3/B3 or board deployment. No routing or real-bike capability is inferred from rendered sample geometry.
+
 ## Resource accounting and target verification
 
 Regenerate current metrics instead of using an old image size as today's budget:

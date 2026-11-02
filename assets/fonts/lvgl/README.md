@@ -9,6 +9,7 @@ Reproduce with scripts/generate-fonts.sh. Converter: lv_font_conv 1.5.3, pinned 
 | inter_caption_12 | Tick labels and date | 12 px Medium |
 | inter_label_14 | General labels/status | 14 px Medium |
 | inter_value_16 | RPM caption and suffix | 16 px Medium |
+| inter_map_copyright_16 | Copyright notice glyph (©/dash), host map preview only | 16 px Medium |
 | inter_rpm_16 | RPM digits/comma/dash | 16 px SemiBold |
 | inter_unit_18 | Speed unit | 18 px Medium |
 | inter_heading_23 | Mode and supporting values | 23 px SemiBold |

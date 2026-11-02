@@ -18,6 +18,8 @@ bash scripts/preview.sh
 
 Tab changes layout, D previews themes, arrows adjust speed/RPM, brackets adjust fuel, O simulates ignition and X toggles unavailable data. Press P then S for Settings; arrows cycle focus, Enter selects and Backspace/Esc returns. Esc quits outside Settings.
 
+For the synthetic LVGL map renderer, run `bash scripts/preview.sh --map-preview`. This separate 800 × 480 host preview draws a fictional road network/sample route with follow/overview cameras; it has no real map provider, GPS or board connection. For real central-Kolkata OpenStreetMap roads, run `bash scripts/preview.sh --kolkata-map` after the one-time import. See [map controls and evidence](docs/development.md#lvgl-map-render-preview).
+
 See the [step-by-step preview guide](docs/development.md#host-setup-and-controls), [project documentation](README.md#documentation), [architecture](docs/architecture.md#system-architecture-status-and-roadmap) and [implementation plan](docs/architecture.md#current-status-and-roadmap).
 
 ## Development verification
