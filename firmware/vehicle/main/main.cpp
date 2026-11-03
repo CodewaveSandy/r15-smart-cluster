@@ -1,5 +1,7 @@
 #include "shared/protocol/GearPacket.h"
 #include "BlePhone.h"
+#include "firmware/common/RecordWriter.h"
+#include "esp_heap_caps.h"
 #include "shared/protocol/PairingIdentity.h"
 #include "driver/gpio.h"
 #include "InputConfig.h"
@@ -23,7 +25,7 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(uart_param_config(UART_NUM_1,&link));
     ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1,wiring::displayTx,wiring::displayRx,UART_PIN_NO_CHANGE,UART_PIN_NO_CHANGE));
     QueueHandle_t linkEvents=nullptr;
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1,512,0,8,&linkEvents,0));
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1,2048,0,8,&linkEvents,0));
     gpio_config_t inputs{};
     const auto add=[&](wiring::Input input){if(input.pin>=0)inputs.pin_bit_mask|=1ULL<<input.pin;};
     add(wiring::tripButton);add(wiring::infoButton);
@@ -47,6 +49,10 @@ extern "C" void app_main() {
     uart_vfs_dev_port_set_tx_line_endings(0,ESP_LINE_ENDINGS_LF);
     cluster::gearlink::Packet packet;packet.session=esp_random();if(!packet.session)packet.session=1;
     static cluster::board::BlePhone phone;phone.initialize(packet.session);
+    static cluster::board::RecordWriter writer;ESP_ERROR_CHECK(writer.initialize(UART_NUM_1)?ESP_OK:ESP_FAIL);
+    static cluster::maplink::Demux demux;static cluster::maplink::Assembler assembly;
+    static cluster::maplink::Sender mapSender,locationSender(1);
+    std::uint32_t mapConnection=0,mapDisplay=0;std::uint64_t report=0;
     cluster::phonelink::Receiver controls;cluster::phonelink::Gate gate(packet.session);
     std::uint32_t statusSequence=0,nameSequence=0;std::uint64_t lastStatus=0,lastName=0;
     cluster::inputs::Button tripButton,infoButton;
@@ -57,15 +63,27 @@ extern "C" void app_main() {
         for(unsigned i=0;i<8&&xQueueReceive(linkEvents,&event,0)==pdTRUE;++i)
             if(event.type==UART_FIFO_OVF||event.type==UART_BUFFER_FULL||event.type==UART_FRAME_ERR||event.type==UART_PARITY_ERR)fault=true;
         size_t waiting=0;ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_NUM_1,&waiting));
-        if(fault||waiting>256){uart_flush_input(UART_NUM_1);xQueueReset(linkEvents);controls.reset();gate.invalidate();}
+        if(fault||waiting>1536){uart_flush_input(UART_NUM_1);xQueueReset(linkEvents);controls.reset();gate.invalidate();demux.reset();assembly.reset();phone.invalidateMap();mapSender.reset();locationSender.reset();}
         else {
             std::uint8_t bytes[256];const int count=uart_read_bytes(UART_NUM_1,bytes,sizeof bytes,0);
             if(count<0){controls.reset();gate.invalidate();}
-            for(int i=0;i<count;++i)if(controls.push(bytes[i],now,cluster::phonelink::Kind::Control)) {
-                const auto snapshot=phone.snapshot(now);cluster::phonelink::Request request;bool newDisplay=false;
-                if(gate.receive(controls.latest(),now,snapshot.pairing,request,newDisplay))gate.queued(phone.post(request));
-                if(newDisplay&&snapshot.pairing)phone.post({cluster::phonelink::Action::Reject,snapshot.pairing});
-            }
+            for(int i=0;i<count;++i)demux.push(bytes[i],now,
+                [&](const std::uint8_t* frame,unsigned n,std::uint64_t at){
+                    if(frame[3]!='P')return;
+                    for(unsigned j=0;j<n;++j)if(controls.push(frame[j],at,cluster::phonelink::Kind::Control)){
+                        const auto snapshot=phone.snapshot(at);cluster::phonelink::Request request;bool newDisplay=false;
+                        if(gate.receive(controls.latest(),at,snapshot.pairing,request,newDisplay))gate.queued(phone.post(request));
+                        if(newDisplay){phone.invalidateMap();mapSender.reset();locationSender.reset();if(snapshot.pairing)phone.post({cluster::phonelink::Action::Reject,snapshot.pairing});}
+                    }
+                },[&](const std::uint8_t* frame,unsigned n,std::uint64_t at){
+                    cluster::maplink::Message message;if(assembly.push(frame,n,at,2,message)){
+                        if(cluster::maplink::validCapability(message.bytes.data(),message.size)&&cluster::maplink::get(message.bytes.data(),8)==packet.session){
+                            const auto display=std::uint32_t(cluster::maplink::get(message.bytes.data(),16));
+                            if(display!=mapDisplay){mapSender.reset();locationSender.reset();mapDisplay=display;}
+                        }
+                        phone.mapDownstream(message,at);
+                    }
+                });
         }
         const auto read=[](wiring::Input input)->cluster::Signal<bool> {
             if(input.pin<0)return {};
@@ -84,10 +102,9 @@ extern "C" void app_main() {
         previousSample=sampledAt;sampled=true;
         phone.poll(gate.fresh(now),packet,maxSourceGap);
         const auto bytes=cluster::gearlink::encode(packet);
-        // No TX ring or wait: 36 bytes fit the 128-byte FIFO and consume
-        // 3.125 ms on the wire, versus the 20 ms sampling interval. A partial
-        // write is discarded by CRC/framing at the receiver, never retried.
-        uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+        // Whole critical records enter a bounded priority queue; only its
+        // worker writes UART1. No partial FIFO write or acquisition-task wait.
+        writer.post(bytes.data(),bytes.size());
         // 36 bytes per 20 ms: bounded output well below the UART FIFO capacity.
         fwrite(bytes.data(),1,bytes.size(),stdout);
         if(now-lastStatus>=200) {
@@ -95,7 +112,7 @@ extern "C" void app_main() {
             status.vehicle=packet.session;status.sequence=++statusSequence;status.uptime=std::uint32_t(now);
             status.phone=snapshot.phone;status.pairing=snapshot.pairing;status.code=snapshot.code;gate.stamp(status);
             const auto bytes=cluster::phonelink::encode(status);
-            uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+            writer.post(bytes.data(),bytes.size());
         }
         else if(now-lastName>=200) {
             lastName=now;const auto snapshot=phone.snapshot(now);
@@ -104,14 +121,33 @@ extern "C" void app_main() {
                 metadata.sequence=++nameSequence;metadata.uptime=std::uint32_t(now);metadata.data=snapshot.metadata;
                 const auto bytes=cluster::phonemeta::encode(metadata);
                 // 36 + 80 bytes fit the FIFO; mutually exclusive with status/name.
-                uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+                writer.post(bytes.data(),bytes.size());
             } else if(snapshot.phone.available()&&snapshot.phone.pairingRequested&&snapshot.phone.displayName[0]) {
                 cluster::pairidentity::Packet identity;identity.vehicle=packet.session;identity.pairing=snapshot.pairing;
                 identity.sequence=++nameSequence;identity.uptime=std::uint32_t(now);identity.label=snapshot.phone.displayName;
                 const auto bytes=cluster::pairidentity::encode(identity);
                 // 36 telemetry + 64 identity bytes fit the FIFO; never append to a status cycle.
-                uart_tx_chars(UART_NUM_1,reinterpret_cast<const char*>(bytes.data()),bytes.size());
+                writer.post(bytes.data(),bytes.size());
             }
+        }
+        const auto mapPhone=phone.snapshot(now);
+        const auto connection=mapPhone.phone.available()&&mapPhone.phone.connected&&gate.fresh(now)?mapPhone.phone.connectionId:0;
+        if(connection!=mapConnection){mapSender.reset();locationSender.reset();mapConnection=connection;}
+        if(connection){
+            cluster::maplink::Message m;
+            const auto eligible=[&](const cluster::maplink::Message& q){return cluster::maplink::get(q.bytes.data(),8)==packet.session&&cluster::maplink::get(q.bytes.data(),12)==connection&&cluster::maplink::get(q.bytes.data(),16)==mapDisplay;};
+            if(phone.takeMap(m,false,true)&&eligible(m)){mapSender.reset();locationSender.reset();mapSender.enqueue(m);}
+            if(!mapSender.pending()&&phone.takeMap(m,false)&&eligible(m))mapSender.enqueue(m);
+            if(!locationSender.pending()&&phone.takeMap(m,true)&&eligible(m))locationSender.enqueue(m);
+            // One fragment per sample cycle; latest fix precedes bulk map.
+            auto* sender=locationSender.pending()?&locationSender:&mapSender;
+            if(sender->pending()){
+                const auto r=sender->next(1);if(writer.post(r.bytes.data(),r.size,sender->bulk()?2:1))sender->sent();
+            }
+        }
+        if(now-report>=10000){
+            report=now;std::printf("@MAP heap_free=%u heap_min=%u largest=%u stack=%u tx_queue_full=%u tx_stack=%u sample_gap_ms=%u\n",
+                unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),unsigned(uxTaskGetStackHighWaterMark(nullptr)),writer.rejected(),writer.stackMargin(),unsigned(maxSourceGap));
         }
         ++packet.sequence;
         vTaskDelay(pdMS_TO_TICKS(20));

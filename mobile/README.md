@@ -1,6 +1,6 @@
 # R15 Companion
 
-For map/location development, use the [phase 1 integration handoff](../docs/map-phase-1.md) and [proposed wire extension](docs/protocol.md#phase-1-map-extension--implementation-specification). Firmware capability/transport is implemented and frozen first; Android MapLibre/local OSM + native GPS follows.
+For map/location development, use the [phase 1 integration handoff](../docs/map-phase-1.md) and [proposed wire extension](docs/protocol.md#phase-1-map-extension--implementation-specification). Firmware capability/transport/store/page are implemented/build verified under v1; physical bench acceptance precedes Android MapLibre/local OSM + native GPS.
 
 Flutter application in the R15 Smart Cluster monorepo. Android first, future iOS; native Kotlin/Swift project shells are generated. Independent of the C++17/LVGL/CMake build.
 

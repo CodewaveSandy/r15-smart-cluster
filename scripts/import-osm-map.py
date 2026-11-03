@@ -9,6 +9,8 @@ import datetime
 import hashlib
 import json
 import math
+import struct
+import zlib
 from pathlib import Path
 import unicodedata
 import urllib.parse
@@ -122,6 +124,8 @@ def main():
         name = tags.get('name:en', tags.get('name', ''))
         ascii_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
         ascii_name = ''.join(c for c in ascii_name if 32 <= ord(c) <= 126)[:23]
+        if not ascii_name.strip():
+            ascii_name = ''
         normalized_names += name != ascii_name
         points = [project(float(p['lat']), float(p['lon'])) for p in geometry]
         source_points += len(points)
@@ -146,7 +150,7 @@ def main():
         for piece in pieces:
             rounded = []
             for x, y in simplify(piece):
-                point = (round(x), round(y))
+                point = (int(math.copysign(math.floor(abs(x) + 0.5), x)), int(math.copysign(math.floor(abs(y) + 0.5), y)))
                 if not rounded or rounded[-1] != point:
                     rounded.append(point)
             for start in range(0, len(rounded) - 1, MAX_POINTS - 1):
@@ -175,6 +179,39 @@ def main():
         'simplification_tolerance_m': 2.0, 'normalized_or_truncated_names': normalized_names,
         'note': 'Road snapshot only. No route, live traffic, legal access decision or GPS. Source/generated map are ODbL data; not firmware assets.',
     }
+    # Deterministic wire package and matching local phone geometry. All exports
+    # come from the same clipped/simplified source; no hosted tile dependency.
+    body = bytearray()
+    features = []
+    for kind, name, points in roads:
+        body += struct.pack('<BBBB', kind, len(points), len(name), 0) + name.encode('ascii')
+        body += b''.join(struct.pack('<hh', x, y) for x, y in points)
+        coordinates = [[origin_lon + math.degrees(x / (radius * math.cos(math.radians(origin_lat)))),
+                        origin_lat + math.degrees(y / radius)] for x, y in points]
+        features.append({'type': 'Feature', 'properties': {'kind': kind, 'name': name},
+                         'geometry': {'type': 'LineString', 'coordinates': coordinates}})
+    if len(body) + 64 > 65536:
+        parser.error('Binary region exceeds 65536 bytes; choose a smaller area. No roads dropped.')
+    timestamp = metadata['osm_timestamp']
+    if not timestamp:
+        parser.error('OSM source timestamp required for wire package provenance.')
+    source_epoch = int(datetime.datetime.fromisoformat(timestamp.replace('Z', '+00:00')).timestamp())
+    header = bytearray(64)
+    struct.pack_into('<4sBBH6iHHIII', header, 0, b'R15B', 1, 0, 64,
+                     round(origin_lat * 1e7), round(origin_lon * 1e7),
+                     *(round(v * 1e7) for v in BOUNDS), len(roads), 0, len(body), source_epoch, zlib.crc32(body))
+    package = bytes(header + body)
+    wire = args.output.with_suffix('.r15b')
+    wire.write_bytes(package)
+    args.output.with_suffix('.geojson').write_text(json.dumps({'type': 'FeatureCollection', 'features': features}, separators=(',', ':')) + '\n')
+    manifest = {'format': 'R15B', 'version': 1, 'bytes': len(package), 'sha256': hashlib.sha256(package).hexdigest(),
+                'body_crc32': f'{zlib.crc32(body):08x}', 'road_chunks': len(roads), 'points': output_points,
+                'bbox_south_west_north_east': BOUNDS, 'origin_lat_lon': [origin_lat, origin_lon],
+                'osm_timestamp': timestamp, 'source_sha256': metadata['source_sha256'],
+                'attribution': '© OpenStreetMap contributors', 'license': 'ODbL-1.0',
+                'license_url': metadata['license_url']}
+    args.output.with_suffix('.manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    print(f'Wire package: {wire} ({len(package)} bytes), SHA256 {manifest["sha256"]}')
     args.output.with_suffix('.provenance.json').write_text(json.dumps(metadata, indent=2) + '\n')
     args.output.with_suffix('.LICENSE.txt').write_text('Map data © OpenStreetMap contributors, ODbL 1.0.\nhttps://www.openstreetmap.org/copyright\nOpen Database License: https://opendatacommons.org/licenses/odbl/1-0/\nDerived map data remains subject to the ODbL. Software licensing is separate.\n')
     print(f'Imported {len(roads)} road chunks / {output_points} points: {args.output}')

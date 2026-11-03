@@ -1,6 +1,6 @@
 # Firmware background-sync strategy and work plan
 
-Next map work follows the [phase 1 firmware-first handoff](map-phase-1.md#6-firmware-first-implementation-order), then Android integration. It adds a separate proposed protocol extension; existing background-sync/B1/B2 gates remain applicable.
+Map firmware source/build work is complete under the [phase 1 firmware-first handoff](map-phase-1.md#6-firmware-first-implementation-order), then Android integration. It adds the separate v1 map protocol extension; existing background-sync/B1/B2 gates remain applicable.
 
 Updated: 2026-11-01. Status: firmware continuity diagnostics and authenticated discrete-input telemetry are implemented/build-verified; mobile integration and physical B1/B2 remain pending. Start here for firmware work. App developers start at [the mobile plan](../mobile/docs/background-sync.md). [Current BLE protocol](../mobile/docs/protocol.md) is the single wire-contract authority; [bench wiring](development.md#vehicle-ble-uart-bench) remains authoritative for physical connections.
 
@@ -10,7 +10,7 @@ The rider opens the app, connects/selects a route, then locks the phone and puts
 
 Working baseline: authenticated numeric-comparison BLE pairing, one saved bond/connection, saved-peer reconnect, enrollment name and authenticated name/battery/UTC metadata. Core phone/board behavior is user-confirmed; extended fault/load checks remain open. Firmware has no Android foreground/background setting. Android still owns continuity scheduling; existing c011/c012 behavior is preserved and new optional read/notify endpoints provide bidirectional observability without a faster metadata cadence.
 
-Current boundaries: vehicle owns NimBLE, bond NVS and validation; display owns clock/presentation under one LVGL owner. R15G discrete-input, R15P status/control, R15N enrollment identity and R15M metadata are implemented. Vehicle-to-phone discrete-input telemetry, authenticated capability discovery and health reads are now implemented through c013–c015. Navigation messages, Wi-Fi map delivery and display maps remain absent. BLE connected does not prove fresh app data. Metadata expires after 90 seconds; display clock continues ticking after a valid sync, with no cold-power retention claim.
+Current boundaries: vehicle owns NimBLE, bond NVS and validation; display owns clock/presentation under one LVGL owner. R15G discrete-input, R15P status/control, R15N enrollment identity and R15M metadata are implemented. Vehicle-to-phone discrete-input telemetry, authenticated capability discovery and health reads are now implemented through c013–c015. Phase 1 BLE/UART map packages and the native display map page are now implemented/build verified; physical acceptance and Android location integration remain pending. Route guidance and Wi-Fi map delivery remain absent. BLE connected does not prove fresh app data. Metadata expires after 90 seconds; display clock continues ticking after a valid sync, with no cold-power retention claim.
 
 ## Work independently: F1 continuity baseline
 

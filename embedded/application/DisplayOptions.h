@@ -6,6 +6,7 @@ namespace cluster {
 struct DisplayOptions {
     bool light=false, track=false, imperial=false;
     bool settings=false;
+    bool map=false,mapOverview=false;unsigned mapFocus=1,mapZoom=1;
     unsigned settingsFocus=0;
     bool appearance=false, appearanceOriginalLight=false, appearanceSaveFailed=false, appearanceSaving=false;
     unsigned appearanceFocus=0;

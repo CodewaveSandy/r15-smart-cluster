@@ -2,6 +2,8 @@
 #include "shared/protocol/PhoneLink.h"
 #include "shared/protocol/PhoneMetadata.h"
 #include "shared/protocol/PhoneTelemetry.h"
+#include "shared/protocol/MapTunnel.h"
+#include <atomic>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/portmacro.h"
@@ -26,8 +28,23 @@ public:
     bool post(phonelink::Request request);
     void poll(bool displayFresh,const gearlink::Packet& inputs,std::uint32_t maxSourceGapMs);
     Snapshot snapshot(std::uint64_t now);
+    void mapDownstream(const maplink::Message&,std::uint64_t now);
+    bool takeMap(maplink::Message&,bool location,bool urgentOnly=false);
+    void invalidateMap();
 private:
     static BlePhone* instance_;
+    static int mapAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
+    void notifyMap(std::uint64_t);
+    maplink::Capability mapCapability(std::uint64_t);
+    maplink::Status mapStatus(std::uint64_t);
+    maplink::Message mapCommand_,mapLocation_;
+    maplink::Capability downstreamCapability_{};maplink::Status downstreamStatus_{};
+    std::uint64_t capabilityAt_=0,statusAt_=0,mapLocationAt_=0,mapDataAt_=0;
+    std::uint32_t pendingMapControl_=0;
+    bool mapCommandPending_=false,mapLocationPending_=false,mapSubscribed_=false,mapNotifyPending_=false;
+    std::atomic<bool> mapDirty_{false};
+    std::uint16_t mapHandle_=0;
+    std::uint64_t mapNotifyAt_=0;
     static int gap(ble_gap_event*,void*);
     static int streamAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
     bool authenticated(std::uint16_t handle);

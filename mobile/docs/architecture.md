@@ -1,6 +1,6 @@
 # Companion architecture, status and approved UI
 
-The next map/location scope is defined in the [phase 1 handoff](../../docs/map-phase-1.md): MapLibre/local regional OSM on the phone, native foreground GPS ownership, bounded BLE/UART transfer and LVGL rendering. This is a firmware-first specification, not installed dependencies or implemented live maps.
+The next map/location scope is defined in the [phase 1 handoff](../../docs/map-phase-1.md): MapLibre/local regional OSM on the phone, native foreground GPS ownership, bounded BLE/UART transfer and LVGL rendering. Firmware source/build and host-preview evidence now exists; the phone has no installed map/location dependencies or implemented live map yet. Physical firmware acceptance precedes Android work.
 
 Updated: 2026-11-02. Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Native foreground ownership and c013–c015 telemetry integration are implemented in source; latest APK packaging and physical B1/B2 background/telemetry acceptance remain pending. GPS/navigation/maps and native iOS integration remain pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).
 

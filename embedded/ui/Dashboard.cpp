@@ -11,7 +11,7 @@ Dashboard::Dashboard(lv_obj_t* parent)
     : root_(box(parent,0,0,Metrics::width,Metrics::height)),
       instruments_(box(root_.get(),0,0,Metrics::width,Metrics::height)),
       header_(root_.get()), tellTales_(root_.get()), tachometer_(instruments_.get()), settings_(root_.get()), appearance_(root_.get()), phone_(root_.get()), clock_(root_.get()), primary_(root_.get()),
-      rideInfo_(instruments_.get()), fuel_(instruments_.get()), overlay_(root_.get()) {
+      rideInfo_(instruments_.get()), fuel_(instruments_.get()), map_(root_.get()), overlay_(root_.get()) {
     shiftGradient_.dir=LV_GRAD_DIR_VER; shiftGradient_.stops_count=3;
     const std::uint32_t shiftColors[]={Metrics::shiftTop,Metrics::shiftMiddle,Metrics::shiftBottom};
     for(int i=0;i<3;++i) { shiftGradient_.stops[i].color=color(shiftColors[i]); shiftGradient_.stops[i].opa=255; shiftGradient_.stops[i].frac=i*127; }
@@ -44,6 +44,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         appearance_.update(v,p,settingsProgress);
         phone_.update(s.phone,v,p,settingsProgress);
         clock_.update(v,p,settingsProgress);
+        map_.update(mapState_,v,p,v.map&&!v.phone&&settingsProgress==1000);
         tellTales_.update(s,p,now,v.iconTest);
         primary_.update(s,v,p,settingsProgress);
         if(settingsProgress==0) {

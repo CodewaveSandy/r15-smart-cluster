@@ -411,3 +411,44 @@ For a full continuity observation window, the read-only USB collector accepts 1.
 ```
 
 It sends no data/reset request and prints only bounded `@BLE` diagnostic lines; firmware emits one `@BLE SYNC metadata-expired` line per expiry. Detailed counters/maximum ages are available through authenticated c015 reads by the updated app, not through a new USB command. Ordinary telemetry events are not logged individually, avoiding a new console flood/sampling task. Phone USB/debugging must be disconnected during B1; board USB power/logging remains acceptable for a desk check. Capture numeric app callback gaps and c015 deltas alongside display UART/heap/stack/render diagnostics; absence of serial faults alone is not acceptance.
+
+## Phase 1 map firmware integration
+
+2026-11-02/03 implementation session: firmware source implementation and affected board builds/packaging are complete; **not flashed, radio/physical/real-GPS accepted or bike verified**. No serial board ports were connected during this session. The implementation handoff is [phase 1 maps](map-phase-1.md), with exact implemented v1 bytes in [phone protocol](../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification). Android map/GPS work is still separate.
+
+Implemented:
+
+- Portable R15B package validation/projection, R15X commands, R15K capability and R15S display status; incremental CRC/SHA-256 and bounded escaped R15Q UART framing/demultiplexing. [Normative vectors](../shared/protocol/map-phase-1-vectors.txt) are non-executable data, not an automated suite.
+- Display reserves two binary slots and two decoded scenes from PSRAM only (524,824 bytes at current ceilings); failure disables maps while instruments continue. Its application/LVGL owner stages, hashes/parses in bounded512-byte/16-road steps, then publishes an immutable scene. No scene-sized task-stack copies, flash/NVS map writes, partial-map rendering or synthetic board GPS source.
+- Navigation tile opens the map page under the existing Settings lifecycle. Header/compact instruments/tell-tales and warnings remain; full dashboards remain outside the map page. Touch, serial focus/select/Back and Trip-next/Info-select on the open map page operate Back/Follow/Area/Zoom. Cached maps remain on disconnect/Stop; stale/uncertain/poor-accuracy/outside fixes hide the marker. A valid stationary fix uses a neutral dot; qualified course uses an arrow. Follow reprojects under each active region's origin.
+- Vehicle adds authenticated c016/c017/c018 with authenticated/encrypted status CCCD, current boot/connection/display IDs, downstream resource/credit checks, one pending control/latest location and display-originated ACKs. c013–c015 bytes stay unchanged. All UART1 writes are whole bounded records through a priority worker; GPIO sampling never waits on a map write. Bulk DATA is limited to4096 encoded bytes/sec; critical frames precede every next fragment. Driver RX buffers are2048 bytes, bounded reads remain256 vehicle/512 display bytes per application turn. UART0 console/return records use a separate bounded writer, preserving existing pins/baud and record integrity alongside logs.
+- Numeric diagnostics include internal heap/min/largest block, task stacks, source gap and TX queue-full attempts (backpressure attempts, not proof of dropped/delivered map data). Display reports PSRAM and whether its map reservation succeeded. Runtime resource/timing/coexistence measurements remain a physical gate.
+
+Generate the binary Kolkata region from the already cached source:
+
+```sh
+python3 scripts/import-osm-map.py
+```
+
+Current output: `build/maps/kolkata/kolkata.r15b`, **30,066 bytes**, SHA-256 `3443bb2dab6efe9a91840b0c8f375cfd970398c86c6fac0d23c93327fdd91685`; 1,435 road chunks /4,494 points. The `.manifest.json`, `.geojson`, provenance and licence accompany it. The C++ SHA output in the firmware developer preview matches this Python-generated manifest. This is the same central-Kolkata source timestamp/hash described above, not a new network request or citywide coverage.
+
+Build and inspect the actual portable firmware store/tunnel with the native Dashboard map page:
+
+```sh
+cmake -S . -B build/lvgl
+cmake --build build/lvgl
+SDL_VIDEODRIVER=dummy build/lvgl/simulator/lvgl/r15-map-firmware-preview.app/Contents/MacOS/r15-map-firmware-preview --package build/maps/kolkata/kolkata.r15b --render build/lvgl/map-firmware-previews
+```
+
+This host-only developer preview explicitly labels BENCH DEMO and SIMULATED fixes; it has no radio/board injection endpoint. Captures cover17 states in both layouts/themes (68 images): empty, loading0/half, checking, active/no fix, simulated direction arrow/neutral dot, low accuracy, outside coverage, replacement-half, cancel, hash rejection retaining old map, stale, warning, Stop, disconnect and15s timeout retaining old map. Console diagnostics show accepted byte offsets, state/error/location changes and matching SHA; latest run has **0 LVGL warnings**. Manually inspected representative day/night, Street/Track, loading/checking, marker, stale/failure and warning images. The normal dashboard/Settings/Phone developer preview also completed successfully. These are development previews/runtime diagnostics, not resumed automated test suites.
+
+Both `bash scripts/flash-vehicle.sh --build-only` and `bash scripts/flash-display.sh --build-only` build/package successfully with pinned ESP-IDF5.5.4; display image partition bounds/application fit are checked. No chip or partition changes and no flashes were performed. One existing `PairingIdentity.h` misleading-indentation compiler warning remains; new map sources compile without warnings. Build hashes below identify this session's packages; rebuilds may change embedded build metadata.
+
+For an actual paired-radio transfer, see [map tool commands and peer/MTU constraints](../tools/maps/README.md). The optional desktop sender has syntax/CLI checks only; it has **not** run against a board. It does not synthesize LOCATION, auto-approve pairing, remove the phone bond or claim locked-screen Android coexistence. Firmware physical acceptance still requires identified boards, PSRAM/heap/stack and serial rate/gap measurements, authenticated reconnect/subscription, first/replacement/malformed/stalled transfers and loss/reset recovery. Follow the complete [acceptance matrix](map-phase-1.md#8-phase-1-acceptance-and-evidence), then implement Android against the frozen v1 contract. No automated test suites were added or run.
+
+| Package | SHA-256 |
+| --- | --- |
+| Vehicle `build/vehicle/sevensemi-s3/firmware.factory.bin` | `d1279752b776f2c081b83dc7e88a4a41492b5ad2e9e6f770a4deaeec5ca3cd92` |
+| Display `build/display/crowpanel-v3/r15-display.factory.bin` | `4ecc2bb0f8c528aa3b66ec3bee28ff84ace5706e40bb2fff9f074a44411a386b` |
+
+Build-time static usage is vehicle23,880 bytes RAM /486,941 bytes app flash; display26,104 bytes RAM /701,375 bytes app flash. These exclude runtime stacks, driver/LVGL allocation, framebuffers and reserved map PSRAM; they are not free-heap/performance measurements.

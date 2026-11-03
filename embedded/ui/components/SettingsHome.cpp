@@ -9,7 +9,7 @@ SettingsHome::SettingsHome(lv_obj_t* parent):root_(box(parent,SettingsLayout::bo
     subtitle_=label(root_.get(),SettingsLayout::subtitle,"Appearance and connectivity");
     back_=label(root_.get(),SettingsLayout::back,"< Back",fonts::value); alignRight(back_);
     const char* names[]={"Appearance","Phone","Navigation","Clock & Date"};
-    const char* details[]={"Theme · Design","Not connected","Setup required","Format · Timezone"};
+    const char* details[]={"Theme · Design","Not connected","Offline map · Phone GPS","Format · Timezone"};
     const Icon icons[]={Icon::Appearance,Icon::Phone,Icon::Navigation,Icon::Clock};
     for(int i=0;i<4;++i) {
         tiles_[i]=box(root_.get(),SettingsLayout::tile(i));
@@ -22,7 +22,7 @@ SettingsHome::SettingsHome(lv_obj_t* parent):root_(box(parent,SettingsLayout::bo
     show(root_.get(),false);
 }
 void SettingsHome::update(const ViewOptions& options,const PhoneState& phone,const Palette& p,int progress) {
-    show(root_.get(),progress==1000&&!options.appearance&&!options.clock&&!options.bluetooth&&!options.wifi&&!options.phone);
+    show(root_.get(),progress==1000&&!options.appearance&&!options.clock&&!options.bluetooth&&!options.wifi&&!options.phone&&!options.map);
     if(progress!=1000) return;
     text(details_[1],!phone.available()?"Status unavailable":phone.connected?"Connected":phone.paired?"Waiting for saved phone":"Pair your phone");
     const lv_opa_t alpha=progress*255/1000;

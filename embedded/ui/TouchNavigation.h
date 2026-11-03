@@ -15,6 +15,11 @@ inline std::optional<SettingsEffect> settingsTouch(DisplayOptions& view,const Cl
     if(!view.settings) return std::nullopt;
     if(!canOpenSettings(state,life)) return reconcileSettings(view,state,life);
     if(!menuReady) return SettingsEffect::None;
+    if(view.map){
+        const int xs[]={340,430,530,620,690},widths[]={80,90,80,60,60};
+        if(y>=442&&y<480)for(unsigned i=0;i<5;++i)if(x>=xs[i]&&x<xs[i]+widths[i]){view.mapFocus=i;return settingsAction(view,SettingsAction::Select,state,life);}
+        return SettingsEffect::None;
+    }
     y-=SettingsLayout::bounds.y;
     if(view.phone&&state.phone.available()&&valid(state.phone)&&state.phone.pairingRequested) {
         // Modal consumes backdrop taps; only explicit buttons can approve/reject.

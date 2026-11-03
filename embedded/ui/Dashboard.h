@@ -16,6 +16,7 @@
 #include "components/FuelGauge.h"
 #include "components/LifecycleOverlay.h"
 #include "TouchNavigation.h"
+#include "components/MapPage.h"
 
 namespace cluster::ui {
 // Owns the root and fixed-size component members. Components are destroyed
@@ -30,6 +31,7 @@ public:
     ~Dashboard();
     Dashboard(const Dashboard&)=delete;
     Dashboard& operator=(const Dashboard&)=delete;
+    void mapState(const MapPageState& value){mapState_=value;}
     void update(const ClusterState&,const ViewOptions&,const Lifecycle&,std::uint64_t now);
     std::optional<SettingsEffect> touch(ViewOptions& view,const ClusterState& state,const Lifecycle& life,int x,int y) {
         if(!touchVisible_||life.phase()!=Phase::Running) return std::nullopt;
@@ -50,6 +52,7 @@ private:
     PrimaryReadout primary_;
     RideInfoPanel rideInfo_;
     FuelGauge fuel_;
+    MapPage map_;MapPageState mapState_;
     LifecycleOverlay overlay_;
     bool initialized_=false, previousLight_=false, previousShift_=false;
     bool touchVisible_=false,touchMenuReady_=false;

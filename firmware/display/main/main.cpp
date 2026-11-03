@@ -56,7 +56,7 @@ extern "C" void app_main() {
     // Return frames share console TX GPIO43 with USB bridge RX. Preserve all
     // binary bytes; only the external RX input (vehicle GPIO18) is attached.
     uart_vfs_dev_port_set_tx_line_endings(0,ESP_LINE_ENDINGS_LF);
-    cluster::board::VehicleUart vehicleUart;vehicleUart.initialize(esp_random());
+    static cluster::board::VehicleUart vehicleUart;vehicleUart.initialize(esp_random());
     const auto dispatch=[&](cluster::SettingsEffect effect,std::uint64_t now){
         if(effect==cluster::SettingsEffect::SavePreferences||effect==cluster::SettingsEffect::SaveClockPreferences)savePreferences(effect);
         else if(effect!=cluster::SettingsEffect::None)vehicleUart.command(effect,now);
@@ -86,12 +86,12 @@ extern "C" void app_main() {
         const auto clicks=vehicleUart.takeClicks();
         if(live) {
             state=vehicleUart.state(now);
-            for(unsigned i=0;i<clicks.trip;++i) cluster::applyAction(view,cluster::DashboardAction::NextTrip);
-            for(unsigned i=0;i<clicks.info;++i) cluster::applyAction(view,cluster::DashboardAction::NextInfo);
+            for(unsigned i=0;i<clicks.trip;++i){if(view.map)cluster::settingsAction(view,cluster::SettingsAction::Next,state,life);else cluster::applyAction(view,cluster::DashboardAction::NextTrip);}
+            for(unsigned i=0;i<clicks.info;++i){if(view.map)cluster::settingsAction(view,cluster::SettingsAction::Select,state,life);else cluster::applyAction(view,cluster::DashboardAction::NextInfo);}
         }
         if(live&&life.phase()==cluster::Phase::Running) {
             if(state.phone.available()&&state.phone.pairingRequested&&!previousPairRequest) {
-                view.settings=true;cluster::cancelClock(view);cluster::cancelAppearance(view);view.phone=true;view.phoneFocus=0;view.phoneForgetConfirmation=false;
+                view.settings=true;cluster::cancelClock(view);cluster::cancelAppearance(view);view.map=false;view.phone=true;view.phoneFocus=0;view.phoneForgetConfirmation=false;
             }
             previousPairRequest=state.phone.available()&&state.phone.pairingRequested;
         }
@@ -165,9 +165,18 @@ extern "C" void app_main() {
             else if(view.appearance&&view.appearanceSaving)cluster::appearanceSaveResult(view,saved);
             ESP_LOGI(tag,"Preferences save %s",saved?"committed":"failed");
         }
-        life.advance(now); dispatch(cluster::reconcileSettings(view,state,life),now); dashboard.update(state,view,life,now);
+        life.advance(now); dispatch(cluster::reconcileSettings(view,state,life),now);
+        const auto mapStatus=vehicleUart.mapStore().status(now);
+        char mapTransfer[64];const auto stage=cluster::maplink::State(mapStatus[6]);
+        const auto total=cluster::maplink::get(mapStatus.data(),32),offset=cluster::maplink::get(mapStatus.data(),28);
+        if(stage==cluster::maplink::State::Receiving)std::snprintf(mapTransfer,sizeof mapTransfer,"%s map · %u%%",vehicleUart.mapStore().scene()?"Updating":"Loading",unsigned(total?offset*100/total:0));
+        else std::snprintf(mapTransfer,sizeof mapTransfer,"%s",stage==cluster::maplink::State::Verifying?"Checking map...":stage==cluster::maplink::State::Failed?"Map update failed · Retry":stage==cluster::maplink::State::Unsupported?"Map unavailable":vehicleUart.mapStore().scene()?"Offline road map":"Share map from phone");
+        const char* locationLabels[]={"Waiting for timed location","Waiting for location","Current location · north up","Location stale · marker hidden","Location accuracy low","Outside downloaded area","Location sharing stopped","Location invalid"};
+        cluster::ui::MapPageState mapView;mapView.scene=vehicleUart.mapStore().scene();mapView.pose=vehicleUart.mapStore().pose(now);mapView.transfer=mapTransfer;mapView.location=locationLabels[mapStatus[68]];
+        dashboard.mapState(mapView);dashboard.update(state,view,life,now);
         lv_timer_handler();
         if(now-report>=10000) {
+            ESP_LOGI(tag,"MAP ready=%d tx_queue_full=%u tx_stack_margin=%u",int(vehicleUart.mapStore().ready()),vehicleUart.txRejected(),vehicleUart.txStackMargin());
             ESP_LOGI(tag,"UART RX GPIO38: accepted=%u overruns/errors=%u fresh=%d source=%s",
                 vehicleUart.accepted(),vehicleUart.overruns(),int(vehicleUart.fresh(now)),live?"UART":"BENCH");
             const unsigned frames=cluster::board::flushCount();

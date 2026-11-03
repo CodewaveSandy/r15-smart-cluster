@@ -87,3 +87,7 @@ Vehicle BLE bonding, return controls, saved reconnect and authenticated connecte
 
 
 Background-sync firmware now adds authenticated c013 capability reads, c014 discrete-input full snapshots/notifications (5Hz maximum) and c015 health counters/maxima under the existing c010 service. Existing c011/c012 and UART formats stay compatible. It exposes actual gear/lamp/button samples only; speed/RPM/fuel/bike voltage are Unsupported. App background service and physical B1/B2 remain pending. See [firmware handoff](../../docs/background-sync.md#supplied-firmware-implementation-and-app-handoff) and [exact wire contract](../../mobile/docs/protocol.md#background-sync-capabilities-and-telemetry-c013c015). No navigation/Wi-Fi capability is advertised.
+
+## Phase 1 maps
+
+Map firmware is implemented and build/host-preview verified; physical transfer/resource/load acceptance and Android GPS remain pending. See the [implementation handoff](../../docs/map-phase-1.md), [exact wire contract](../../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification) and [build/bench evidence](../../docs/development.md#phase-1-map-firmware-integration). Existing guarded flash commands, pins, baud rate, bond storage and partition policies are preserved.

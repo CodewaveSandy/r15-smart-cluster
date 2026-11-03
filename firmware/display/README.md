@@ -91,3 +91,7 @@ User bench acceptance (2026-10-29): the user reports the display follow-up worki
 ## BLE pairing bench
 
 Vehicle BLE bonding, return controls, saved reconnect and authenticated connected phone name/battery/time are implemented; core companion behavior is user-confirmed, with extended faults/load still pending. Follow [wiring, flashing and Android acceptance](../../docs/development.md#vehicle-ble-uart-bench). Use compatible current images on both boards; metadata connection identifiers extend the older R15P status contract. The working GPIO17 → IO38 receive link remains; add display UART0 TX43 → vehicle GPIO18 with no power connection. Background continuity is the next gate; follow [firmware background sync](../../docs/background-sync.md) and the [current phone protocol](../../mobile/docs/protocol.md). Full telemetry, Wi-Fi and navigation remain pending.
+
+## Phase 1 maps
+
+Map firmware is implemented and build/host-preview verified; physical transfer/resource/load acceptance and Android GPS remain pending. See the [implementation handoff](../../docs/map-phase-1.md), [exact wire contract](../../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification) and [build/bench evidence](../../docs/development.md#phase-1-map-firmware-integration). Existing guarded flash commands, pins, baud rate, bond storage and partition policies are preserved.

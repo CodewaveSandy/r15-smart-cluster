@@ -36,7 +36,10 @@ bool BlePhone::initialize(std::uint32_t boot) {
     static const ble_uuid128_t capabilityCharacteristic=BLE_UUID128_INIT(0x13,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
     static const ble_uuid128_t telemetryCharacteristic=BLE_UUID128_INIT(0x14,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
     static const ble_uuid128_t healthCharacteristic=BLE_UUID128_INIT(0x15,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
-    static ble_gatt_chr_def characteristics[6]{};
+    static const ble_uuid128_t mapCap=BLE_UUID128_INIT(0x16,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static const ble_uuid128_t mapCommand=BLE_UUID128_INIT(0x17,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static const ble_uuid128_t mapStatus=BLE_UUID128_INIT(0x18,0xc0,0x31,0x25,0x0a,0x9f,0x3b,0xa5,0x67,0x4d,0xd9,0x8f,0x40,0x12,0x3b,0x81);
+    static ble_gatt_chr_def characteristics[9]{};
     static ble_gatt_svc_def services[2]{};
     characteristics[0].uuid=&nameCharacteristic.u;characteristics[0].access_cb=nameAccess;
     characteristics[0].flags=BLE_GATT_CHR_F_WRITE;
@@ -47,6 +50,10 @@ bool BlePhone::initialize(std::uint32_t boot) {
     characteristics[2].uuid=&capabilityCharacteristic.u;characteristics[3].uuid=&telemetryCharacteristic.u;
     characteristics[3].flags|=BLE_GATT_CHR_F_NOTIFY;characteristics[3].val_handle=&telemetryHandle_;
     characteristics[4].uuid=&healthCharacteristic.u;
+    for(unsigned i=5;i<8;++i){characteristics[i].access_cb=mapAccess;characteristics[i].arg=reinterpret_cast<void*>(std::uintptr_t(i));}
+    characteristics[5].uuid=&mapCap.u;characteristics[5].flags=BLE_GATT_CHR_F_READ|BLE_GATT_CHR_F_READ_ENC|BLE_GATT_CHR_F_READ_AUTHEN;
+    characteristics[6].uuid=&mapCommand.u;characteristics[6].flags=BLE_GATT_CHR_F_WRITE|BLE_GATT_CHR_F_WRITE_ENC|BLE_GATT_CHR_F_WRITE_AUTHEN;
+    characteristics[7].uuid=&mapStatus.u;characteristics[7].flags=BLE_GATT_CHR_F_READ|BLE_GATT_CHR_F_READ_ENC|BLE_GATT_CHR_F_READ_AUTHEN|BLE_GATT_CHR_F_NOTIFY|BLE_GATT_CHR_F_NOTIFY_INDICATE_ENC|BLE_GATT_CHR_F_NOTIFY_INDICATE_AUTHEN;characteristics[7].val_handle=&mapHandle_;
     services[0].type=BLE_GATT_SVC_TYPE_PRIMARY;services[0].uuid=&nameService.u;services[0].characteristics=characteristics;
     if(ble_gatts_count_cfg(services)||ble_gatts_add_svcs(services))return false;
     ble_store_config_init();write_=ble_hs_cfg.store_write_cb;delete_=ble_hs_cfg.store_delete_cb;
@@ -113,6 +120,7 @@ phonetelemetry::Bytes BlePhone::telemetry(std::uint64_t now) {
     return phonetelemetry::encode(sample);
 }
 void BlePhone::resetStream() {
+    invalidateMap();mapSubscribed_=mapNotifyPending_=false;mapLocationAt_=mapDataAt_=0;
     subscribed_=notifyPending_=notifyStalled_=false;nextNotify_=notifyAt_=0;lastMetadata_=0;metadataAt_=0;
 }
 void BlePhone::notify(std::uint64_t now) {
@@ -129,6 +137,80 @@ void BlePhone::notify(std::uint64_t now) {
     if(rc){if(notifyPending_)phonetelemetry::increment(diagnostics_.notifyErrors);notifyPending_=false;}
     else phonetelemetry::increment(diagnostics_.notifyQueued);
 }
+
+void BlePhone::invalidateMap(){
+    portENTER_CRITICAL(&mux_);mapCommandPending_=mapLocationPending_=false;pendingMapControl_=0;capabilityAt_=statusAt_=0;mapDirty_=true;portEXIT_CRITICAL(&mux_);
+}
+void BlePhone::mapDownstream(const maplink::Message& m,std::uint64_t now){
+    const auto* b=m.bytes.data();
+    const bool cap=maplink::validCapability(b,m.size),status=maplink::validStatus(b,m.size);
+    if((!cap&&!status)||maplink::get(b,8)!=boot_||!maplink::get(b,16))return;
+    portENTER_CRITICAL(&mux_);
+    // Display boot change makes pending commands/status from the old display
+    // unusable even if their BLE connection happens to remain open.
+    if(cap){if(maplink::get(downstreamCapability_.data(),16)!=maplink::get(b,16)){statusAt_=0;pendingMapControl_=0;mapCommandPending_=mapLocationPending_=false;}
+        std::copy_n(b,64,downstreamCapability_.begin());capabilityAt_=now;}
+    else if(maplink::get(b,12)==published_.phone.connectionId&&maplink::get(b,16)==maplink::get(downstreamCapability_.data(),16)&&
+        (!statusAt_||maplink::get(b,40,8)>=maplink::get(downstreamStatus_.data(),40,8))){
+        std::copy_n(b,80,downstreamStatus_.begin());statusAt_=now;
+        if(maplink::get(b,24)==pendingMapControl_)pendingMapControl_=0;
+    }
+    mapDirty_=true;portEXIT_CRITICAL(&mux_);
+}
+bool BlePhone::takeMap(maplink::Message& out,bool location,bool urgentOnly){
+    portENTER_CRITICAL(&mux_);bool& pending=location?mapLocationPending_:mapCommandPending_;
+    const bool urgent=!location&&(mapCommand_.bytes[5]==6||mapCommand_.bytes[5]==8);
+    const bool have=pending&&(!urgentOnly||urgent);if(have){out=location?mapLocation_:mapCommand_;pending=false;}portEXIT_CRITICAL(&mux_);return have;
+}
+maplink::Capability BlePhone::mapCapability(std::uint64_t now){
+    portENTER_CRITICAL(&mux_);auto b=downstreamCapability_;const auto at=capabilityAt_;portEXIT_CRITICAL(&mux_);
+    const bool fresh=at&&now>=at&&now-at<=1500&&displayAvailable(now)&&maplink::validCapability(b.data(),b.size());
+    if(!fresh)b=maplink::capability(boot_,state_.phone.connectionId,0,false);
+    else {maplink::put(b.data(),8,boot_);maplink::put(b.data(),12,state_.phone.connectionId);maplink::seal(b.data(),64);}
+    return b;
+}
+maplink::Status BlePhone::mapStatus(std::uint64_t now){
+    const auto cap=mapCapability(now);
+    portENTER_CRITICAL(&mux_);auto b=downstreamStatus_;const auto at=statusAt_;portEXIT_CRITICAL(&mux_);
+    if(!at||now<at||now-at>=2000||!cap[6]||maplink::get(b.data(),8)!=boot_||maplink::get(b.data(),12)!=state_.phone.connectionId||maplink::get(b.data(),16)!=maplink::get(cap.data(),16)){
+        b={};maplink::prefix(b.data(),'S');b[5]=80;maplink::put(b.data(),8,boot_);maplink::put(b.data(),12,state_.phone.connectionId);maplink::seal(b.data(),80);
+    }
+    return b;
+}
+int BlePhone::mapAccess(std::uint16_t handle,std::uint16_t,ble_gatt_access_ctxt* c,void* arg){
+    auto& s=*instance_;const auto kind=reinterpret_cast<std::uintptr_t>(arg);const auto now=nowMs();
+    if(!s.authenticated(handle))return BLE_ATT_ERR_INSUFFICIENT_AUTHEN;
+    if(c->offset)return BLE_ATT_ERR_INVALID_OFFSET;
+    if(kind==5&&c->op==BLE_GATT_ACCESS_OP_READ_CHR){if(ble_att_mtu(handle)<96)return BLE_ATT_ERR_INSUFFICIENT_RES;const auto b=s.mapCapability(now);return os_mbuf_append(c->om,b.data(),b.size())?BLE_ATT_ERR_INSUFFICIENT_RES:0;}
+    if(ble_att_mtu(handle)<96)return BLE_ATT_ERR_INSUFFICIENT_RES;
+    if(kind==7&&c->op==BLE_GATT_ACCESS_OP_READ_CHR){const auto b=s.mapStatus(now);return os_mbuf_append(c->om,b.data(),b.size())?BLE_ATT_ERR_INSUFFICIENT_RES:0;}
+    if(kind!=6||c->op!=BLE_GATT_ACCESS_OP_WRITE_CHR)return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    maplink::Message m;m.size=OS_MBUF_PKTLEN(c->om);
+    if(m.size>std::min(240u,unsigned(ble_att_mtu(handle)-3))||m.size<36||os_mbuf_copydata(c->om,0,m.size,m.bytes.data())||!maplink::validCommand(m))return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    const auto cap=s.mapCapability(now);const auto* b=m.bytes.data();
+    if(cap[6]!=7||maplink::get(b,8)!=s.boot_||maplink::get(b,12)!=s.state_.phone.connectionId||maplink::get(b,16)!=maplink::get(cap.data(),16)||m.size>maplink::get(cap.data(),28,2))return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    const auto type=maplink::Type(b[5]);const auto seq=std::uint32_t(maplink::get(b,24));
+    const auto display=s.mapStatus(now);
+    if(type!=maplink::Type::Location&&type!=maplink::Type::Stop&&type!=maplink::Type::Cancel&&!display[69]&&maplink::get(display.data(),24)!=seq)return BLE_ATT_ERR_INSUFFICIENT_RES;
+    if(type==maplink::Type::Begin&&maplink::get(b,32)>maplink::get(cap.data(),20))return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    portENTER_CRITICAL(&s.mux_);bool accepted=false;
+    if(type==maplink::Type::Location){if(!s.mapLocationAt_||now-s.mapLocationAt_>=500){s.mapLocation_=m;s.mapLocationPending_=true;s.mapLocationAt_=now;accepted=true;}}
+    else if((!s.pendingMapControl_||s.pendingMapControl_==seq||type==maplink::Type::Stop||type==maplink::Type::Cancel)&&(!s.mapCommandPending_||type==maplink::Type::Stop||type==maplink::Type::Cancel)&&
+        (type!=maplink::Type::Data||!s.mapDataAt_||now-s.mapDataAt_>=67)){
+        s.mapCommand_=m;s.mapCommandPending_=true;s.pendingMapControl_=seq;accepted=true;if(type==maplink::Type::Data)s.mapDataAt_=now;
+        if(type==maplink::Type::Stop||type==maplink::Type::Cancel)s.mapLocationPending_=false;
+    }
+    portEXIT_CRITICAL(&s.mux_);return accepted?0:BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+void BlePhone::notifyMap(std::uint64_t now){
+    if(!mapSubscribed_||mapNotifyPending_||!authenticated(connection_)||ble_att_mtu(connection_)<96)return;
+    portENTER_CRITICAL(&mux_);const bool dirty=mapDirty_.exchange(false);portEXIT_CRITICAL(&mux_);
+    if(!dirty)return;
+    const auto b=mapStatus(now);auto* mbuf=ble_hs_mbuf_from_flat(b.data(),b.size());if(!mbuf){mapDirty_=true;return;}
+    mapNotifyPending_=true;mapNotifyAt_=now;
+    if(ble_gatts_notify_custom(connection_,mapHandle_,mbuf)){mapNotifyPending_=false;mapDirty_=true;}
+}
+
 void BlePhone::fault(const char* source,int code,int type) {
     if(!faultLogged_)std::printf("@BLE FAULT source=%s code=%d type=%d\n",source,code,type);
     faultLogged_=true;state_.phone.quality=Quality::Unavailable;
@@ -276,7 +358,7 @@ void BlePhone::process() {
         if(rc)state_.phone.commandFailed=true;
     }
     finishForget(now);
-    if(ready_&&!forgetting_)advertise();notify(now);publish();
+    if(ready_&&!forgetting_)advertise();notify(now);notifyMap(now);publish();
 }
 void BlePhone::finishForget(std::uint64_t now) {
     if(!forgetting_)return;
@@ -336,11 +418,13 @@ int BlePhone::gap(ble_gap_event* event,void* arg) {
         s.state_.phone.commandFailed=false;s.state_.phone.connected=true;s.state_.phone.pairWindowOpen=false;s.state_.phone.pairingRequested=s.state_.phone.pairingApproved=false;
         s.state_.phone.pairingCode={};s.state_.pairing=s.state_.code=0;break;
     case BLE_GAP_EVENT_SUBSCRIBE:
+        if(event->subscribe.conn_handle==s.connection_&&event->subscribe.attr_handle==s.mapHandle_){s.mapSubscribed_=event->subscribe.cur_notify&&s.authenticated(s.connection_);s.mapDirty_=true;}
         if(event->subscribe.conn_handle==s.connection_&&event->subscribe.attr_handle==s.telemetryHandle_) {
             s.subscribed_=event->subscribe.cur_notify; // CCCD rewrites cannot bypass the 200 ms cadence.
         }
         break;
     case BLE_GAP_EVENT_NOTIFY_TX:
+        if(event->notify_tx.conn_handle==s.connection_&&event->notify_tx.attr_handle==s.mapHandle_&&!event->notify_tx.indication)s.mapNotifyPending_=false;
         if(event->notify_tx.conn_handle==s.connection_&&event->notify_tx.attr_handle==s.telemetryHandle_&&!event->notify_tx.indication) {
             s.notifyPending_=s.notifyStalled_=false;
             if(event->notify_tx.status)phonetelemetry::increment(s.diagnostics_.notifyErrors);

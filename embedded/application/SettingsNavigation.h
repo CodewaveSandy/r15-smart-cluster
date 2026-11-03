@@ -36,6 +36,7 @@ inline void clockSaveResult(DisplayOptions& options,bool saved) {
 inline bool canOpenSettings(const ClusterState&,const Lifecycle& life) {return life.phase()==Phase::Running;}
 inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction action,const ClusterState& state,const Lifecycle& life) {
     if(action==SettingsAction::Back) {
+        if(options.map){options.map=false;return SettingsEffect::None;}
         if(options.clock){cancelClock(options);return SettingsEffect::None;}
         if(options.phone){
             if(options.phoneForgetConfirmation){options.phoneForgetConfirmation=false;options.phoneFocus=0;}
@@ -56,8 +57,18 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
     }
     if(action==SettingsAction::Open) { if(canOpenSettings(state,life)) options.settings=true; return SettingsEffect::None; }
     if(!options.settings) return SettingsEffect::None;
-    if(!canOpenSettings(state,life)) { options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect; }
-    if(options.clock) {
+    if(!canOpenSettings(state,life)) { options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; options.map=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect; }
+    if(options.map){
+        if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.mapFocus=(options.mapFocus+1)%5;
+        else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.mapFocus=(options.mapFocus+4)%5;
+        else if(action==SettingsAction::Select){
+            if(options.mapFocus==0)options.map=false;
+            else if(options.mapFocus==1)options.mapOverview=false;
+            else if(options.mapFocus==2)options.mapOverview=true;
+            else if(options.mapFocus==3){options.mapOverview=false;if(options.mapZoom>1)--options.mapZoom;}
+            else if(options.mapFocus==4){options.mapOverview=false;if(options.mapZoom<3)++options.mapZoom;}
+        }
+    } else if(options.clock) {
         if(options.clockSaving)return SettingsEffect::None;
         if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.clockFocus=(options.clockFocus+1)%7;
         else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.clockFocus=(options.clockFocus+6)%7;
@@ -158,7 +169,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
                 options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false; options.appearanceSaving=false;
             } else if(options.settingsFocus==1) {
                 options.phone=true;options.phoneFocus=0;options.phoneForgetConfirmation=false;
-            } else if(options.settingsFocus==3) {
+            } else if(options.settingsFocus==2){options.map=true;options.mapFocus=1;} else if(options.settingsFocus==3) {
                 options.clock=true;options.clockOriginal=options.clockPreferences;options.clockFocus=0;
                 options.clockSaveFailed=false;options.clockSaving=false;
             }
@@ -170,7 +181,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
 }
 inline SettingsEffect reconcileSettings(DisplayOptions& options,const ClusterState& state,const Lifecycle& life) {
     if(!canOpenSettings(state,life)) {
-        options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect;
+        options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; options.map=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect;
     }
     if(options.phone){
         if(!state.phone.available()||!state.phone.paired)options.phoneForgetConfirmation=false;
