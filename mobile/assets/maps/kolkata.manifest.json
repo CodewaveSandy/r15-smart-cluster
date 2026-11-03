@@ -1,0 +1,24 @@
+{
+  "format": "R15B",
+  "version": 1,
+  "bytes": 30066,
+  "sha256": "3443bb2dab6efe9a91840b0c8f375cfd970398c86c6fac0d23c93327fdd91685",
+  "body_crc32": "420a1154",
+  "road_chunks": 1435,
+  "points": 4494,
+  "bbox_south_west_north_east": [
+    22.546,
+    88.337,
+    22.574,
+    88.365
+  ],
+  "origin_lat_lon": [
+    22.560000000000002,
+    88.351
+  ],
+  "osm_timestamp": "2026-11-02T15:08:51Z",
+  "source_sha256": "38e7324cfa61598decd972af89135a4008736e9a7ae4fc07ed270805804c04b5",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "license": "ODbL-1.0",
+  "license_url": "https://www.openstreetmap.org/copyright"
+}

@@ -46,3 +46,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// Native foreground location, independent of Flutter pages/engine lifetime.
+dependencies {
+    implementation("com.google.android.gms:play-services-location:21.4.0")
+}

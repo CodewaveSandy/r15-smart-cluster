@@ -37,6 +37,7 @@ class MainActivity : FlutterActivity() {
     private var sync: ClusterSyncService? = null
     private var syncBound = false
     private var observingLink = false
+    private var mapStartRequested = false
     private val linkObserver: (Map<String, Any?>) -> Unit = { linkEvents?.success(it) }
     private val syncConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -87,6 +88,16 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "linkStatus" -> result.success(linkSnapshot())
+                    "startMapSharing" -> {
+                        if (!observingLink || sync == null) { result.error("foreground", "Open the connected app before sharing location.", null); return@setMethodCallHandler }
+                        mapStartRequested = true
+                        val permissions = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+                        if (permissions.any { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }) requestPermissions(permissions, 105)
+                        else { mapStartRequested = false; sync?.startMapSharing() }
+                        result.success(null)
+                    }
+                    "stopMapSharing" -> { mapStartRequested = false; sync?.stopMapSharing(); result.success(null) }
+                    "bleAccessLost" -> { sync?.accessLost(); result.success(null) }
                     "disconnectLink" -> {
                         sync?.stopSync() ?: run {
                             getSharedPreferences("ble-selection", MODE_PRIVATE).edit().putBoolean("stopped", true).apply()
@@ -164,6 +175,12 @@ class MainActivity : FlutterActivity() {
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 105) {
+            val allowed = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (!allowed) { mapStartRequested = false; sync?.stopMapSharing("Location access denied. Allow it in app settings, then Start sharing.") }
+            else if (mapStartRequested && observingLink) { mapStartRequested = false; sync?.startMapSharing() }
+            return
+        }
         if (requestCode == 101) {
             if (accessOnly) { finishAccess(); return }
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) startScan()
@@ -299,6 +316,7 @@ class MainActivity : FlutterActivity() {
     }
     override fun onResume() {
         super.onResume(); observingLink = true
+        if (mapStartRequested && (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) { mapStartRequested = false; sync?.startMapSharing() }
         sync?.observer = linkObserver
         sync?.refresh(); linkEvents?.success(linkSnapshot())
     }

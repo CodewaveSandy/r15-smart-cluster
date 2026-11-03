@@ -1,0 +1,42 @@
+{
+  "source": "OpenStreetMap contributors",
+  "license": "ODbL-1.0",
+  "license_url": "https://www.openstreetmap.org/copyright",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "query": "[out:json][timeout:45];way[\"highway\"][\"area\"!=\"yes\"](22.546,88.337,22.574,88.365);out tags geom;",
+  "bbox_south_west_north_east": [
+    22.546,
+    88.337,
+    22.574,
+    88.365
+  ],
+  "origin_lat_lon": [
+    22.560000000000002,
+    88.351
+  ],
+  "osm_timestamp": "2026-11-02T15:08:51Z",
+  "imported_utc": "2026-11-02T17:26:15.288569+00:00",
+  "source_sha256": "38e7324cfa61598decd972af89135a4008736e9a7ae4fc07ed270805804c04b5",
+  "ways_by_highway": {
+    "primary": 59,
+    "secondary": 195,
+    "residential": 336,
+    "tertiary": 98,
+    "track": 6,
+    "service": 483,
+    "living_street": 64,
+    "footway": 117,
+    "path": 6,
+    "secondary_link": 10,
+    "busway": 1,
+    "primary_link": 1,
+    "pedestrian": 1,
+    "steps": 7
+  },
+  "road_chunks": 1435,
+  "source_points": 7543,
+  "output_points": 4494,
+  "simplification_tolerance_m": 2.0,
+  "normalized_or_truncated_names": 35,
+  "note": "Road snapshot only. No route, live traffic, legal access decision or GPS. Source/generated map are ODbL data; not firmware assets."
+}

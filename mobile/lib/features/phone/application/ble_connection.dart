@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../home/domain/bike_telemetry.dart';
 import '../data/ble_pairing.dart';
+import '../../navigation/domain/map_sharing.dart';
 import '../data/nearby_platform.dart';
 import '../domain/phone_status.dart';
 
@@ -33,6 +34,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   Completer<void>? _connectionResult;
   bool _nativeStarted = false;
   String? error;
+  MapSharing mapSharing = const MapSharing();
   BikeTelemetry telemetry = const BikeTelemetry.unavailable();
   PhoneMetadataState _metadata = PhoneMetadataState.notConnected;
   bool get hasSelection => _selected != null;
@@ -79,6 +81,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
             _ => PhoneMetadataState.unavailable,
           }
         : PhoneMetadataState.notConnected;
+    mapSharing = MapSharing.fromNative(value);
     telemetry = _live
         ? telemetryFromNative(value['telemetry'])
         : const BikeTelemetry.unavailable();
@@ -93,6 +96,10 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  Future<void> startMapSharing() => _platform.startMapSharing();
+  Future<void> stopMapSharing() => _platform.stopMapSharing();
+  Future<void> locationSettings() => _platform.locationSettings();
+  Future<void> appSettings() => _platform.appSettings();
   Future<void> accessReady() async {
     _access = true;
     await onForeground();
@@ -128,7 +135,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     _busy = false;
     _commandPending = false;
     telemetry = const BikeTelemetry.unavailable();
-    _platform.disconnect().catchError((Object _) {});
+    _platform.accessLost().catchError((Object _) {});
   }
 
   Future<void> select(NearbyDevice device) async {

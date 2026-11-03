@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
       - name: Read pinned Flutter version
         id: flutter
         run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"

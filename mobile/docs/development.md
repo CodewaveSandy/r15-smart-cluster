@@ -6,36 +6,23 @@ Updated: 2026-11-02. Android is the implemented physical path; iOS shell/device 
 
 Pinned Flutter 3.47.7, framework abaf9c5237, engine deb287481e, Dart 3.13.5; `.flutter-version` does not select the SDK automatically. Keep `pubspec.lock`. Generated Android tooling pins AGP 9.1.0, Kotlin 2.4.0 and Gradle 9.3.1, Java target 17; verify installed JDK/SDK compatibility through doctor and the pinned project. iOS deployment target is 15.0; full Xcode/native setup and separate device verification are required. App IDs/signing are development configuration; release signing remains unconfigured.
 
-With Flutter/Python on PATH, authorized Android USB debugging, compatible Android SDK/JDK and accepted licenses, run from repository root:
+**Current user workflow (2026-11-03): code locally, build APKs in GitHub Actions, install through platform-tools/ADB, and manually test on the phone.** Do not attempt local Android builds, Flutter device runs, ad-hoc native compilation, Android SDK installation or Android Studio installation. Earlier local compilation records below are historical evidence, not instructions to repeat.
+
+Optional non-build checks from `mobile/`, when the existing Flutter/Dart tooling is available:
 
 ```sh
-bash scripts/preview-mobile.sh
-# If multiple phones are connected, pass the ID from flutter devices:
-bash scripts/preview-mobile.sh YOUR_ANDROID_DEVICE_ID
-```
-
-The launcher verifies SDK version, selects a real device and resolves locked dependencies. Uncached first builds need network access. Press `r` for hot reload, `R` for restart/opening and `q` to quit. SDK installation, licenses and device authorization remain explicit setup steps. Host firmware/SDL builds require no mobile SDK.
-
-Run checks from `mobile/`:
-
-```sh
-flutter --version
-flutter doctor -v
 flutter pub get --enforce-lockfile
 dart format --output=none --set-exit-if-changed lib
 flutter analyze --no-pub
-flutter build apk --debug --no-pub
-# Optional run on the selected real device:
-flutter run --no-pub -d YOUR_ANDROID_DEVICE_ID
-# Separate iOS gate, only with full Xcode/simulator tooling:
-flutter build ios --simulator --no-pub
 ```
+
+App UI verification targets modern/latest Android devices at normal text size. Small-screen/2× text checks are not required unless the user requests them; older records below are historical. For APK generation/install use the cloud workflow below. The existing local launcher is a legacy tool, not the current app development workflow; do not invoke it automatically. iOS work remains separate and is not authorized by this Android phase.
 
 Keep generated native project source and locks in Git. Keep SDKs/caches, build products, captures, isolated stores and credentials out. Do not build/install a mobile toolchain on the firmware Mac merely to verify unrelated firmware/docs.
 
 ## Build on GitHub, install from the Mac
 
-The `Mobile APK` workflow (`.github/workflows/mobile-apk.yml`) runs on every push, on all branches, and can also be started from GitHub Actions → Mobile APK → Run workflow. It builds only `mobile/` on a standard Ubuntu runner with Java 17 and the Flutter version in `mobile/.flutter-version`. It restores locked dependencies, checks Dart formatting/static analysis and builds a universal debug APK. No automated suites or firmware builds run. The `r15-companion-debug` artifact contains the APK, SHA-256 checksum and source commit/run metadata; retention is seven days. Public-repository standard runner compute is free; artifact/cache storage has separate limits. Download before expiration or rerun the workflow.
+The `Mobile APK` workflow (`.github/workflows/mobile-apk.yml`) runs on every push, on all branches, and can also be started from GitHub Actions → Mobile APK → Run workflow. It builds only `mobile/` on a standard Ubuntu runner with Java 21 and the Flutter version in `mobile/.flutter-version`. It restores locked dependencies, checks Dart formatting/static analysis and builds a universal debug APK. No automated suites or firmware builds run. The `r15-companion-debug` artifact contains the APK, SHA-256 checksum and source commit/run metadata; retention is seven days. Public-repository standard runner compute is free; artifact/cache storage has separate limits. Download before expiration or rerun the workflow.
 
 The Mac needs GitHub CLI and your existing platform tools, with no Android Studio, Flutter, JDK or full Android SDK required for this path:
 
@@ -78,11 +65,11 @@ Verification on 2026-11-02: shell syntax/help and diff whitespace checks passed.
 | Metadata | Pinned format/analyze and ARM64 debug build/install passed; MTU 256/status 0, c012 write status 0; user confirmed actual phone name/battery/local date/time. Periodic writes succeeded for over four minutes; Disconnect/Connect and explicit app relaunch delivered fresh accepted snapshots |
 | Firmware | Build/package/partition and host preview checks previously passed; user-operated images supplied on both boards, exact flashed hashes not collected for every app run |
 
-These are core milestone observations, not background, extended reliability, iOS or bike acceptance. No automated suites were run for the latest milestones. Current normal bike telemetry is unavailable; Navigate has no provider/map service. Current metadata is transient best-effort native scheduling, with no foreground service.
+These are core milestone observations, not background, extended reliability, iOS or bike acceptance. No automated suites were run for the latest milestones. These older milestones predate the native foreground-service/telemetry integration and current phase 1 map implementation; consult the later verification sections for current source status.
 
 Still manually verify the latest combined first-pair ordering; reject/cancel/timeouts/closed enrollment; other app occupying the sole slot; phone/cluster asymmetric Forget; radio/permission loss; invalid/unsupported/long names; battery 0/100/unknown; invalid/unavailable time; date rollover and automatic/manual timezone/12-hour formats; unsupported endpoint/MTU failure; missing callback; metadata expiry and delayed/old-session data; independent board reset; NVS/render/radio concurrent load. Preserve warning visibility, focus/back and both 2-second lifecycle sequences. Run [B1 background acceptance](../../docs/background-sync.md#joint-acceptance-b1-locked-screen-continuity) independently of earlier foreground checks.
 
-Record revision/build/configuration, device/OS, image hashes where available, exact steps, duration, power/debug state, numeric native state/write outcomes, gaps/recovery and failures. Capture phone UI in dark/light, small-screen/large-text and reduced motion as affected. Never include pairing codes, keys, labels/addresses, phone contents, routes or raw payloads. Debugger/USB-connected runs cannot establish untethered pocket behavior.
+Record revision/build/configuration, device/OS, image hashes where available, exact steps, duration, power/debug state, numeric native state/write outcomes, gaps/recovery and failures. Capture phone UI in dark/light and unavailable/permission states on the current modern target device at normal text size; no small-screen/2× text checks unless requested. Never include pairing codes, keys, labels/addresses, phone contents, routes or raw payloads. Debugger/USB-connected runs cannot establish untethered pocket behavior.
 
 ## Background-sync integration verification
 
@@ -94,7 +81,7 @@ An isolated ignored web preview built from the actual Home widget was used for m
 
 Push the reviewed changes through the normal Git workflow to build the actual Android APK in Actions, then install with `bash scripts/install-mobile-apk.sh`. Connect while visible; check the foreground notification and real cluster metadata/gear, then lock/untether the phone for B1/B2. Record Actions run/commit, APK hash, flashed firmware hashes, phone/OS, notification/Nearby permissions and battery settings with numeric observations.
 
-For a cloud diagnostic build, use GitHub Actions → Mobile APK → Run workflow and enable `link_diagnostics` (ordinary push builds leave it off). Local diagnostic builds pass `--dart-define=R15_LINK_DIAGNOSTICS=true` to `flutter build apk --debug --no-pub`. The artifact build-info records the diagnostics flag. This enables ten-second serialized c015 polling and numeric `R15BleLink` age/gap/RTT/drift-budget/counter logs while sync is active. Normal builds read one health baseline only. Collect with the existing platform tools:
+For a cloud diagnostic build, use GitHub Actions → Mobile APK → Run workflow and enable `link_diagnostics` (ordinary push builds leave it off). Use that Actions input for diagnostic APKs; do not build them locally. The artifact build-info records the diagnostics flag. This enables ten-second serialized c015 polling and numeric `R15BleLink` age/gap/RTT/drift-budget/counter logs while sync is active. Normal builds read one health baseline only. Collect with the existing platform tools:
 
 ```sh
 ~/Desktop/learning/platform-tools/adb logcat -s R15BleLink:I
@@ -140,3 +127,25 @@ The launcher builds the Swift CoreBluetooth/Keychain helper as `R15 Nearby.app`,
 | Freshness | Phone heartbeat two seconds; host disconnected after six seconds; IPC unavailable after 1.5 seconds. No old heartbeat revives an expired session |
 
 Secrets stay in protected stores/private temporary files; bootstrap/build outputs are ignored. This adapter neither provisions ESP32 Wi-Fi nor implements road background execution, live bike telemetry, navigation or iOS integration. Its physical phone/Mac BLE/LAN acceptance is separate from the confirmed real ESP32 BLE path. Preserve it during M1; do not copy its UUIDs, HTTP tickets, timeouts or bootstrap into the product contract.
+
+## Phase 1 map location integration
+
+2026-11-03: Android phase 1 sources are integrated after the user reported both map firmware images flashed. This confirms user-reported installation, not paired map/GPS/heap/load acceptance. The app has not yet been packaged/installed in this session; a local `flutter build apk --debug --no-pub` attempt stops at **No Android SDK found**. No Android Studio or full Android SDK was installed. GitHub Actions remains the APK path after committing/pushing the reviewed source.
+
+Implementation:
+
+- MapLibre Flutter is pinned0.27.1 with locked Dart dependencies. Google Play services location is pinned21.4.0 (matching the plugin). MapLibre's Android plugin targets JVM21, so Actions now uses Temurin21; application Kotlin/Java remains JVM17. Current local source compilation uses the cached Kotlin2.4.0 compiler/API36 compile jar and the pinned location AAR's classes; it does not establish Gradle plugin/native-SDK/manifest merge, DEX/APK packaging or runtime compatibility.
+- Navigate draws the packaged central-Kolkata OSM GeoJSON with a local style and bounded road-name sprites generated from bundled Inter. No raster tile URL, remote glyph service, API key or public-Overpass request is used at runtime. The paired binary region/manifest/provenance/ODbL notice are deliberate runtime assets under `mobile/assets/maps/`; temporary data preparation/preview outputs stay ignored. Binary size30,066 bytes/SHA256 `3443bb2dab6efe9a91840b0c8f375cfd970398c86c6fac0d23c93327fdd91685`,1,435 chunks.
+- Visible Share map & location explains the region/location use and requests coarse/fine location. The native foreground service owns Fused Location Provider updates, a single latest observation and a separate nonpersisted sharing intent. It declares the location foreground type/permission and includes Stop map sharing in the notification. Stop sharing retains ordinary BLE sync; Disconnect/Stop sync stops both. No location history/persisted fix, silent sharing restart, boot receiver, blanket battery exemption or second GATT is introduced.
+- BleBond negotiates MTU247 and uses the actual callback (map minimum96); c016/c017/c018 share its existing serialized ATT owner, behind metadata/telemetry maintenance. Strict v1 decoders, SHA/CRC/package bounds, current boot/token/display/generation, display ACK/credit/progress/activation, time handshake, latest-fix coalescing, identical retries and bounded backoff are implemented. A missing ATT callback still closes that GATT before recovery. Retry after map failure uses a new secured connection/BEGIN; no half-map offset resume or trust removal. Stop can preempt map work through the same operation owner.
+- Real fixes use Android elapsed-realtime timestamps, horizontal accuracy, mock state and qualified course; stale/invalid/approximate/poor-accuracy updates never become a precise live pointer. GPS speed is only a course-quality aid. Phone map/fix quality and display-reported map/location status are separate observations. The prepared region is central Kolkata only; outside coverage is explicit. There is no route search, routing/ETA, global tile cache, Wi-Fi provisioning or iOS location adapter.
+
+Actual checks:
+
+1. `dart format lib` and `flutter analyze --no-pub` pass with no issues. `flutter pub get` resolved and locked MapLibre.
+2. All app Kotlin sources compile against the official API36 compile jar, cached Flutter/AndroidX/resource classes and Google location21.4.0 plus its compile dependencies. Existing compatibility/deprecation warnings remain (legacy callbacks/notification/old-API mock check); no compilation errors. This is a source compilation check, not an APK build.
+3. Manual JShell inspection of compiled Kotlin reads/validates the bundled package and matches the language-neutral TIME_REQUEST vector exactly. Further explicit REPL observations show TIME_REQUEST1, TIME_CONFIRM2, no-fix LOCATION7, BEGIN3, DATA4 with240-byte value at MTU247; a corrupt status leaves accepted bytes0, a valid display ACK advances to200, and STOP8 reaches Stopped. Truncated capability is rejected. These were manual fixture/codec/state observations, not automated test files/suites or a physical radio simulation.
+4. An isolated ignored developer web build from the actual Navigate widgets rendered local roads and an explicitly labelled preview point. Manual browser inspection covered dark loading progress, daylight active/neutral point at390×844, and dark stale/unavailable/Stop controls at320×568 with2× text and scrolling. No runtime browser errors were observed. Local labels/marker/phone map are presentation evidence only; native Android OpenGL, GPS, OS permissions, foreground notification and locked-screen operation remain device checks. The standalone preview font-tree-shaking notice about unused Cupertino icon fonts is not an Android packaging result.
+5. Local APK packaging cannot proceed without an Android SDK; Actions has been updated to JDK21 for the new plugin. No APK, Git commit/push, installation, permission grant, real location collection or BLE transfer was performed during this app implementation. No automated suites were created/restored/run. The earlier vehicle-flash reliability changes remain separate user work.
+
+After the new Actions APK is built, install with the existing USB helper. Connect the already-authorized phone, open Navigate, choose Share map & location and grant Precise location. Check the service notification, display accepted-byte progress, Checking, ACTIVE and a real pointer **inside the supplied region**. Stop sharing must remove the cluster pointer while ordinary metadata/telemetry remain. Then verify denied/approximate/GPS-off/stale/outside states, radio/range recovery, board reset, independent app/UI lifecycle and the untethered60-minute pocket run under the complete [phase 1 acceptance matrix](../../docs/map-phase-1.md#8-phase-1-acceptance-and-evidence). Preserve actual APK/image hashes and measured heap/stack/UART/latency evidence. Neither a web screenshot nor successful ATT write completes this gate.

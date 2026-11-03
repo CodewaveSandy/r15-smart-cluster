@@ -22,6 +22,13 @@ class ClusterSyncService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var link: BleBond
     private val prefs get() = getSharedPreferences("ble-selection", MODE_PRIVATE)
+    private var mapWanted = false
+    private lateinit var location: PhoneLocation
+    private val mapLoader = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private var mapLoadGeneration = 0
+    private var loadedRegion: MapWire.Region? = null
+    private var mapError: String? = null
+    private var suspended = false
     private var wanted = false
     private var foreground = false
     private var retryScheduled = false
@@ -33,7 +40,7 @@ class ClusterSyncService : Service() {
     var observer: ((Map<String, Any?>) -> Unit)? = null
     private val retry = Runnable {
         retryScheduled = false
-        if (!wanted || !eligible()) { stopSync("Bluetooth access or the saved bond is unavailable. Open the app to reconnect."); return@Runnable }
+        if (!wanted || !eligible()) { if (mapWanted) suspendLink("Bluetooth unavailable; map location continues locally") else stopSync("Bluetooth access or the saved bond is unavailable. Open the app to reconnect."); return@Runnable }
         val address = prefs.getString("address", null) ?: return@Runnable
         val name = prefs.getString("name", "R15 Cluster") ?: "R15 Cluster"
         connect(address, name, true)
@@ -42,7 +49,10 @@ class ClusterSyncService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == BluetoothAdapter.ACTION_STATE_CHANGED &&
                 intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) != BluetoothAdapter.STATE_ON && wanted) {
-                stopSync("Bluetooth turned off. Open the app to reconnect after enabling it.")
+                if (mapWanted) suspendLink("Bluetooth off; sharing will reconnect when available") else stopSync("Bluetooth turned off. Open the app to reconnect after enabling it.")
+            }
+            if (intent.action == BluetoothAdapter.ACTION_STATE_CHANGED && intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) == BluetoothAdapter.STATE_ON && wanted && mapWanted && suspended && eligible()) {
+                suspended = false; serviceError = null; handler.post(retry)
             }
             if (wanted && intent.action == android.bluetooth.BluetoothDevice.ACTION_BOND_STATE_CHANGED &&
                 intent.getIntExtra(android.bluetooth.BluetoothDevice.EXTRA_BOND_STATE, -1) == android.bluetooth.BluetoothDevice.BOND_NONE) {
@@ -56,6 +66,9 @@ class ClusterSyncService : Service() {
     override fun onCreate() {
         super.onCreate()
         link = BleBond(applicationContext) { changed(it) }
+        location = PhoneLocation(applicationContext) { value ->
+            if (mapWanted) { link.location(value); if (value.problem == "permissionRequired") stopMapSharing("Location permission revoked. Start sharing again after restoring access.") }
+        }
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL, "Cluster connection", NotificationManager.IMPORTANCE_LOW).apply {
@@ -67,6 +80,7 @@ class ClusterSyncService : Service() {
     }
     override fun onBind(intent: Intent): IBinder = binder
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "stop-map") { stopMapSharing(); return START_NOT_STICKY }
         if (intent?.action == STOP) { stopSync(); return START_NOT_STICKY }
         // No boot receiver or blind restart from a persisted "connected" flag.
         if (intent?.action != CONNECT) { stopSync(); return START_NOT_STICKY }
@@ -78,7 +92,7 @@ class ClusterSyncService : Service() {
         if (wanted && before["state"] in listOf("connected", "connecting", "pairing") &&
             (before["address"] == address || before["state"] != "connected")) return START_NOT_STICKY
         handler.removeCallbacks(retry); retryScheduled = false; retryAttempt = 0
-        wanted = true; serviceError = null
+        wanted = true; suspended = false; serviceError = null
         prefs.edit().putBoolean("stopped", false).apply()
         try {
             showNotification("Connecting")
@@ -102,15 +116,16 @@ class ClusterSyncService : Service() {
         changed(link.snapshot())
     }
     fun snapshot(): Map<String, Any?> = link.snapshot() + mapOf(
-        "serviceActive" to wanted, "reconnecting" to retryScheduled,
+        "serviceActive" to wanted, "mapSharing" to mapWanted, "mapError" to mapError, "reconnecting" to retryScheduled,
         "stopped" to prefs.getBoolean("stopped", false),
         "notificationVisible" to (Build.VERSION.SDK_INT < 24 || getSystemService(NotificationManager::class.java).areNotificationsEnabled()),
     ) + (serviceError?.let { mapOf("error" to it) } ?: emptyMap())
     private fun changed(value: Map<String, Any?>) {
         if (destroyed) return
         if (wanted) {
+            if (suspended) { observer?.invoke(snapshot()); return }
             if (!permitted() || (value["state"] == "connected" && value["bonded"] != true)) {
-                stopSync("Bluetooth access or the saved bond is unavailable. Open the app to reconnect."); return
+                if (mapWanted) suspendLink("Bluetooth unavailable; location remains active locally") else stopSync("Bluetooth access or the saved bond is unavailable. Open the app to reconnect."); return
             }
             when (value["state"]) {
                 "connected" -> {
@@ -119,7 +134,9 @@ class ClusterSyncService : Service() {
                 }
                 "disconnected" -> if (!starting) {
                     if (value["retryAllowed"] == false || !eligible()) {
-                        stopSync(value["error"] as? String ?: "Connection stopped. Open the app to retry."); return
+                        if (mapWanted) suspendLink(value["error"] as? String ?: "Connection needs explicit Retry; local location remains active")
+                        else stopSync(value["error"] as? String ?: "Connection stopped. Open the app to retry.")
+                        return
                     }
                     if (!retryScheduled) {
                         val delay = if (retryAttempt < 4) 1000L shl retryAttempt++ else { retryAttempt = 0; 30000L }
@@ -134,24 +151,64 @@ class ClusterSyncService : Service() {
         observer?.invoke(snapshot())
     }
     private fun showNotification(state: String) {
-        if (noticeState == state && foreground) return
-        noticeState = state
+        if (mapWanted && !location.permitted()) { stopMapSharing("Location permission revoked. Restore access and start sharing again."); return }
+        if (!mapWanted && !permitted()) { stopSync("Bluetooth access unavailable. Open the app to reconnect."); return }
+        val title = state + if (mapWanted) " · Location sharing" else ""
+        if (noticeState == title && foreground) return
+        noticeState = title
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), flags)
         val stop = PendingIntent.getService(this, 1, Intent(this, ClusterSyncService::class.java).setAction(STOP), flags)
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
-        val notification = builder.setSmallIcon(R.drawable.ic_cluster_sync).setContentTitle("R15 Cluster · $state")
+        if (mapWanted) {
+            val stopMap = PendingIntent.getService(this, 2, Intent(this, ClusterSyncService::class.java).setAction("stop-map"), flags)
+            builder.addAction(Notification.Action.Builder(null, "Stop map sharing", stopMap).build())
+        }
+        val notification = builder.setSmallIcon(R.drawable.ic_cluster_sync).setContentTitle("R15 Cluster · $title")
             .setContentText("Tap to open the app. Use Stop sync to disconnect.")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .setCategory(Notification.CATEGORY_SERVICE).setVisibility(Notification.VISIBILITY_PRIVATE)
             .addAction(Notification.Action.Builder(null, "Stop sync", stop).build()).build()
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification,
+            (if (permitted()) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0) or
+                (if (mapWanted && location.permitted()) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0))
         else startForeground(NOTIFICATION, notification)
         foreground = true
     }
+    fun accessLost() { if (mapWanted) suspendLink("Bluetooth access unavailable; local location remains active") else stopSync("Restore Nearby devices access and reconnect") }
+    private fun suspendLink(message: String) {
+        suspended = true; serviceError = message; handler.removeCallbacks(retry); retryScheduled = false
+        link.disconnect(); showNotification("Waiting for Bluetooth"); observer?.invoke(snapshot())
+    }
+    // Called only by a visible Activity after a fresh user action/permission result.
+    fun startMapSharing() {
+        if (!wanted || !location.permitted()) { mapError = "Connect your cluster and allow location before sharing"; observer?.invoke(snapshot()); return }
+        mapWanted = true; mapError = null; val generation = ++mapLoadGeneration
+        try {
+            showNotification(if (link.snapshot()["state"] == "connected") "Connected" else "Reconnecting")
+            if (!location.start()) { stopMapSharing("Location provider unavailable. Check permission and Google Play services."); return }
+        } catch (_: Exception) { stopMapSharing("Android could not start foreground location. Open the app and retry."); return }
+        mapLoader.execute {
+            try {
+                val region = loadedRegion ?: run {
+                    val root = "flutter_assets/assets/maps/"
+                    val manifest = org.json.JSONObject(assets.open(root + "kolkata.manifest.json").bufferedReader().use { it.readText() })
+                    val bytes = assets.open(root + "kolkata.r15b").use { it.readBytes() }
+                    MapWire.region(bytes, manifest.getString("sha256"))
+                }
+                handler.post { if (!destroyed && mapWanted && generation == mapLoadGeneration) { loadedRegion = region; link.shareMap(true, region); observer?.invoke(snapshot()) } }
+            } catch (_: Exception) { handler.post { if (!destroyed && generation == mapLoadGeneration) stopMapSharing("Bundled map validation failed; reinstall the current APK") } }
+        }
+    }
+    fun stopMapSharing(error: String? = null) {
+        ++mapLoadGeneration; mapWanted = false; mapError = error; location.stop(); link.shareMap(false)
+        if (wanted && permitted()) showNotification(if (link.snapshot()["state"] == "connected") "Connected" else "Reconnecting")
+        else if (wanted) { stopSync(error); return }
+        observer?.invoke(snapshot())
+    }
     fun refresh() { if (wanted) link.refreshMetadata(); observer?.invoke(snapshot()) }
     fun stopSync(error: String? = null) {
-        wanted = false; serviceError = error
+        wanted = false; suspended = false; mapWanted = false; ++mapLoadGeneration; location.stop(); link.shareMap(false); serviceError = error
         handler.removeCallbacks(retry); retryScheduled = false; retryAttempt = 0
         prefs.edit().putBoolean("stopped", true).apply()
         link.disconnect()
@@ -167,7 +224,7 @@ class ClusterSyncService : Service() {
         destroyed = true; wanted = false; observer = null
         handler.removeCallbacksAndMessages(null)
         unregisterReceiver(radio)
-        link.dispose()
+        location.stop(); mapLoader.shutdownNow(); link.dispose()
         super.onDestroy()
     }
 }

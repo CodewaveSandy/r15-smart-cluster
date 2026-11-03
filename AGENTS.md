@@ -5,6 +5,10 @@
 Per the user, all repository-owned automated test files have been removed for this development phase. Do not create, restore, expand or run automated test files/suites unless the user explicitly requests resuming that work. This applies to firmware, shared code, host preview and mobile. Defer automated unit/integration/golden tests until the later testing stage. Use affected builds, formatting/static analysis, runtime diagnostics, manual preview inspection and physical bench checks as appropriate; report exactly what was and was not verified. Preserve runtime validation, CRC/security checks, flash/backup/partition guards, development previews and normative protocol vectors. This override supersedes automated-test authoring/preservation gates elsewhere in project documents.
 
 
+## App builds (2026-11-03)
+
+Per the user, app builds run in GitHub Actions after pushing; do not attempt local Android/Gradle/APK builds, ad-hoc native compilation or Android SDK/Studio installation. Complete app code, use available formatting/static analysis without an Android SDK, and let the user manually test the Actions APK. See mobile/AGENTS.md for the persistent app workflow. App UI checks target modern/latest Android devices at normal text size; skip small-screen/2× text checks unless explicitly requested. Firmware build/display checks remain separate.
+
 ## Read before work
 
 Read RULES.md, README.md, docs/architecture.md and docs/ui.md and the relevant development/background-sync guides, then inspect affected source. RULES.md is the engineering authority. User instructions take precedence except where they would require unsafe vehicle behavior or invented hardware facts.

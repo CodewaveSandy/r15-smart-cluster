@@ -7,6 +7,7 @@ import '../features/phone/application/preview_session.dart';
 import '../features/phone/domain/phone_status.dart';
 import '../features/phone/presentation/phone_page.dart';
 import 'theme/companion_theme.dart';
+import '../features/navigation/presentation/navigation_page.dart';
 
 enum _CompanionPage { bike, navigate, connection }
 
@@ -106,7 +107,7 @@ class _CompanionHomeState extends State<CompanionHome> {
               onNavigate: () => _select(_CompanionPage.navigate),
               onConnection: () => _select(_CompanionPage.connection),
             ),
-            _CompanionPage.navigate => const _NavigationPage(),
+            _CompanionPage.navigate => NavigationPage(ble: widget.ble),
             _CompanionPage.connection => PhonePage(
               status: widget.status,
               ble: widget.ble,
@@ -204,51 +205,4 @@ class _BottomNavigation extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NavigationPage extends StatelessWidget {
-  const _NavigationPage();
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.all(CompanionTokens.pagePadding),
-    child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: CompanionTokens.contentWidth,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 44),
-            Icon(
-              Icons.near_me_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 28),
-            Text(
-              'Your next destination.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Destination search and maps are coming next.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 28),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'You can keep your cluster connected while switching pages. Route guidance will be available here once navigation is ready.',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }

@@ -1,12 +1,14 @@
 # R15 Companion
 
-For map/location development, use the [phase 1 integration handoff](../docs/map-phase-1.md) and [proposed wire extension](docs/protocol.md#phase-1-map-extension--implementation-specification). Firmware capability/transport/store/page are implemented/build verified under v1; physical bench acceptance precedes Android MapLibre/local OSM + native GPS.
+App workflow: finish code locally, push through the normal Git workflow, let GitHub Actions build the APK, then install with `bash scripts/install-mobile-apk.sh` and test manually. Target modern/latest Android devices at normal text size; skip small-screen/2× text checks unless requested. Do not attempt local Android builds or install an Android SDK/Studio; [app instructions](AGENTS.md#app-build-and-verification-policy-2026-11-03) preserve this user preference.
+
+For map/location development, use the [phase 1 integration handoff](../docs/map-phase-1.md) and [proposed wire extension](docs/protocol.md#phase-1-map-extension--implementation-specification). Firmware and Android phase 1 map/location source are integrated under v1; both boards are user-reported flashed. Full paired APK/transfer/locked-screen acceptance remains pending.
 
 Flutter application in the R15 Smart Cluster monorepo. Android first, future iOS; native Kotlin/Swift project shells are generated. Independent of the C++17/LVGL/CMake build.
 
 ## Current state
 
-Android implements BLE discovery/pairing, a native foreground connection service/retry owner, Concept 01 My bike/Navigate tabs, authenticated phone name/battery/time metadata and strict c013–c015 discrete-input telemetry integration. Real Available gear feeds Home; speed/RPM/fuel/bike voltage remain unsupported and Navigate has no map provider. The latest background/telemetry APK packaging and physical B1/B2 acceptance remain pending; GPS/navigation/maps, Wi-Fi provisioning, optional phone services and native iOS integrations are separate future work.
+Android implements BLE discovery/pairing, a native foreground connection service/retry owner, Concept 01 My bike/Navigate tabs, authenticated phone name/battery/time metadata and strict c013–c015 discrete-input telemetry integration. Real Available gear feeds Home; speed/RPM/fuel/bike voltage remain unsupported and Navigate now uses pinned MapLibre/local Kolkata OSM with explicit foreground location sharing. The latest background/telemetry APK packaging and physical B1/B2 acceptance remain pending; Route guidance/search, automatic regional downloads, Wi-Fi provisioning, optional phone services and native iOS remain future work.
 
 Start independent app work with [background-sync strategy and plan](docs/background-sync.md); firmware work starts at [the firmware plan](../docs/background-sync.md). Current contracts are consolidated in [protocol](docs/protocol.md), and the separate Mac development adapter is in [development](docs/development.md#mac-preview-adapter).
 
