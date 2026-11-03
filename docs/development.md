@@ -53,7 +53,7 @@ These commands target the separate vehicle ESP32, not the display. See the [vehi
 | `bash scripts/flash-vehicle.sh --build-only` | Builds/packages the vehicle discrete-input firmware without device access. |
 | `bash scripts/flash-vehicle.sh --list-ports` | Lists serial ports using PlatformIO. |
 | `bash scripts/flash-vehicle.sh --port /dev/cu.YOUR_VEHICLE_PORT` | Builds, checks chip/capacity, backs up and verifies current 8 MB flash, then writes/verifies vehicle firmware. Rejects the known display. |
-| `R15_VEHICLE_BAUD=115200 bash scripts/flash-vehicle.sh --port /dev/cu.YOUR_VEHICLE_PORT` | Uses slower backup/flashing transfers if the default 460800 fails. USB preview remains 115200 independently. |
+| `R15_VEHICLE_BAUD=115200 bash scripts/flash-vehicle.sh --port /dev/cu.YOUR_VEHICLE_PORT` | Explicitly selects the115200 backup/flashing default; faster rates require a reliable link. USB preview remains 115200 independently. |
 | `bash scripts/flash-vehicle.sh --port /dev/cu.YOUR_VEHICLE_PORT --resume-backup /absolute/path/vehicle-8mb.bin` | Resumes using a previously completed pre-write backup with adjacent saved identity; verifies it against the connected board before writing. Only use while flash still matches that backup. |
 
 After flashing, run the `--vehicle-serial` preview above using the same port. Stop the preview before flashing again. Manual BOOT/reset recovery is described in the vehicle guide.

@@ -39,7 +39,9 @@ fi
 python="${R15_VEHICLE_PYTHON:-$HOME/.platformio/penv/bin/python}"
 esptool="${R15_VEHICLE_ESPTOOL:-$HOME/.platformio/packages/tool-esptoolpy/esptool.py}"
 [[ -x "$python" && -f "$esptool" ]] || { echo "Installed esptool/Python missing." >&2; exit 1; }
-baud="${R15_VEHICLE_BAUD:-460800}"
+baud="${R15_VEHICLE_BAUD:-115200}"
+[[ "$baud" =~ ^[0-9]+$ && "$baud" -gt 0 ]] || { echo "R15_VEHICLE_BAUD must be a positive baud rate." >&2; exit 2; }
+echo "Backup/flash transfer baud: $baud (override with R15_VEHICLE_BAUD)."
 # Explicit chip and capacity prevent the 4 MB display from receiving this 8 MB image.
 echo "Connecting to vehicle ESP on $port. Hold BOOT now if automatic entry fails."
 echo "If needed: keep BOOT held, tap RESET, then release BOOT once the stub starts."
@@ -77,7 +79,14 @@ else
   backup="$backup_dir/vehicle-8mb.bin"
   printf '%s\n' "$identity" > "$backup_dir/identity.txt"
   echo "Saving full existing flash to $backup (this can take several minutes)..."
-  "${continued[@]}" read-flash 0x0 0x800000 "$backup"
+  if ! "${continued[@]}" read-flash 0x0 0x800000 "$backup"; then
+    echo "Backup read failed. No firmware write was attempted by this run." >&2
+    echo "Do not resume with this incomplete backup: $backup" >&2
+    echo "Close serial monitors; reconnect with a reliable data cable/direct USB port." >&2
+    echo "If using native USB and it keeps failing, use the board's USB-to-UART bridge socket, then select its new port." >&2
+    echo "Re-enter BOOT/download mode and retry; do not reset during an active transfer." >&2
+    exit 1
+  fi
 fi
 [[ "$(wc -c < "$backup" | tr -d ' ')" == 8388608 ]] || { echo "Incomplete backup; refusing write." >&2; exit 1; }
 "${continued[@]}" verify-flash 0x0 "$backup"
