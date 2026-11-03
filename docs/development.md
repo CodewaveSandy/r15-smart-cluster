@@ -452,3 +452,9 @@ For an actual paired-radio transfer, see [map tool commands and peer/MTU constra
 | Display `build/display/crowpanel-v3/r15-display.factory.bin` | `4ecc2bb0f8c528aa3b66ec3bee28ff84ace5706e40bb2fff9f074a44411a386b` |
 
 Build-time static usage is vehicle23,880 bytes RAM /486,941 bytes app flash; display26,104 bytes RAM /701,375 bytes app flash. These exclude runtime stacks, driver/LVGL allocation, framebuffers and reserved map PSRAM; they are not free-heap/performance measurements.
+
+## Phase 1 user feedback and phase 2 planning
+
+2026-11-03 user report: both boards/APK installed; real map appears, but approximately30KB sharing takes1–2minutes, current marker is hidden, low-accuracy/outside-coverage messages appear, free display drag/pan is absent and a green vehicle-board LED is distracting. No exact MTU, measured stage timings, reported accuracy/anchor diagnostics, flashed/APK hashes or LED circuit identity accompanied this report. Record it as partial user bench evidence, not a completed navigation/continuity/performance acceptance.
+
+The [phase 2 plan](navigation-phase-2.md) and separate [firmware](navigation-phase-2-firmware.md)/[mobile](../mobile/docs/navigation-phase-2.md) work packages document the requested new journey. Location precision permission, actual accuracy, map coverage and transfer readiness are independent. Current central-Kolkata coverage cannot serve arbitrary current locations. The plan includes throughput measurement/pipeline targets, dynamic source/cache, search/motorcycle routes, full phone corridor vs bounded display cache, independent cameras and verified LED-off handling. No firmware/app code, local app build, flash or tests were performed in this planning turn.

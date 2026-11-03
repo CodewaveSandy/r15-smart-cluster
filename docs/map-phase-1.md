@@ -1,6 +1,8 @@
 # Phase 1 map + current-location integration handoff
 
-Updated: 2026-11-03. **Firmware and Android phase 1 source integrated; APK and physical end-to-end acceptance pending.** User-requested handoff for firmware-first, then Android work. Baseline: commit `3710ed1` (real central-Kolkata LVGL host map) and Android service integration `ede6905`. The v1 wire extension is implemented and specified in [the protocol authority](../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification); existing c011–c015/UART contracts remain unchanged. This document owns workflow, rendering behavior and acceptance; the protocol guide owns bytes/IDs/limits. Do not treat the host `.r15map` text file as a firmware/phone wire format.
+Updated: 2026-11-03. **Firmware and Android phase 1 implemented; user reports installed APK/boards and real map appearance, with unresolved performance/location/interaction issues. Extended acceptance remains pending.** User-requested handoff for firmware-first, then Android work. Baseline: commit `3710ed1` (real central-Kolkata LVGL host map) and Android service integration `ede6905`. The v1 wire extension is implemented and specified in [the protocol authority](../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification); existing c011–c015/UART contracts remain unchanged. This document owns workflow, rendering behavior and acceptance; the protocol guide owns bytes/IDs/limits. Do not treat the host `.r15map` text file as a firmware/phone wire format.
+
+The next user-requested journey is documented in [phase 2](navigation-phase-2.md), with the reported limitations and proposed replacements. This guide continues to describe the existing v1 baseline; the new plan does not retroactively expand its scope.
 
 ## 1. Outcome and scope
 

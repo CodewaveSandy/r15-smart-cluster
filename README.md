@@ -1,5 +1,7 @@
 # R15 Smart Cluster
 
+The next map/navigation work is planned in [dynamic maps and route sharing](docs/navigation-phase-2.md), with separate [firmware](docs/navigation-phase-2-firmware.md) and [mobile](mobile/docs/navigation-phase-2.md) work packages. This proposal addresses the first physical map-feedback issues; it is documentation only and does not change the implemented v1 protocol.
+
 Phase 1 map/location implementation starts with the [firmware-first integration handoff](docs/map-phase-1.md): real regional OSM roads, phone GPS, transfer/partial-map behavior and Android follow-up. Firmware codecs, bounded BLE/UART transport and the native map page are implemented/build verified; board transfer acceptance and Android map/GPS integration remain pending.
 
 A dual-ESP32 instrument cluster for the Yamaha R15 V4, with an 800 x 480 LVGL interface. The vehicle MCU acquires/validates observations and handles calculations/connectivity; the display MCU renders normalized state received over UART.

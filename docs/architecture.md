@@ -1,5 +1,7 @@
 # System architecture, status and roadmap
 
+The next proposed architecture is [phase 2 dynamic maps and route sharing](navigation-phase-2.md): canonical phone tile/route cache, independent cameras, bounded display working sets and a measured versioned transfer pipeline. Existing v1 remains implemented; phase 2 is not implemented.
+
 The [phase 1 map/location handoff](map-phase-1.md) specifies the next firmware-first integration: bounded regional geometry, real phone fixes and atomic map activation. Native map transport/store/page and location-quality handling are implemented and build/host-preview verified; physical board acceptance and Android GPS remain pending.
 
 Updated: 2026-11-01. Shared host/native display UI, vehicle discrete inputs, return UART, authenticated BLE pairing/reconnect and phone metadata/clock synchronization are implemented. Core pairing/reconnect and phone metadata behavior are user bench-confirmed. The vehicle now also implements authenticated discrete-input telemetry/capabilities/health for the app handoff. Android background/telemetry integration, full vehicle measurements, Wi-Fi and navigation/maps remain pending; extended hardware/load acceptance remains separate. [Implementation status and gates](architecture.md#current-status-and-roadmap) distinguish host evidence from hardware readiness.

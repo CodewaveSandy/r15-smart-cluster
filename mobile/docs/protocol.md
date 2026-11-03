@@ -1,5 +1,7 @@
 # Phone protocol: implemented contracts and future gates
 
+Phase 2 navigation is [planned separately](../../docs/navigation-phase-2.md#12-wire-change-boundaries). Its semantic requirements are not a frozen byte contract: do not reinterpret implemented v1 frames, reserved bits or UUIDs. Exact v2 discovery/layouts/limits and normative vectors must be added here before its Android transfer work.
+
 Updated: 2026-11-02. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Firmware now includes authenticated capabilities/discrete-input telemetry/health endpoints for the background-sync handoff; Android background service/telemetry source integration is implemented; latest APK packaging and physical B1/B2 acceptance remain pending. Phase 1 BLE/UART map firmware is implemented/build and host-preview verified; physical acceptance and Android GPS remain pending. Route guidance and Wi-Fi map delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
 
 ## Pairing, reconnect and trust

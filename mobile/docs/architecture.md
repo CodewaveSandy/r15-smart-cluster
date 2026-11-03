@@ -1,5 +1,7 @@
 # Companion architecture, status and approved UI
 
+The user-requested next journey is planned in [phase 2](navigation-phase-2.md) and the [cross-system design](../../docs/navigation-phase-2.md). Phone map/location will be independent of BLE, with dynamic nearby coverage, search and route corridor caching; this is proposed behavior, not implemented phase 1 behavior.
+
 The next map/location scope is defined in the [phase 1 handoff](../../docs/map-phase-1.md): MapLibre/local regional OSM on the phone, native foreground GPS ownership, bounded BLE/UART transfer and LVGL rendering. Firmware and Android phase 1 sources are now integrated. MapLibre0.27.1 and native Google location21.4.0 are pinned; both boards are user-reported flashed. Physical paired transfer/live GPS/background acceptance remains open.
 
 Updated: 2026-11-02. Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Native foreground ownership and c013–c015 telemetry integration are implemented in source; latest APK packaging and physical B1/B2 background/telemetry acceptance remain pending. Phase 1 local maps/native GPS are source-integrated; APK/device acceptance, route guidance and native iOS remain pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).

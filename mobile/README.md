@@ -1,5 +1,7 @@
 # R15 Companion
 
+Next work is the [phase 2 mobile handoff](docs/navigation-phase-2.md): nearby maps on app open, independent phone navigation, search/route preparation and route sharing. Provider/key/cache/firmware gates are in the [full plan](../docs/navigation-phase-2.md); no phase 2 implementation is claimed.
+
 App workflow: finish code locally, push through the normal Git workflow, let GitHub Actions build the APK, then install with `bash scripts/install-mobile-apk.sh` and test manually. Target modern/latest Android devices at normal text size; skip small-screen/2× text checks unless requested. Do not attempt local Android builds or install an Android SDK/Studio; [app instructions](AGENTS.md#app-build-and-verification-policy-2026-11-03) preserve this user preference.
 
 For map/location development, use the [phase 1 integration handoff](../docs/map-phase-1.md) and [proposed wire extension](docs/protocol.md#phase-1-map-extension--implementation-specification). Firmware and Android phase 1 map/location source are integrated under v1; both boards are user-reported flashed. Full paired APK/transfer/locked-screen acceptance remains pending.

@@ -1,5 +1,7 @@
 # UI, Settings and lifecycle
 
+The proposed dynamic-map journey and independent display camera/marker states are in [phase 2](navigation-phase-2.md#10-independent-display-interaction). Drag/pan, approximate points and route sharing are planned changes, not current implemented UI behavior.
+
 For the upcoming map page, [phase 1 display behavior](map-phase-1.md#5-map-transfer-and-display-behavior) specifies loading, cached-map replacement, fresh/stale position, coverage, physical controls and warning/lifecycle precedence. These states are implemented in the firmware page and inspected in the host preview; physical panel/transport acceptance remains pending.
 
 Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation, retained clock sources and full hardware integration remain pending; phone/USB clock sync, persisted formats and connected phone metadata are implemented.
