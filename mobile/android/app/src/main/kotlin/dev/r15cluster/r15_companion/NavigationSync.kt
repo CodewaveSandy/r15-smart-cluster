@@ -1,5 +1,7 @@
 package dev.r15cluster.r15_companion
 
+import kotlin.math.ceil
+
 /** Main-thread v2 scheduler. ATT serialization remains exclusively in BleBond. */
 internal class NavigationSync {
     data class Request(val kind: String, val bytes: ByteArray = byteArrayOf())
