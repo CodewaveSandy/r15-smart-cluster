@@ -42,9 +42,12 @@ struct Feed {
     void accuracyLimited(){std::vector<std::uint8_t> b(40);maplink::put(b.data(),8,phoneClock+2,8);maplink::put(b.data(),24,UINT32_MAX);maplink::put(b.data(),28,65535,2);maplink::put(b.data(),30,65535,2);maplink::put(b.data(),32,65535,2);b[34]=5;b[35]=3;command(maplink::Type::Location,b);}
 };
 }
+int navigationPreview(const char*,const char*);
 int main(int argc,char** argv){try{
+    if(argc==5&&std::string(argv[1])=="--navigation-bundle"&&std::string(argv[3])=="--render")return navigationPreview(argv[2],argv[4]);
     if(argc!=5||std::string(argv[1])!="--package"||std::string(argv[3])!="--render"){std::cerr<<"Usage: r15-map-firmware-preview --package region.r15b --render directory\nDevelopment simulation only; no live GPS/radio.\n";return 2;}
-    Feed feed(argv[2]);const std::filesystem::path output=argv[4];std::filesystem::create_directories(output);
+    Feed feed(argv[2]);std::cout<<"Scene bytes="<<sizeof(maps::Scene)<<"; reserved map bytes="<<2*sizeof(maps::Scene)+2*maplink::maxPackage<<"\n";
+    const std::filesystem::path output=argv[4];std::filesystem::create_directories(output);
     if(SDL_Init(SDL_INIT_VIDEO))throw std::runtime_error(SDL_GetError());
     lv_init();lv_log_register_print_cb(log);auto* display=lv_display_create(800,480);lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);lv_display_set_flush_cb(display,flush);
     static std::array<std::uint16_t,800*48> buffer;lv_display_set_buffers(display,buffer.data(),nullptr,buffer.size()*2,LV_DISPLAY_RENDER_MODE_PARTIAL);
@@ -57,7 +60,19 @@ int main(int argc,char** argv){try{
             auto* surface=SDL_CreateRGBSurfaceWithFormatFrom(pixels.data(),800,480,16,1600,SDL_PIXELFORMAT_RGB565);const auto file=output/(std::string(name)+(track?"-track":"-street")+(light?"-day":"-night")+".bmp");if(!surface||SDL_SaveBMP(surface,file.string().c_str()))throw std::runtime_error(SDL_GetError());SDL_FreeSurface(surface);}
         std::cout<<name<<": state="<<unsigned(s[6])<<" error="<<unsigned(s[7])<<" accepted="<<maplink::get(s.data(),28)<<"/"<<maplink::get(s.data(),32)<<" location="<<unsigned(s[68])<<"\n";
     };
-    capture("empty");feed.begin();capture("loading-zero");feed.data(unsigned(feed.package.size()/2));capture("loading-half");feed.data(unsigned(feed.package.size()));feed.commit();capture("checking");feed.finish();capture("active-no-fix");feed.fix();capture("simulated-position");feed.fix(false);capture("simulated-neutral-position");feed.accuracyLimited();capture("low-accuracy");feed.fix(false,true);capture("outside-coverage");feed.fix();feed.begin();feed.data(unsigned(feed.package.size()/2));capture("replacement-half");feed.command(maplink::Type::Cancel,{},true);feed.title="Map update cancelled";capture("cancelled");
+    capture("empty");feed.begin();capture("loading-zero");feed.data(unsigned(feed.package.size()/2));capture("loading-half");feed.data(unsigned(feed.package.size()));feed.commit();capture("checking");feed.finish();capture("active-no-fix");feed.fix();capture("simulated-position");feed.fix(false);capture("simulated-neutral-position");
+    dashboard.mapPointer(view,life,{maps::TouchPhase::Press,540,300});
+    dashboard.mapPointer(view,life,{maps::TouchPhase::Move,680,350});
+    dashboard.mapPointer(view,life,{maps::TouchPhase::Release,680,350});
+    capture("browse-position");feed.fix(false);capture("browse-new-fix");
+    view.mapFocus=4;settingsAction(view,SettingsAction::Select,vehicle,life);capture("browse-zoom");
+    view.mapFocus=5;settingsAction(view,SettingsAction::Select,vehicle,life);capture("physical-pan");
+    settingsAction(view,SettingsAction::Select,vehicle,life);capture("physical-pan-west");
+    settingsAction(view,SettingsAction::Back,vehicle,life);
+    view.mapFocus=1;settingsAction(view,SettingsAction::Select,vehicle,life);capture("follow-restored");
+    view.mapFocus=2;settingsAction(view,SettingsAction::Select,vehicle,life);capture("area-overview");
+    view.mapFocus=1;settingsAction(view,SettingsAction::Select,vehicle,life);
+    feed.accuracyLimited();capture("low-accuracy");feed.fix(false,true);capture("outside-coverage");feed.fix();feed.begin();feed.data(unsigned(feed.package.size()/2));capture("replacement-half");feed.command(maplink::Type::Cancel,{},true);feed.title="Map update cancelled";capture("cancelled");
     feed.begin();feed.data(unsigned(feed.package.size()));feed.binary[1-(feed.store.scene()==feed.scenes[0].get()?0:1)][feed.package.size()-1]^=1;feed.commit();feed.finish();capture("hash-failure-old-map");
     feed.now+=2000;feed.store.poll(feed.now);capture("stale");vehicle.engineWarning=vehicle.coolantWarning={true,Quality::Available};capture("warnings");vehicle={};feed.command(maplink::Type::Stop);capture("stopped");feed.store.session(1,0,false);capture("disconnected");feed.store.session(1,2,true);feed.begin();feed.now+=15000;feed.store.poll(feed.now);feed.title="Map transfer timed out";capture("timeout-old-map");
     std::cout<<"LVGL warnings="<<warnings<<"; development preview only, no board/radio acceptance\n";return warnings?1:0;

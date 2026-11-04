@@ -1,8 +1,8 @@
 # Phone protocol: implemented contracts and future gates
 
-Phase 2 navigation is [planned separately](../../docs/navigation-phase-2.md#12-wire-change-boundaries). Its semantic requirements are not a frozen byte contract: do not reinterpret implemented v1 frames, reserved bits or UUIDs. Exact v2 discovery/layouts/limits and normative vectors must be added here before its Android transfer work.
+Phase 2 firmware discovery, exact layouts, limits, session/credit rules and normative examples are implemented in the [v2 contract below](#phase-2-navigation-extension--implemented-firmware-contract). Existing v1 frames/reserved bits/UUIDs remain unchanged. Android must target that contract; its source/cache proof and actual integration are still pending.
 
-Updated: 2026-11-02. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Firmware now includes authenticated capabilities/discrete-input telemetry/health endpoints for the background-sync handoff; Android background service/telemetry source integration is implemented; latest APK packaging and physical B1/B2 acceptance remain pending. Phase 1 BLE/UART map firmware is implemented/build and host-preview verified; physical acceptance and Android GPS remain pending. Route guidance and Wi-Fi map delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
+Updated: 2026-11-02. This is the single phone/firmware wire-contract authority. Pairing and connected metadata are implemented and their core physical path is user-confirmed. Firmware now includes authenticated capabilities/discrete-input telemetry/health endpoints for the background-sync handoff; Android background service/telemetry source integration is implemented; latest APK packaging and physical B1/B2 acceptance remain pending. Phase 1 BLE/UART map firmware is implemented/build and host-preview verified; physical acceptance and Android GPS remain pending. Firmware route-window presentation and quality-gated guidance are implemented through v2; Android v2 and Wi-Fi delivery are not implemented. Source codecs and runtime checks must agree with this guide. See [firmware UART/bench](../../docs/development.md#vehicle-ble-uart-bench) for R15P and physical wiring; [development](development.md) for current evidence and the separate Mac bridge.
 
 ## Pairing, reconnect and trust
 
@@ -375,3 +375,159 @@ Escape every byte after prefix, including header/CRC: raw `0x00`, `0x52` (ASCII 
 Inner records are R15X commands, R15S statuses or R15K capability announcements above. Direction/type mismatch is invalid. Vehicle does not ACK map bytes before display acceptance. Timeout/drop retries are the original full command, not cross-session fragment resume. Serialize UART writes in one bounded nonblocking owner: legacy acquisition/status/control first, timed LOCATION/control next, map DATA last. Bulk limit4096 encoded UART bytes/sec, ≤one low-priority fragment ahead of critical traffic; current RX-ring/flush limits must be refactored for this framing. No baud/pin change is authorized. Measure acquisition/return-path latency and heap/stack headroom under sustained transfer before asserting readiness. [Firmware implementation/acceptance order](../../docs/map-phase-1.md#6-firmware-first-implementation-order).
 
 Implementation clarifications from the proposed handoff: negotiate MTU before the64-byte c016 read; explicit accuracy-limited flag bit2 lets a non-Available observation explain LOW_ACCURACY without sending a false precise position; periodic display status keeps readiness truthful while idle. These are part of this first implemented v1 and must be reflected in the Android decoder. Normative non-executable examples: [map-phase-1-vectors.txt](../../shared/protocol/map-phase-1-vectors.txt).
+
+
+## Phase 2 navigation extension — implemented firmware contract
+
+Frozen for the firmware-first implementation on 2026-11-04 at the user's request. Firmware no longer waits for the phone cache spike to define its bytes. The phone still must prove its canonical source/cache adapter and implement this encoder; no MapLibre cache API or completed Android integration is assumed. Existing c011–c018/v1 bytes and security requirements are unchanged. Firmware implementation: `shared/protocol/NavigationProtocol.h`, `shared/application/NavigationStore.h` and `NavigationBridge.h`. Static [normative examples](../../shared/protocol/navigation-v2-vectors.txt) accompany this specification; these are data, not automated tests.
+
+### Discovery, security and resources
+
+Same c010 service and UUID prefix `813b1240-8fd9-4d67-a53b-9f0a2531`:
+
+| Endpoint | Operation |
+| --- | --- |
+| c019 | READ 64-byte R15J capability |
+| c01a | WRITE WITH RESPONSE R15V commands, no write-without-response capability |
+| c01b | READ current R15Y STATUS; NOTIFY STATUS, INTEREST and ROUTE_NEED |
+
+All access/CCCD requires the current authenticated LE Secure Connections bond, encryption and 16-byte key. No enrollment bypass, second GATT owner, automatic bond replacement or unauthenticated navigation path. Minimum MTU96. Maximum ATT value `min(240, actualMTU−3)`; MTU96 allows49 DATA bytes, MTU247 allows196. Serialize ATT procedures but pipeline up to the advertised number of downstream-pending DATA commands. A successful ATT write is vehicle admission only.
+
+Advertised encoded-object ceiling32,768 bytes; twelve verified raw-object slots plus one staging slot; four requested tile keys and at most four pending controls;512 road chunks/cell, eight points/chunk,23-byte ASCII road labels;512 points/route object and2,048 aggregate roads/render snapshot. Display map arena is966,712 bytes on this ABI, including the two v1 binary buffers, two shared204,828-byte render scenes and thirteen32KiB raw buffers. It is reserved in PSRAM only; failed allocation advertises unavailable navigation without affecting instruments. V1 and v2 share render snapshots under the single display application/LVGL owner. They cannot concurrently mutate/render the shared arena. No map/GPS/route NVS persistence, assumed SD storage or full arbitrary corridor in ESP32 RAM.
+
+### Primitive rules and R15J capability
+
+Little-endian integers; signed fields two's complement. All reserved bytes/bits zero; unknown version/type/enum/length is invalid. CRC32/ISO-HDLC covers all preceding bytes, including header; CRC occupies the last4 bytes. Object SHA256 covers the complete R15O bytes including its header/body CRC. CRC is not authentication. Full SHA256 identity, not a CRC or short source ID, authorizes reuse.
+
+| Offset | R15J field |
+| --- | --- |
+| 0..3 | ASCII R15J |
+| 4,5 | Version2; length64 |
+| 6,7 | Feature flags:0 unavailable or15 (cells/routes/quality-bearing locations/camera); maximum command window4 |
+| 8,12,16 | Vehicle boot, current secured connection token, display boot; u32 each |
+| 20,24 | Total reserved map arena bytes; maximum encoded object32,768; u32 each |
+| 28,29 | Verified cache slots12; maximum interest keys4; u8 each |
+| 30,32,34 | Max roads/cell512; aggregate roads2,048; points/route object512; u16 each |
+| 36,38 | Max command value240; minimum MTU96; u16 each |
+| 40,42,44,46 | Encoded bulk UART cap4,096 B/s; live freshness2,000 ms; anchor lifetime30,000 ms; last-known limit10,000 ms; u16 each |
+| 48,52 | Supported style bitmask1 (style1); attribution bitmask3 (IDs1 and2); u32 each |
+| 56,57,58..59,60..63 | Maximum selected working cells6; halo targets2; reserved; CRC32 |
+
+The vehicle rewrites the current secured connection token and reseals its capability. Missing/stale display resources return flags0. Capability freshness≤1,500 ms and current return-path health are required for command admission. Never treat presence of a characteristic as readiness.
+
+### Common R15V/R15Y envelope
+
+| Offset | Field |
+| --- | --- |
+| 0..3 | R15V command or R15Y reply |
+| 4,5,6,7 | Version2; opcode; header length40; reserved0 |
+| 8,12,16 | Current vehicle/secured connection/display IDs; u32 each |
+| 20,24 | Navigation session u32; sequence u32 |
+| 28,32 | Object ID u32; byte offset u32 |
+| 36,38 | Body length u16; reserved u16=0 |
+| 40.. | Body,0..196 bytes |
+| final4 | CRC32; total length44+body length |
+
+All command context IDs/session/sequence are nonzero. Object ID is nonzero only for BEGIN/DATA/COMMIT/CANCEL/HAVE; offset is nonzero only for DATA. Object ID is a session-local handle, not content identity, a tile generation or route revision. STATUS uses object/offset for current object and cumulative accepted prefix. INTEREST/ROUTE_NEED use their independent request-generation sequence, object/offset0.
+
+OPEN has control sequence1 and starts a nonzero navigation session. Sessions advance by unsigned forward delta1..0x7FFFFFFF within a secured connection; reconnect may start a new counter because the connection token changed. Retired sessions never restart through an old OPEN. Subsequent controls use exact increment, skipping0 on wrap. LOCATION and PROGRESS each have a separate forward sequence stream and monotonic source-sample validation. STOP, END and CANCEL may jump over cancelled queued control sequences and win over queued DATA. No other out-of-order control consumes the expected sequence; STATUS returns SEQUENCE and the last accepted sequence.
+
+The last four byte-identical controls are idempotent retries. Conflicting same-sequence bytes are rejected. A retry cannot renew source age or DATA inactivity. Semantic failures of an otherwise correctly ordered control consume its sequence and report an error: correct the request using the next sequence. A missing/corrupt control does not consume a sequence: retransmit it and the bounded pending window in order. The vehicle retains up to four full commands until a matching downstream cumulative ACK; it never invents an ACK. Inflight duplicates reuse the slot; an acknowledged retained duplicate returns current status without new admission. No CRC-only or cross-session partial resume.
+
+### Commands and bodies
+
+| Opcode | Name | Body |
+| --- | --- | --- |
+| 1 | OPEN | 40 bytes: full source descriptor SHA256 at0; style u16 at32=1; attribution u16 at34=1 or2; requested window u8 at36=1..4; reserved37..39 |
+| 2 | TIME_REQUEST | Phone dispatch monotonic ms u64 T0 |
+| 3 | TIME_CONFIRM | Request sequence u32; T0 u64 at4; callback T1 u64 at12 |
+| 4 | BEGIN | Total object length u32 at0,64..32,768; full object SHA256 at4..35; object kind u8 at36=1..3; reserved37..39 |
+| 5 | DATA | 1..196 raw object bytes (reduce for actual MTU); prefix offset in envelope |
+| 6 | COMMIT | Empty |
+| 7 | CANCEL | Empty; matching object only |
+| 8 | LOCATION | 40 bytes, below |
+| 9 | ACTIVATE | Route ID u64 at0; revision u32 at8; cached overview object ID u32 at12; detail-window ID u32 at16; current-area cell ID u32 at20; all nonzero |
+| 10 | PROGRESS | 40 bytes, below |
+| 11 | STOP | Empty: stop cluster sharing/source/anchor/guidance; keep complete cached roads/route preview |
+| 12 | HAVE | Full object SHA256 at0..31; length u32 at32; reserved36..39 |
+| 13 | END | Empty: stop sharing, remove active route/guidance, retain complete map cells |
+
+Source descriptor bytes are producer-defined canonical provenance/configuration, hashed as SHA256; include provider/dataset/snapshot identity, projection/geometry profile, style/attribution and conversion version. Cache identity changes when that descriptor changes. Firmware treats this digest as opaque, never as a MapLibre SDK-cache handle. `sourceId` in object/interest headers is its first4 bytes read little-endian; the full source digest controls cache lifetime, so a short-ID collision does not permit cross-source reuse. Attribution1 means OpenStreetMap contributors/ODbL;2 additionally means OpenMapTiles/OpenFreeMap. Do not claim provider provenance for geometry taken from a different source. Style1 supports bounded roads/water polylines and Latin labels, not raw MVT/raster, arbitrary Unicode glyph downloads or a complete land-use renderer.
+
+OPEN clears anchors, fixes, source sequences, progress and active route, discards partial staging and rebuilds the snapshot from compatible cached cells. A changed full source digest or attribution invalidates all cached raw objects. A cached full SHA/length match in BEGIN returns HAVE with accepted offset=length, after kind/handle validation; COMMIT need not retransmit it. HAVE queries can bind a known complete hash to a fresh object ID. No hit returns IDLE/offset0. A handle already bound to a different cached object conflicts. CANCEL can also unpin a complete candidate route object by its bound ID; it cannot remove the active route geometry. HAVE/new BEGIN while receiving/verifying another object reports BUSY; a matching BEGIN during RECEIVING only reports the accepted prefix and does not renew its timeout.
+
+DATA must append to the accepted prefix. Exact already-accepted bytes are harmless but do not renew inactivity; wrong/conflicting offsets report OFFSET without publishing or modifying that prefix. STATUS's offset is the first missing byte, so retry/recover that contiguous suffix. This implementation intentionally uses a cumulative prefix rather than an arbitrary sparse range bitmap. COMMIT requires complete bytes and incrementally checks SHA256, body CRC, every header/geometry/label/count, then atomically publishes the complete object. Invalid data never draws. Hash/decode work is≤512 bytes/16 records per display service cycle; scene rebuild is≤16 roads/32 route points per cycle. Staging times out after15s without new DATA; old complete objects remain.
+
+Cache eviction chooses an unpinned least-recently-used slot. Active and candidate route objects, at most six selected working cells and cells referenced by an in-progress snapshot build are protected. Target-LOD cells take priority, with bounded coarser/finer fallback; obsolete zoom levels are retired once suitable target cells arrive. Active render snapshots own copied geometry and remain intact while raw-cache selections change, so retiring an old raw cell cannot leave a dangling visible pointer. Replacing the same tile cancels an in-progress staging snapshot first. Publication copies validated geometry into the inactive render scene; a pointer swap occurs only at completion on the LVGL owner. Resource pressure reports RESOURCE without evicting live route/current-area context. The phone must honor aggregate geometry/capacity, send useful current-area content first, keep route windows bounded and avoid flooding remote cells. The full corridor remains on the phone.
+
+ACTIVATE is the route-revision barrier: overview and window must be complete, same route ID/revision/source/style, and the supplied complete current-area cell must cover the eligible fix or current camera when no fix is eligible. Otherwise NOT_READY retains the old route. Route revision is a navigation-session counter advancing by unsigned forward delta even when the route ID changes; an equal revision may only update windows of the same route. Older revisions and conflicting route IDs at the same pending revision cannot activate. New validated route-revision candidates suppress old confident guidance until activation; new route metadata never rides on old geometry. Before beginning an intentional reroute, the phone should also publish PROGRESS quality0 immediately. Activation clears old progress and requires a matching new observation. Each subsequent detail-window replacement uses ACTIVATE with the existing overview/revision plus the new complete window/current cell. A partially downloaded route window is never used.
+
+### R15O object and projection
+
+Every object is64-byte header + body. SHA256 covers the full object; its embedded body CRC covers bytes64..end only.
+
+| Offset | Field |
+| --- | --- |
+| 0..7 | R15O; version2; kind1 cell/2 overview/3 route window; header64; cell flag bit0=geographically partial (all other bits0; route flags0) |
+| 8,12,14 | Source ID u32; style u16=1; attribution u16=OPEN attribution |
+| 16,24 | Route ID u64; route revision u32 |
+| 28,29,30 | Semantic display-cell z u8; reserved u8=0; record/point count u16 |
+| 32,36 | Semantic display-cell x,y; u32 each |
+| 40,44 | Route-window start/end along-route metres; u32 each |
+| 48,52 | Route total estimated distance metres / duration seconds; u32 each |
+| 56,60 | Body CRC32; reserved u32=0 |
+
+Cell: route/revision/range/distance/duration fields all0; z0..22; x,y<2^z; count0..512. Empty complete cells are legitimate known coverage. A clipped regional extract/corridor may set geographic-partial bit0: its fully received, verified geometry can render, but it never counts as full tile/detail coverage or a complete INTEREST HAVE hit. This is unrelated to a partially received object, which never renders. A partial replacement cannot downgrade an already complete tile. Cell body contains exactly `count` roads, each: kind u8 (local0/arterial1/water2/path3/service4); point count u8 2..8; name length u8 0..23; reserved u8=0; printable ASCII name bytes, no terminator and no all-space nonempty name; then `pointCount` pairs u16 u,v. Each coordinate0..4096 inclusive; at least two distinct points/road. Clip/split at tile borders and split long polylines with shared endpoints; never silently truncate a dense tile. Simplification/Latin transliteration is the phone encoder's documented style profile.
+
+Projection is standard Web Mercator, radius6,378,137 m, world width W=2πR. Display-cell z/x/y follow slippy-map indexing: x wraps modulo2^z, y is bounded, origin northwest. A point's world metres are `east=−W/2+(x+u/4096)W/2^z`, `north=W/2−(y+v/4096)W/2^z`. Valid geographic samples are E7 latitude±850,511,287 and longitude±1,800,000,000. Projection uses `east=R·lonRadians`, `north=R·log(tan(π/4+latRadians/2))`; clamp to the Mercator latitude limit, wrap east to[−W/2,W/2). Shared borders use exactly the same extent4096. These are semantic display cells, not a demand that the upstream provider expose the same raw tile zoom. Clamp raw downloads to TileJSON/source zoom limits; derive a requested child by clipping/resampling its canonical cached parent when overscaling. Include that conversion/LOD policy in the source descriptor. Geometry-profile completeness does not promise more detail than the upstream source supplies, and must not trigger repeated404 downloads above its maximum zoom. The render snapshot has a geographic local origin; world deltas wrap to the nearest east displacement and round to integer metres (half away from zero). Metres here are projected units; on-screen ground scale/accuracy circles account for latitude cosine. No equirectangular v1 region assumptions leak into v2.
+
+Route objects: tile z/x/y all0; nonzero route/revision;2..512 points; body is exactly count pairs of signed latE7/lonE7 i32. Overview range is0..totalDistance; window has start<end≤totalDistance. Distance1..100,000,000 m and estimated duration≤31,536,000 s. Split detailed routes into overlapping bounded windows instead of truncation. The overview may be deliberately simplified but retains real endpoints; phone owns fidelity and estimated travel values. Firmware renders the overview and current detailed window together, with the destination taken from the full overview, and skips wrap-discontinuous line segments. It does not calculate a route, road snap, speed, odometer, off-route decision or ETA from bike data.
+
+### Source, progress and time
+
+LOCATION has the same field sizes as v1 but its separately versioned quality semantics retain low-accuracy coordinates:
+
+| Body offset | Field |
+| --- | --- |
+| 0,8 | Source sample / actual phone dispatch elapsed ms; u64 each |
+| 16,20,24 | Latitude E7 i32; longitude E7 i32; horizontal accuracy cm u32 |
+| 28,30,32 | Course centidegrees u16; course accuracy centidegrees u16; speed cm/s u16; each0xFFFF unknown |
+| 34,35 | Permission/source mode0 unknown/1 precise/2 approximate/3 mock-invalid; source observation0 no fix/1 coordinate fix/2 stale/3 invalid |
+| 36..39 | Reserved0 |
+
+A coordinate fix requires mode1 or2, sample≤dispatch, dispatch−sample<2,000 ms, valid bounds and accuracy≤100,000,000 cm. Course0..35,999 or unknown; course accuracy0..18,000 or unknown. Other observation states carry sample/lat/lon0, accuracy0xFFFFFFFF and all course/speed fields0xFFFF; no mock coordinates survive. Dispatch is nonnegative≤INT64_MAX. Reject repeated/backward source times and sequences; no receipt-time-only freshness renewal. Latest LOCATION and PROGRESS are independently coalesced/rate-limited to≥500 ms per type in the vehicle.
+
+Time handshake mirrors the conservative v1 logic: actual dispatch T0, display handling DB, actual callback T1, RTT≤500 ms and matching request/echo/context. TIME_CONFIRM must arrive within2s of DB. Refresh at25s; expire anchor at30s; account for measured drift/quantization. OPEN/TIME_REQUEST/TIME_CONFIRM are serialized barriers, not pipelined behind bulk DATA. Do not use wall clock. An anchor, source time, source age bound and current link are all needed; future/discontinuous/replayed samples cannot turn live later merely by receipt.
+
+Fresh age bound<2s: mode1 and accuracy≤50m gives filled neutral dot, qualified arrow only with course accuracy≤45° and speed≥2m/s; mode2 or accuracy>50m gives a hollow approximate point and dashed uncertainty ring plus actual numeric accuracy. Coverage is independent: missing roads do not hide a valid position. The ring's screen radius is capped but the accuracy label retains the measured bound. A previously eligible observation becoming stale may show a gray last-known point only until source/receipt age10s; no live arrow/guidance. Then hide it. Invalid/mock, stopped, expired anchor or wrong-session data never become a last-known/live point. Cached maps/camera remain usable while disconnected; a cached route is only a preview.
+
+PROGRESS: route ID u64 at0; revision u32 at8; source elapsed ms u64 at12; remaining metres u32 at20; estimated remaining seconds u32 at24; distance to maneuver metres u32 at28; maneuver u8 at32 (continue0,left1,right2,straight3,arrive4,keep-left5,keep-right6,U-turn7); quality u8 at33 (0 unavailable/1 eligible); reserved34..39. Metre/time fields use the same maxima as route objects. Current route/revision, forward sample/sequence, precise fresh location, live anchor, progress age<2s and along-route position inside the active window are all required for confident guidance. Approximate fixes cannot advance confident turns. Estimates remain labelled estimates; these fields never populate instrument speed/gear/odometer.
+
+### Replies, credits and camera requests
+
+STATUS opcode64 is84 bytes (40-byte envelope +40-byte body +CRC). Envelope sequence is cumulative last accepted control, object/offset are current staging/reuse ID and accepted prefix. Body:
+
+| Body offset | Field |
+| --- | --- |
+| 0,1 | Stage0 closed/1 idle/2 receiving/3 verifying/4 ready/5 stopped/6 have; error enum below |
+| 2,3 | Negotiated window1..4; free downstream command slots0..window |
+| 4,8 | Current total object bytes u32; active route revision u32 |
+| 12,13,14 | Source0 none/1 precise/2 approximate/3 stale/4 invalid/5 stopped/6 no-anchor; coverage0 missing/1 partial/2 ready; camera0 Follow/1 Browse |
+| 15 | Geometry-ceiling flag0/1: producer must simplify/budget further; partial coverage cannot be called complete |
+| 16,24,32 | Display monotonic now, echoed T0, DB; u64 each |
+
+Errors:0 none,1 sequence,2 session,3 busy,4 bounds,5 hash,6 offset,7 resource,8 timeout,9 not-ready,10 timing,11 conflict,12 unsupported. READY means a complete validated object, not a complete route corridor or fresh GPS. ACTIVE route revision changes only at ACTIVATE. Credit is0 during verify/closed/stopped. The bridge reduces slots by its unacknowledged occupancy; byte credit is explicitly derived as `freeSlots × min(240,actualMTU−3)` ATT-value bytes, at most960, not another unbounded queue. One encoded object may be staged; do not pipeline BEGINs for several objects. Only DATA is pipelined; wait for cumulative DATA ACK before COMMIT, and READY/HAVE before beginning the next object. Clear pending control credit only from a valid current-context display ACK matching an admitted command; a GATT callback does not replenish it.
+
+INTEREST opcode65 is88 bytes, object/offset0, header sequence=request generation. Body: generation u32 at0; source ID u32 at4; z u8 at8; key count u8 at9≤4; HAVE bitmask u8 at10; camera mode u8 at11; four x/y u32 pairs at12..43, unused pairs0. Visible missing keys have priority, then at most the two nearest halo keys. Successive requests cover a viewport requiring more than four keys. HAVE means a complete compatible non-partial geographic cell is cached; when content certainty matters, use full-SHA HAVE. Generation changes coalesce old camera requests; repeat an unfulfilled generation at bounded1s intervals after transport loss. The phone should deduplicate by source/key/content and drop obsolete interests, while prioritizing source/current route over remote browsing. No public Overpass query per pan. Geometry clipping is exposed separately from cache-hit coverage.
+
+Camera is independent north-up Follow/Browse, single-contact drag with6px threshold, +/− six zoom levels for v2 and explicit physical Pan controls. Pan never changes phone camera, route origin/destination or source location. Semantic display-cell z selection targets roughly512..1,024 projected pixels/tile (bounded0..18 for current interests, decoder supports0..22); oversized-world overview deduplicates wrapped keys. A cached parent can still render while current detail is missing; no fake roads or automatic recenter timer. Ground scale includes latitude. Follow is explicit; a geographic marker may leave the viewport in Browse.
+
+ROUTE_NEED opcode66 is68 bytes: route ID u64 at0, revision u32 at8, requested along-route metres u32 at12, current window start/end u32 at16/20. Header sequence is its own generation. With eligible progress, request a detail window when outside the current range or within200m of its end and the full route continues. Repeat outstanding requests at bounded1s intervals until a matching replacement is activated. Phone also proactively prepares upcoming windows from its full cached route; the display never recalculates routing.
+
+Replies and requests share the retained R-safe R15Q framing. Direction1 permits R15X/v1 and R15V/v2; direction2 permits R15K/R15S and R15J/R15Y. Existing raw-fragment version1,48-byte pieces, CRC and escaping of0/R/0x7D remain. Control/capability versus latest-observation reassembly slots are bounded. Bytes inside corrupt/partial map frames never enter legacy input/pairing/metadata sliding decoders. Critical legacy records precede every next lower-priority fragment; LOCATION/PROGRESS precede bulk DATA; encoded bulk cap4,096 B/s and115200 baud/pins remain unchanged. The sole TX worker drains logical messages outside acquisition. Partial/cancelled fragments may be abandoned, but can never activate an object.
+
+### Reset, compatibility and Android handoff
+
+Reconnect/display reset invalidates control/source/anchor/staging context and active guidance. Keep complete RAM content only if its full source and object SHA can be rebound after a new OPEN; no partial suffix resumes across sessions. Cold power loses RAM and requires current-area-first reload. STOP stops sharing while retaining roads/route preview; END may follow STOP in the same session and clears the route; neither disconnects the phone's independent navigation owner. Old APK/v1 remains usable: a valid current-context v1 TIME_REQUEST/BEGIN switches the shared render arena back to v1; v2 OPEN selects v2. Old v1 LOCATION cannot overwrite a v2 session. Metadata/telemetry/pairing remain unchanged. New app on old firmware must explicitly downgrade rather than sending v2 packets to c017.
+
+Native phone work now has a concrete implemented firmware contract: prove canonical raw geometry/cache and renderer resources, encode source/cells/routes to this schema, serialize handshake/controls, pipeline DATA with downstream credit, honor accepted offsets and full-hash reuse, process INTEREST/ROUTE_NEED, and keep source/route/camera/link/coverage states separate. Use OpenFreeMap/Geoapify only under their configured current terms/key limits. Build Android only in GitHub Actions; user manually checks the APK. Firmware host simulation and builds do not establish physical BLE throughput, phone locked-screen continuity, actual touch/RGB behavior or bike readiness.

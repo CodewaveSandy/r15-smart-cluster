@@ -7,6 +7,28 @@ namespace cluster::maplink {
 // PSRAM on the board; no map-sized members/copies on task stacks.
 class MapStore {
 public:
+    struct Diagnostics {
+        std::uint32_t commands=0,invalid=0,wrongSession=0,dataBytes=0,duplicates=0,failures=0;
+        std::uint64_t receiveMs=0,verifyMs=0,anchorAgeMs=0,sourceAgeUpperMs=0;
+        unsigned accuracyCm=UINT32_MAX;LocationState source=LocationState::NoAnchor;
+        bool hasMap=false,inside=false;
+    };
+    Diagnostics diagnostics(std::uint64_t now)const{
+        auto d=diagnostics_;d.hasMap=active_;d.inside=fix_&&active_&&activeRegion_.contains(lat_,lon_);
+        d.source=sourceState(now);d.accuracyCm=fix_?accuracy_:UINT32_MAX;
+        d.anchorAgeMs=anchor_&&now>=anchorAt_?now-anchorAt_:UINT64_MAX;
+        d.sourceAgeUpperMs=UINT64_MAX;
+        if(anchor_&&fix_&&now>=anchorAt_){
+            const auto elapsed=now-anchorAt_;
+            const auto behind=phoneBase_>=fixTime_?phoneBase_-fixTime_:0;
+            const auto ahead=fixTime_>phoneBase_?fixTime_-phoneBase_:0;
+            const auto age=elapsed>=ahead?elapsed-ahead:0;
+            d.sourceAgeUpperMs=std::min<std::uint64_t>(60000,age+std::min<std::uint64_t>(60000,behind)+uncertainty_+(elapsed+999)/1000);
+        }
+        if(state_==State::Receiving&&now>=receiveStarted_)d.receiveMs=now-receiveStarted_;
+        if(state_==State::Verifying&&now>=verifyStarted_)d.verifyMs=now-verifyStarted_;
+        return d;
+    }
     void initialize(std::uint32_t boot,std::uint8_t* binary0,std::uint8_t* binary1,maps::Scene* scene0,maps::Scene* scene1){
         boot_=boot?boot:1;binary_[0]=binary0;binary_[1]=binary1;scenes_[0]=scene0;scenes_[1]=scene1;ready_=binary0&&binary1&&scene0&&scene1;state_=ready_?State::Empty:State::Unsupported;
     }
@@ -17,13 +39,16 @@ public:
     }
     Capability capability()const{return maplink::capability(vehicle_,link_?connection_:0,boot_,ready_);}
     bool ready()const{return ready_;}
+    maps::Scene* renderStorage(unsigned i)const{return scenes_[i&1];}
+    void discard(){active_=false;generation_=maxGeneration_=lastControl_=lastLocation_=0;anchor_=fix_=pendingTime_=false;total_=offset_=0;state_=ready_?State::Empty:State::Unsupported;dirty_=true;}
     const maps::Scene* scene()const{return active_?scenes_[activeSlot_]:nullptr;}
     const Region& region()const{return activeRegion_;}
     bool takeDirty(){const bool v=dirty_;dirty_=false;return v;}
     void command(const Message& m,std::uint64_t now){
-        if(!validCommand(m))return;
+        ++diagnostics_.commands;
+        if(!validCommand(m)){++diagnostics_.invalid;return;}
         const auto* b=m.bytes.data();const auto type=Type(b[5]);const auto seq=std::uint32_t(get(b,24));
-        if(!ready_||!link_||get(b,8)!=vehicle_||get(b,12)!=connection_||get(b,16)!=boot_)return;
+        if(!ready_||!link_||get(b,8)!=vehicle_||get(b,12)!=connection_||get(b,16)!=boot_){++diagnostics_.wrongSession;return;}
         if(type==Type::Location){
             if(!forward(seq,lastLocation_)||stopped_)return;
             const auto* p=b+32;
@@ -32,9 +57,9 @@ public:
             const auto sample=get(p,0,8),dispatch=get(p,8,8);
             if((fixSeen_&&sample<=fixTime_)||dispatch<lastDispatch_)return;
             lastLocation_=seq;fixTime_=sample;lastDispatch_=dispatch;fixSeen_=true;fix_=true;fixAt_=now;
-            lat_=signed32(p,16);lon_=signed32(p,20);course_=unsigned(get(p,28,2));courseAccuracy_=unsigned(get(p,30,2));speed_=unsigned(get(p,32,2));dirty_=true;return;
+            lat_=signed32(p,16);lon_=signed32(p,20);accuracy_=unsigned(get(p,24));course_=unsigned(get(p,28,2));courseAccuracy_=unsigned(get(p,30,2));speed_=unsigned(get(p,32,2));dirty_=true;return;
         }
-        if(seq==lastControl_){if(m.size==lastRequest_.size&&std::equal(m.bytes.begin(),m.bytes.begin()+m.size,lastRequest_.bytes.begin()))dirty_=true;return;}
+        if(seq==lastControl_){if(m.size==lastRequest_.size&&std::equal(m.bytes.begin(),m.bytes.begin()+m.size,lastRequest_.bytes.begin())){dirty_=true;++diagnostics_.duplicates;}return;}
         if(!forward(seq,lastControl_))return;
         lastControl_=seq;lastRequest_=m;dirty_=true;error_=Error::None;
         const auto gen=std::uint32_t(get(b,20));const auto* body=b+32;
@@ -56,15 +81,15 @@ public:
             if(!forward(gen,maxGeneration_)){error_=Error::Session;break;}
             maxGeneration_=generation_=gen;total_=unsigned(get(body,0));offset_=0;std::copy_n(body+4,32,expectedHash_.begin());
             if(active_&&expectedHash_==activeHash_&&total_==activeSize_){activeGeneration_=gen;offset_=total_;state_=State::Active;break;}
-            state_=State::Receiving;lastData_=now;break;
+            state_=State::Receiving;lastData_=receiveStarted_=now;diagnostics_.receiveMs=diagnostics_.verifyMs=0;break;
         case Type::Data:
             if(state_!=State::Receiving||gen!=generation_){error_=Error::Session;break;}
             if(get(body,0)!=offset_||m.size-40>total_-offset_){fail(Error::Offset);break;}
-            std::copy_n(body+4,m.size-40,binary_[1-activeSlot_]+offset_);offset_+=m.size-40;lastData_=now;break;
+            std::copy_n(body+4,m.size-40,binary_[1-activeSlot_]+offset_);offset_+=m.size-40;diagnostics_.dataBytes+=m.size-40;lastData_=now;diagnostics_.receiveMs=now-receiveStarted_;break;
         case Type::Commit:
             if(state_!=State::Receiving||gen!=generation_){error_=Error::Session;break;}
             if(offset_!=total_){fail(Error::Offset);break;}
-            state_=State::Verifying;sha_.reset();hashOffset_=0;bodyCrc_=0xffffffffu;parsing_=false;break;
+            state_=State::Verifying;verifyStarted_=now;sha_.reset();hashOffset_=0;bodyCrc_=0xffffffffu;parsing_=false;break;
         case Type::Cancel:
             if(gen!=generation_){error_=Error::Session;break;}
             state_=State::Cancelled;total_=offset_=0;break;
@@ -76,6 +101,7 @@ public:
     void poll(std::uint64_t now){
         if(state_==State::Receiving&&now-lastData_>=15000)fail(Error::Timeout);
         if(state_==State::Verifying){
+            diagnostics_.verifyMs=now-verifyStarted_;
             const auto* b=binary_[1-activeSlot_];
             if(hashOffset_<total_){
                 const unsigned end=std::min(total_,hashOffset_+512);sha_.update(b+hashOffset_,end-hashOffset_);
@@ -90,7 +116,7 @@ public:
         }
         const auto previous=location_;location_=evaluate(now);if(previous!=location_)dirty_=true;
     }
-    LocationState evaluate(std::uint64_t now)const{
+    LocationState sourceState(std::uint64_t now)const{
         if(stopped_)return LocationState::Stopped;
         if(!link_||!anchor_||now<anchorAt_||now-anchorAt_>=30000)return LocationState::NoAnchor;
         if(!fix_)return location_==LocationState::Stale||location_==LocationState::LowAccuracy||location_==LocationState::Invalid?location_:LocationState::NoFix;
@@ -101,8 +127,11 @@ public:
         // A sample apparently ahead of dispatch upper bound indicates clock
         // discontinuity/uncertainty, not permission to extend its lifetime.
         if(age< -500||std::uint64_t(std::max<std::int64_t>(0,age))+uncertainty_+drift>=2000||now-fixAt_>=2000)return LocationState::Stale;
-        if(!active_||!activeRegion_.contains(lat_,lon_))return LocationState::Outside;
         return LocationState::Fresh;
+    }
+    LocationState evaluate(std::uint64_t now)const{
+        const auto source=sourceState(now);if(source!=LocationState::Fresh)return source;
+        return !active_||!activeRegion_.contains(lat_,lon_)?LocationState::Outside:LocationState::Fresh;
     }
     maps::Pose pose(std::uint64_t now)const{
         maps::Pose p;if(evaluate(now)!=LocationState::Fresh)return p;
@@ -115,12 +144,13 @@ public:
     }
 private:
     bool heading()const{return course_<36000&&courseAccuracy_<=4500&&speed_!=65535&&speed_>=200;}
-    void fail(Error e){state_=State::Failed;error_=e;dirty_=true;}
+    void fail(Error e){state_=State::Failed;error_=e;dirty_=true;++diagnostics_.failures;}
     std::uint8_t* binary_[2]{};maps::Scene* scenes_[2]{};unsigned activeSlot_=0,total_=0,offset_=0,activeSize_=0,hashOffset_=0;
     bool ready_=false,link_=false,active_=false,dirty_=true,anchor_=false,pendingTime_=false,fix_=false,fixSeen_=false,stopped_=false,parsing_=false;
     std::uint32_t boot_=1,vehicle_=0,connection_=0,generation_=0,activeGeneration_=0,maxGeneration_=0,lastControl_=0,lastLocation_=0,timeSequence_=0,bodyCrc_=0,activeCrc_=0;
-    std::uint64_t lastData_=0,phoneT0_=0,displayBase_=0,phoneBase_=0,anchorAt_=0,fixTime_=0,fixAt_=0,lastDispatch_=0,uncertainty_=2;
-    std::int32_t lat_=0,lon_=0;unsigned course_=65535,courseAccuracy_=65535,speed_=65535;
+    std::uint64_t lastData_=0,receiveStarted_=0,verifyStarted_=0,phoneT0_=0,displayBase_=0,phoneBase_=0,anchorAt_=0,fixTime_=0,fixAt_=0,lastDispatch_=0,uncertainty_=2;
+    std::int32_t lat_=0,lon_=0;unsigned accuracy_=UINT32_MAX,course_=65535,courseAccuracy_=65535,speed_=65535;
+    Diagnostics diagnostics_;
     State state_=State::Unsupported;Error error_=Error::None;LocationState location_=LocationState::NoAnchor;
     Region activeRegion_;PackageReader reader_;Sha256 sha_;Message lastRequest_;std::array<std::uint8_t,32> expectedHash_{},activeHash_{};
 };

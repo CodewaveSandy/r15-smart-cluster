@@ -1,8 +1,8 @@
 # R15 Smart Cluster
 
-The next map/navigation work is planned in [dynamic maps and route sharing](docs/navigation-phase-2.md), with separate [firmware](docs/navigation-phase-2-firmware.md) and [mobile](mobile/docs/navigation-phase-2.md) work packages. This proposal addresses the first physical map-feedback issues; it is documentation only and does not change the implemented v1 protocol.
+Phase 2 firmware is implemented: versioned cell/route transfer, bounded display cache, independent camera, quality-bearing location/guidance, missing-cell/window requests and 7Semi RGB-off startup. See [the journey](docs/navigation-phase-2.md), [firmware status](docs/navigation-phase-2-firmware.md) and [exact v2 protocol](mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract). Phone v2 implementation and physical acceptance remain next; the installed v1 APK/bytes remain compatible.
 
-Phase 1 map/location implementation starts with the [firmware-first integration handoff](docs/map-phase-1.md): real regional OSM roads, phone GPS, transfer/partial-map behavior and Android follow-up. Firmware codecs, bounded BLE/UART transport and the native map page are implemented/build verified; board transfer acceptance and Android map/GPS integration remain pending.
+Phase 1 map/location implementation starts with the [firmware-first integration handoff](docs/map-phase-1.md): real regional OSM roads, phone GPS, transfer/partial-map behavior and Android follow-up. Firmware and Android v1 are implemented; the user installed/flashed them and observed real roads, then reported transfer/marker/coverage/interaction issues. Phase2 firmware is implemented for that next journey; Android v2 and extended physical acceptance remain next.
 
 A dual-ESP32 instrument cluster for the Yamaha R15 V4, with an 800 x 480 LVGL interface. The vehicle MCU acquires/validates observations and handles calculations/connectivity; the display MCU renders normalized state received over UART.
 

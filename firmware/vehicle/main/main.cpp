@@ -5,6 +5,7 @@
 #include "shared/protocol/PairingIdentity.h"
 #include "driver/gpio.h"
 #include "InputConfig.h"
+#include "BoardLed.h"
 #include "shared/protocol/Button.h"
 #include "shared/protocol/DiscreteInputs.h"
 #include "driver/uart_vfs.h"
@@ -18,6 +19,7 @@
 #include <algorithm>
 
 extern "C" void app_main() {
+    cluster::board::disableBoardLed();
     uart_config_t link{};
     link.baud_rate=115200;link.data_bits=UART_DATA_8_BITS;
     link.parity=UART_PARITY_DISABLE;link.stop_bits=UART_STOP_BITS_1;
@@ -51,7 +53,6 @@ extern "C" void app_main() {
     static cluster::board::BlePhone phone;phone.initialize(packet.session);
     static cluster::board::RecordWriter writer;ESP_ERROR_CHECK(writer.initialize(UART_NUM_1)?ESP_OK:ESP_FAIL);
     static cluster::maplink::Demux demux;static cluster::maplink::Assembler assembly;
-    static cluster::maplink::Sender mapSender,locationSender(1);
     std::uint32_t mapConnection=0,mapDisplay=0;std::uint64_t report=0;
     cluster::phonelink::Receiver controls;cluster::phonelink::Gate gate(packet.session);
     std::uint32_t statusSequence=0,nameSequence=0;std::uint64_t lastStatus=0,lastName=0;
@@ -63,7 +64,7 @@ extern "C" void app_main() {
         for(unsigned i=0;i<8&&xQueueReceive(linkEvents,&event,0)==pdTRUE;++i)
             if(event.type==UART_FIFO_OVF||event.type==UART_BUFFER_FULL||event.type==UART_FRAME_ERR||event.type==UART_PARITY_ERR)fault=true;
         size_t waiting=0;ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_NUM_1,&waiting));
-        if(fault||waiting>1536){uart_flush_input(UART_NUM_1);xQueueReset(linkEvents);controls.reset();gate.invalidate();demux.reset();assembly.reset();phone.invalidateMap();mapSender.reset();locationSender.reset();}
+        if(fault||waiting>1536){uart_flush_input(UART_NUM_1);xQueueReset(linkEvents);controls.reset();gate.invalidate();demux.reset();assembly.reset();phone.invalidateMap();writer.resetMaps();}
         else {
             std::uint8_t bytes[256];const int count=uart_read_bytes(UART_NUM_1,bytes,sizeof bytes,0);
             if(count<0){controls.reset();gate.invalidate();}
@@ -73,13 +74,13 @@ extern "C" void app_main() {
                     for(unsigned j=0;j<n;++j)if(controls.push(frame[j],at,cluster::phonelink::Kind::Control)){
                         const auto snapshot=phone.snapshot(at);cluster::phonelink::Request request;bool newDisplay=false;
                         if(gate.receive(controls.latest(),at,snapshot.pairing,request,newDisplay))gate.queued(phone.post(request));
-                        if(newDisplay){phone.invalidateMap();mapSender.reset();locationSender.reset();if(snapshot.pairing)phone.post({cluster::phonelink::Action::Reject,snapshot.pairing});}
+                        if(newDisplay){phone.invalidateMap();writer.resetMaps();if(snapshot.pairing)phone.post({cluster::phonelink::Action::Reject,snapshot.pairing});}
                     }
                 },[&](const std::uint8_t* frame,unsigned n,std::uint64_t at){
                     cluster::maplink::Message message;if(assembly.push(frame,n,at,2,message)){
-                        if(cluster::maplink::validCapability(message.bytes.data(),message.size)&&cluster::maplink::get(message.bytes.data(),8)==packet.session){
+                        if((cluster::maplink::validCapability(message.bytes.data(),message.size)||cluster::navlink::validCapability(message))&&cluster::maplink::get(message.bytes.data(),8)==packet.session){
                             const auto display=std::uint32_t(cluster::maplink::get(message.bytes.data(),16));
-                            if(display!=mapDisplay){mapSender.reset();locationSender.reset();mapDisplay=display;}
+                            if(display!=mapDisplay){writer.resetMaps();mapDisplay=display;}
                         }
                         phone.mapDownstream(message,at);
                     }
@@ -132,22 +133,30 @@ extern "C" void app_main() {
         }
         const auto mapPhone=phone.snapshot(now);
         const auto connection=mapPhone.phone.available()&&mapPhone.phone.connected&&gate.fresh(now)?mapPhone.phone.connectionId:0;
-        if(connection!=mapConnection){mapSender.reset();locationSender.reset();mapConnection=connection;}
+        if(connection!=mapConnection){writer.resetMaps();mapConnection=connection;}
+        if(phone.takeTransportReset())writer.resetMaps();
         if(connection){
             cluster::maplink::Message m;
             const auto eligible=[&](const cluster::maplink::Message& q){return cluster::maplink::get(q.bytes.data(),8)==packet.session&&cluster::maplink::get(q.bytes.data(),12)==connection&&cluster::maplink::get(q.bytes.data(),16)==mapDisplay;};
-            if(phone.takeMap(m,false,true)&&eligible(m)){mapSender.reset();locationSender.reset();mapSender.enqueue(m);}
-            if(!mapSender.pending()&&phone.takeMap(m,false)&&eligible(m))mapSender.enqueue(m);
-            if(!locationSender.pending()&&phone.takeMap(m,true)&&eligible(m))locationSender.enqueue(m);
-            // One fragment per sample cycle; latest fix precedes bulk map.
-            auto* sender=locationSender.pending()?&locationSender:&mapSender;
-            if(sender->pending()){
-                const auto r=sender->next(1);if(writer.post(r.bytes.data(),r.size,sender->bulk()?2:1))sender->sent();
+            if(phone.takeMap(m,false,true)&&eligible(m)){writer.resetMaps();writer.postMap(m);}
+            if(phone.navigationUrgent()){writer.resetMaps();if(phone.takeNavigation(m,false)&&eligible(m))writer.postMap(m);}
+            if(writer.mapReady(false)){
+                if(phone.takeNavigation(m,false)&&eligible(m))writer.postMap(m);
+                else if(phone.takeMap(m,false)&&eligible(m))writer.postMap(m);
+            }
+            if(writer.mapReady(true)){
+                if(phone.takeNavigation(m,true)&&eligible(m))writer.postMap(m,true);
+                else if(phone.takeMap(m,true)&&eligible(m))writer.postMap(m,true);
             }
         }
         if(now-report>=10000){
-            report=now;std::printf("@MAP heap_free=%u heap_min=%u largest=%u stack=%u tx_queue_full=%u tx_stack=%u sample_gap_ms=%u\n",
-                unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),unsigned(uxTaskGetStackHighWaterMark(nullptr)),writer.rejected(),writer.stackMargin(),unsigned(maxSourceGap));
+            const auto tx=writer.diagnostics();
+            const auto ble=phone.mapDiagnostics();
+            const auto rx=demux.diagnostics();
+            std::printf("@MAP_RX fragments=%u framing_drops=%u crc_drops=%u frame_timeouts=%u\n",unsigned(rx.fragments),unsigned(rx.framingDrops),unsigned(rx.crcDrops),unsigned(rx.timeouts));
+            std::printf("@MAP_BLE mtu=%u accepted=%u busy=%u data_bytes=%u max_display_ack_ms=%u nav_window_high_water=%u\n",ble.mtu,ble.accepted,ble.busy,ble.dataBytes,ble.maxAckMs,ble.navHighWater);
+            report=now;std::printf("@MAP heap_free=%u heap_min=%u largest=%u stack=%u tx_queue_full=%u tx_stack=%u sample_gap_ms=%u uart_bytes=%u bulk_bytes=%u fragments=%u write_errors=%u critical_wait_ms=%u\n",
+                unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),unsigned(uxTaskGetStackHighWaterMark(nullptr)),writer.rejected(),writer.stackMargin(),unsigned(maxSourceGap),tx.bytes,tx.bulkBytes,tx.fragments,tx.writeErrors,tx.maxCriticalWaitMs);
         }
         ++packet.sequence;
         vTaskDelay(pdMS_TO_TICKS(20));

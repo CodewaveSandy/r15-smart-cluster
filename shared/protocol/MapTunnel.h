@@ -1,5 +1,6 @@
 #pragma once
 #include "MapProtocol.h"
+#include "NavigationProtocol.h"
 
 namespace cluster::maplink {
 // One demultiplexer isolates complete legacy frames and escaped map records.
@@ -7,11 +8,19 @@ namespace cluster::maplink {
 // legacy sliding decoders, even when a tunnel CRC/length check fails.
 class Demux {
 public:
+    struct Diagnostics {std::uint32_t fragments=0,framingDrops=0,crcDrops=0,timeouts=0;};
+    const Diagnostics& diagnostics()const{return diagnostics_;}
     void reset(){used_=expected_=matched_=0;tunnel_=drop_=escape_=false;}
     template<class Legacy,class Fragment> void push(std::uint8_t byte,std::uint64_t now,Legacy legacy,Fragment fragment){
-        if((used_||tunnel_)&&now-started_>500)reset();
+        if((used_||tunnel_)&&now-started_>500){++diagnostics_.timeouts;reset();}
         if(tunnel_){
-            if(byte==0){if(!drop_&&!escape_&&used_>=17&&buffer_[0]==1&&buffer_[1]>=1&&buffer_[1]<=2&&buffer_[8]>=1&&buffer_[8]<=48&&used_==16u+buffer_[8]&&zero(buffer_.data(),9,3)&&intact(buffer_.data(),used_))fragment(buffer_.data(),used_,now);reset();return;}
+            if(byte==0){
+                const bool shape=!drop_&&!escape_&&used_>=17&&buffer_[0]==1&&buffer_[1]>=1&&buffer_[1]<=2&&buffer_[8]>=1&&buffer_[8]<=48&&used_==16u+buffer_[8]&&zero(buffer_.data(),9,3);
+                if(!shape)++diagnostics_.framingDrops;
+                else if(!intact(buffer_.data(),used_))++diagnostics_.crcDrops;
+                else {++diagnostics_.fragments;fragment(buffer_.data(),used_,now);}
+                reset();return;
+            }
             if(drop_)return;
             if(escape_){if(byte!=0x20&&byte!=0x72&&byte!=0x5d){drop_=true;return;}byte^=0x20;escape_=false;}
             else if(byte==0x7d){escape_=true;return;}
@@ -27,6 +36,7 @@ public:
         matched_=byte=='R'?1:0;
     }
 private:
+    Diagnostics diagnostics_;
     std::array<std::uint8_t,80> buffer_{};unsigned used_=0,expected_=0,matched_=0;std::uint64_t started_=0;bool tunnel_=false,drop_=false,escape_=false;
 };
 struct Assembly {
@@ -45,8 +55,10 @@ public:
         unsigned index=0;
         if(!offset){
             if(length<8)return false;
-            if(direction==1){if(!magic(b+12,'X'))return false;index=b[17]==7?1:0;}
-            else {if(!magic(b+12,'S')&&!magic(b+12,'K'))return false;index=magic(b+12,'K')?1:0;}
+            if(direction==1){
+                if(!magic(b+12,'X')&&!magic(b+12,'V'))return false;
+                index=magic(b+12,'V')?(b[17]==8||b[17]==10?1:0):(b[17]==7?1:0);
+            }else {if(!magic(b+12,'S')&&!magic(b+12,'K')&&!magic(b+12,'J')&&!magic(b+12,'Y'))return false;index=magic(b+12,'K')||magic(b+12,'J')?1:0;}
             auto& s=slots_[index];
             if(s.used>=length&&s.sequence==sequence&&s.message.size==total&&std::equal(b+12,b+12+length,s.message.bytes.begin()))return false;
             s.reset();s.sequence=sequence;s.message.size=total;
@@ -81,7 +93,7 @@ public:
     void reset(){pending_=false;offset_=0;}
     WireRecord next(unsigned direction){return pending_?fragment(message_,direction,sequence_,offset_):WireRecord{};}
     void sent(){offset_+=std::min(48u,message_.size-offset_);if(offset_==message_.size)pending_=false;}
-    bool bulk()const{return pending_&&magic(message_.bytes.data(),'X')&&message_.bytes[5]==4;}
+    bool bulk()const{return pending_&&((magic(message_.bytes.data(),'X')&&message_.bytes[5]==4)||(magic(message_.bytes.data(),'V')&&message_.bytes[5]==5));}
 private:Message message_;unsigned offset_=0;std::uint16_t sequence_=0;bool pending_=false;
 };
 }

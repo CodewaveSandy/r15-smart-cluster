@@ -16,8 +16,12 @@ inline std::optional<SettingsEffect> settingsTouch(DisplayOptions& view,const Cl
     if(!canOpenSettings(state,life)) return reconcileSettings(view,state,life);
     if(!menuReady) return SettingsEffect::None;
     if(view.map){
-        const int xs[]={340,430,530,620,690},widths[]={80,90,80,60,60};
-        if(y>=442&&y<480)for(unsigned i=0;i<5;++i)if(x>=xs[i]&&x<xs[i]+widths[i]){view.mapFocus=i;return settingsAction(view,SettingsAction::Select,state,life);}
+        const int xs[]={314,388,474,550,612,674},widths[]={70,82,72,58,58,118};
+        if(y>=442&&y<480)for(unsigned i=0;i<6;++i)if(x>=xs[i]&&x<xs[i]+widths[i]){
+            if(view.mapPan){if(i<5)view.mapPanFocus=i;else {view.mapPan=false;return SettingsEffect::None;}}
+            else view.mapFocus=i;
+            return settingsAction(view,SettingsAction::Select,state,life);
+        }
         return SettingsEffect::None;
     }
     y-=SettingsLayout::bounds.y;

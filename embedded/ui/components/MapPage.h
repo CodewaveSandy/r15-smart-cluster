@@ -6,14 +6,18 @@ struct MapPageState {
     const maps::Scene* scene=nullptr;maps::Pose pose;
     const char* transfer="Connect phone to share a map";
     const char* location="Waiting for location";
+    bool navigation=false;
+    const char* coverage="";
+    const char* guidance="";
+    const char* attribution="OpenStreetMap contributors";
 };
 class MapPage {
 public:
     explicit MapPage(lv_obj_t* parent);
     void update(const MapPageState&,const ViewOptions&,const Palette&,bool visible);
 private:
-    ObjectOwner root_;MapPanel panel_;maps::Point center_{};const maps::Scene* bound_=nullptr;
-    lv_obj_t *card_,*licence_,*title_,*detail_,*north_,*scale_,*footer_,*copyright_,*attribution_;
-    std::array<lv_obj_t*,5> controls_{};
+    ObjectOwner root_;MapPanel panel_;
+    lv_obj_t *card_,*licence_,*title_,*detail_,*coverage_,*routeCard_,*guidance_,*north_,*mode_,*scale_,*footer_,*copyright_,*attribution_;
+    std::array<lv_obj_t*,6> controls_{};
 };
 }

@@ -1,12 +1,14 @@
 #pragma once
 #include "DashboardPages.h"
 #include "Clock.h"
+#include "shared/application/MapCamera.h"
 namespace cluster {
 // Display-local preferences and navigation. No vehicle commands or persistence.
 struct DisplayOptions {
     bool light=false, track=false, imperial=false;
     bool settings=false;
-    bool map=false,mapOverview=false;unsigned mapFocus=1,mapZoom=1;
+    bool map=false,mapPan=false;unsigned mapFocus=1,mapZoom=1,mapPanFocus=0;
+    maps::MapCamera mapCamera;
     unsigned settingsFocus=0;
     bool appearance=false, appearanceOriginalLight=false, appearanceSaveFailed=false, appearanceSaving=false;
     unsigned appearanceFocus=0;

@@ -72,7 +72,8 @@ public:
         if(region.south< -850000000||region.north>850000000||region.west< -1800000000||region.east>1800000000||region.south>=region.north||region.west>=region.east||!region.contains(region.lat,region.lon))return false;
         lower_=region.project(region.south,region.west);upper_=region.project(region.north,region.east);
         if(!maps::valid(lower_)||!maps::valid(upper_)||std::abs(lower_.east)>5000||std::abs(lower_.north)>5000||std::abs(upper_.east)>5000||std::abs(upper_.north)>5000)return false;
-        scene.roadCount=scene.routeCount=0;scene.quality=Quality::Unavailable;return true;
+        scene.originLatE7=region.lat;scene.originLonE7=region.lon;scene.mercator=false;
+        scene.roadCount=scene.routeCount=scene.overviewCount=0;scene.quality=Quality::Unavailable;return true;
     }
     // Return -1 invalid, 0 pending, 1 complete. At most budget road records.
     int step(unsigned budget=16){

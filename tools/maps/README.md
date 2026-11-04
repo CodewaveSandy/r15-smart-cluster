@@ -42,3 +42,26 @@ These are data preparation, developer preview and paired-radio bench tools, not 
    **One saved peer remains the security policy.** The bench Mac must already be that authorized peer through the normal visible cluster/OS numeric comparison. An existing Android bond does not authorize the Mac. Any deliberate Forget/re-pair/restore is a manual user action; this tool never performs it. Obtain the identifier using the OS's BLE tooling; do not paste identifiers or location packets into public logs. Stop the phone client before a Mac transfer. If retaining the phone bond is preferred, defer physical map transfer until the Android integration exists. The tool does not keep c012 phone metadata alive and is not a substitute for the later coexistence/pocket acceptance run.
 
 The byte authority is [mobile protocol](../../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification); [normative vectors](../../shared/protocol/map-phase-1-vectors.txt) are language-neutral data for manual review/future codecs. No automated suites have been added or resumed.
+
+
+## Navigation v2 developer tools
+
+Firmware c019/c01a/c01b is implemented; exact [bytes/limits](../../mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract) and [firmware evidence](../../docs/development.md#phase-2-firmware-integration) supersede the earlier v2 planning gate. Old v1 sender remains independent.
+
+```sh
+python3 tools/maps/navigation.py prepare --package mobile/assets/maps/kolkata.r15b --output build/maps/navigation-v2 --demo-route
+cmake --build build/lvgl --target r15-map-firmware-preview --parallel 4
+SDL_VIDEODRIVER=dummy build/lvgl/simulator/lvgl/r15-map-firmware-preview.app/Contents/MacOS/r15-map-firmware-preview --navigation-bundle build/maps/navigation-v2 --render build/lvgl/navigation-v2-previews
+```
+
+The stdlib preparer consumes the existing bounded/licensed regional file, splits/clips to extent4096 Mercator cells, merges connected road segments into bounded chunks and writes full SHA/size/provenance/index/licence. It refuses count/size/area overflow without truncation. Edge tiles are flagged geographically partial instead of claiming coverage outside the supplied extract. `--demo-route` adds one explicitly illustrative road line for the **host** renderer; no route service or physical GPS is simulated. Outputs stay ignored under `build/` and are not firmware assets or an unlimited downloader.
+
+Actual radio map-only transfer, using the same pinned bleak1.1.1 venv described above:
+
+```sh
+build/map-tools/bin/python tools/maps/navigation.py send --device YOUR_ALREADY_PAIRED_OS_ID --bundle build/maps/navigation-v2 --mtu 96
+```
+
+The selected Mac must be the normally approved OS/cluster peer. This tool never enrolls/approves/replaces a bond, sends LOCATION, activates demo routes, touches vehicle controls or opens USB as a secret map path. Do not discard the user's phone bond just to run it. MTU96 is conservative; opt into247 only after actual verification (CoreBluetooth does not expose it here). Four DATA controls at most remain pending; callbacks serialize ATT and only display ACK/verification advances readiness. Progress prints accepted bytes and elapsed time. The display retains only its bounded cache; the tool does not claim the whole regional bundle remains resident after eviction. Missing-cell/window requests are not network downloads in this explicit fixture sender.
+
+Preparation, syntax/CLI and host rendering were checked; physical paired-radio/MTU/throughput/phone coexistence acceptance remains pending. Static normative examples are data, not an automated suite; no tests are restored.

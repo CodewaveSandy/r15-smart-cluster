@@ -3,7 +3,9 @@
 #include "shared/protocol/PhoneMetadata.h"
 #include "shared/protocol/PhoneTelemetry.h"
 #include "shared/protocol/MapTunnel.h"
+#include "shared/application/NavigationBridge.h"
 #include <atomic>
+#include <algorithm>
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/portmacro.h"
@@ -30,8 +32,19 @@ public:
     Snapshot snapshot(std::uint64_t now);
     void mapDownstream(const maplink::Message&,std::uint64_t now);
     bool takeMap(maplink::Message&,bool location,bool urgentOnly=false);
+    bool takeNavigation(maplink::Message&,bool observation);
+    bool navigationUrgent();
+    bool takeTransportReset();
     void invalidateMap();
+    struct MapDiagnostics {unsigned mtu=0,accepted=0,busy=0,dataBytes=0,maxAckMs=0,navHighWater=0;};
+    MapDiagnostics mapDiagnostics(){portENTER_CRITICAL(&mux_);auto d=mapDiagnostics_;d.maxAckMs=std::max(d.maxAckMs,navigation_.maxAckMs());d.navHighWater=navigation_.highWater();portEXIT_CRITICAL(&mux_);return d;}
 private:
+    static int navigationAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
+    void notifyNavigation(std::uint64_t);
+    navlink::NavigationBridge navigation_;
+    bool navigationSubscribed_=false,navigationNotifyPending_=false,transportReset_=false;
+    std::uint16_t navigationHandle_=0;
+    unsigned navigationNotifyKind_=64;
     static BlePhone* instance_;
     static int mapAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
     void notifyMap(std::uint64_t);
@@ -41,6 +54,7 @@ private:
     maplink::Capability downstreamCapability_{};maplink::Status downstreamStatus_{};
     std::uint64_t capabilityAt_=0,statusAt_=0,mapLocationAt_=0,mapDataAt_=0;
     std::uint32_t pendingMapControl_=0;
+    MapDiagnostics mapDiagnostics_;std::uint64_t mapControlAt_=0;
     bool mapCommandPending_=false,mapLocationPending_=false,mapSubscribed_=false,mapNotifyPending_=false;
     std::atomic<bool> mapDirty_{false};
     std::uint16_t mapHandle_=0;

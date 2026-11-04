@@ -2,6 +2,7 @@
 #include "../ObjectOwner.h"
 #include "../Tokens.h"
 #include "shared/model/MapScene.h"
+#include "shared/application/MapCamera.h"
 #include <memory>
 
 namespace cluster::ui {
@@ -21,6 +22,7 @@ public:
     void bindScene(const maps::Scene*); // caller keeps immutable storage alive
     void visible(bool);
     void update(const maps::Pose&,bool overview,bool light,unsigned zoom=1,bool browsing=false);
+    void update(const maps::Pose&,maps::CameraView,bool light);
 private:
     static void draw(lv_event_t*);
     std::unique_ptr<maps::Scene> owned_;
@@ -28,6 +30,7 @@ private:
     maps::Pose pose_{};
     bool initialized_=false,overview_=false,light_=false,browsing_=false;
     unsigned zoom_=1;
+    maps::CameraView camera_{};bool explicitCamera_=false;
     ObjectOwner root_;
 };
 } // namespace cluster::ui

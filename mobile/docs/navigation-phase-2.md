@@ -1,12 +1,12 @@
 # Phase 2 mobile implementation handoff
 
-Updated: 2026-11-03. **Plan only; no app implementation in this turn.** Read [the full journey, provider decisions and budgets](../../docs/navigation-phase-2.md), [firmware dependencies](../../docs/navigation-phase-2-firmware.md), mobile/AGENTS.md, current architecture/background-sync and exact protocol guides. Current phase 1 remains a bounded Kotlin/MapLibre/Kolkata prototype, not the new dynamic journey.
+Updated: 2026-11-04. **Android implementation pending; firmware v2 is now implemented and specified.** Read [the full journey, provider decisions and budgets](../../docs/navigation-phase-2.md), [firmware dependencies](../../docs/navigation-phase-2-firmware.md), mobile/AGENTS.md, current architecture/background-sync and exact protocol guides. Current phase 1 remains a bounded Kotlin/MapLibre/Kolkata prototype, not the new dynamic journey.
 
 ## NAV-M0 — Source/cache and lifecycle spike
 
 The current app cannot acquire phone-map location until cluster sync/share is started, packages one central-Kolkata region and cannot browse independently before pairing. Replace these coupling assumptions deliberately while preserving real discovery/radar, explicit bond approval and ordinary telemetry.
 
-Before v2 bytes freeze, prove on the installed target APK that the pinned native MapLibre integration and cluster converter can consume one canonical raw-MVT cache. Document the exact native resource/cache hook, network ownership, offline style/glyph/sprite handling and eviction behavior. Do not assume MapLibre Flutter exposes its native cache contents. A reviewed bounded adapter is necessary if it does not; see the main plan for the narrowly scoped loopback fallback and its security/lifecycle constraints. Do not introduce a globally exported tile server, cleartext exception or independent duplicate downloader by accident.
+The user requested firmware-first completion, so [v2 bytes are now frozen](protocol.md#phase-2-navigation-extension--implemented-firmware-contract). Before claiming mobile integration, prove on the installed target APK that the pinned native MapLibre integration and cluster converter can consume one canonical raw-MVT cache. Document the exact native resource/cache hook, network ownership, offline style/glyph/sprite handling and eviction behavior. Do not assume MapLibre Flutter exposes its native cache contents. A reviewed bounded adapter is necessary if it does not; see the main plan for the narrowly scoped loopback fallback and its security/lifecycle constraints. Do not introduce a globally exported tile server, cleartext exception or independent duplicate downloader by accident.
 
 Use a small provider-legal area, record source/TileJSON snapshot and source zoom limits, capture cache-hit/miss/bytes counters and verify offline road/label rendering. No new account or user location is sent by this planning document. Configure provider credentials only after the user selects the recommended stack. App builds/spike APKs run **only in GitHub Actions**; user installs and checks them manually. No local Android builds/SDK installation or ad-hoc native compilation.
 
@@ -46,7 +46,9 @@ Implement progression as its own uncertainty-aware application responsibility: p
 
 ## NAV-M4 — New firmware channel integration
 
-Wait for the exact v2 contract/fixtures/limits from firmware. Existing c011–c015 and map v1 strict decoders remain unchanged; discover a separately versioned channel and truthfully downgrade on old firmware. Do not design an incompatible Android packet from this semantic plan alone.
+Implement the [exact v2 contract/fixtures/limits](protocol.md#phase-2-navigation-extension--implemented-firmware-contract) now supplied by firmware: c019/c01a/c01b, twelve complete objects plus staging, four DATA commands in flight, full-SHA reuse, interest/window requests, strict route revision activation and source-quality/time rules. Existing c011–c015 and map v1 strict decoders remain unchanged; discover a separately versioned channel and truthfully downgrade on old firmware. Do not design an incompatible Android packet from this semantic plan alone.
+
+INTEREST z/x/y are semantic display cells: clamp upstream downloads to provider/source max zoom and derive child cells from the canonical cached parent where overscaling is needed. Do not request nonexistent raw zooms or maintain a duplicate download cache. Geographic-partial cell flags remain partial coverage even after all their bytes arrive.
 
 Integrate a single scheduler with independent current source/route-progress, object transfer and viewport-interest lanes. Honor downstream byte/object credit and negotiated pipeline window while retaining serialized ATT procedures. Measure actual payload/MTU/ACK/pacing; latest observations and metadata/telemetry outrank bulk. Have/need/content-hash negotiation avoids full resend; missing ranges only resume in the matching content/session rules. Location cadence does not depend on the user browsing Navigate.
 

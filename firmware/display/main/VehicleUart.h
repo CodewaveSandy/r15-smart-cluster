@@ -20,6 +20,7 @@ public:
     void initialize(std::uint32_t session=1) {
         phone_.initialize(session);
         reserveMaps(maps_,session);
+        reserveNavigation(navigation_,maps_,session);
         ESP_ERROR_CHECK(writer_.initialize(UART_NUM_0,true)?ESP_OK:ESP_FAIL);
         uart_config_t cfg{};cfg.baud_rate=115200;cfg.data_bits=UART_DATA_8_BITS;
         cfg.parity=UART_PARITY_DISABLE;cfg.stop_bits=UART_STOP_BITS_1;
@@ -30,7 +31,7 @@ public:
     }
     void reset() {
         ESP_ERROR_CHECK(uart_flush_input(UART_NUM_1));
-        xQueueReset(events_);receiver_.reset();status_.reset();identity_.reset();metadata_.reset();phone_.reset();demux_.reset();assembly_.reset();maps_.session(0,0,false);
+        xQueueReset(events_);receiver_.reset();status_.reset();identity_.reset();metadata_.reset();phone_.reset();demux_.reset();assembly_.reset();maps_.session(0,0,false);navigation_.session(0,0,false);
     }
     void poll(std::uint64_t now) {
         // Inspect at most the driver's eight queued events each UI cycle.
@@ -52,9 +53,20 @@ public:
                 }
                 synchronizeMapSession(at);
             },[&](const std::uint8_t* frame,unsigned n,std::uint64_t at){
-                maplink::Message message;if(assembly_.push(frame,n,at,1,message)){synchronizeMapSession(at);maps_.command(message,at);}
+                maplink::Message message;if(assembly_.push(frame,n,at,1,message)){
+                    synchronizeMapSession(at);
+                    if(navlink::command(message)){
+                        navigation_.command(message,at);
+                        if(message.bytes[5]==1&&navigation_.active()){if(!navigationMode_)maps_.discard();navigationMode_=true;interestPending_=routeNeedPending_=false;}
+                    }else if(maplink::validCommand(message)){
+                        const auto phone=phone_.phone(at,receiver_.latest().session);
+                        const bool context=receiver_.fresh(at)&&phone.available()&&phone.connected&&maplink::get(message.bytes.data(),8)==receiver_.latest().session&&maplink::get(message.bytes.data(),12)==phone.connectionId&&maplink::get(message.bytes.data(),16)==maplink::get(maps_.capability().data(),16);
+                        if(navigationMode_&&context&&(message.bytes[5]==1||message.bytes[5]==3)){navigation_.close();maps_.discard();navigationMode_=false;}
+                        if(!navigationMode_)maps_.command(message,at);
+                    }
+                }
             });
-        synchronizeMapSession(now);maps_.poll(now);
+        synchronizeMapSession(now);if(navigationMode_)navigation_.poll(now);else maps_.poll(now);
         phonelink::Packet control;
         if(phone_.outgoing(now,control)) {
             const auto bytes=phonelink::encode(control);
@@ -63,10 +75,18 @@ public:
         // Coalesced end-to-end status; heartbeat capability is independent of
         // whether the phone is subscribed or currently sending a map.
         if(maps_.takeDirty()||now-lastMapStatus_>=1000)statusPending_=true;
+        if(navigation_.takeDirty()||now-lastNavStatus_>=500)navStatusPending_=true;
+        if(navigation_.takeInterest())interestPending_=true;
+        if(navigation_.takeRouteNeed())routeNeedPending_=true;
+        if(!navigation_.active())interestPending_=routeNeedPending_=false;
         if(!sender_.pending()){
             maplink::Message m;
             if(now-lastCapability_>=1000){const auto b=maps_.capability();m.size=b.size();std::copy(b.begin(),b.end(),m.bytes.begin());lastCapability_=now;}
+            else if(now-lastNavCapability_>=1000){const auto b=navigation_.capability();m.size=b.size();std::copy(b.begin(),b.end(),m.bytes.begin());lastNavCapability_=now;}
+            else if(navStatusPending_){m=navigation_.status(now);navStatusPending_=false;lastNavStatus_=now;}
             else if(statusPending_){const auto b=maps_.status(now);m.size=b.size();std::copy(b.begin(),b.end(),m.bytes.begin());statusPending_=false;lastMapStatus_=now;}
+            else if(routeNeedPending_){m=navigation_.routeNeed();routeNeedPending_=false;}
+            else if(interestPending_&&now-lastInterest_>=250){m=navigation_.interest();interestPending_=false;lastInterest_=now;}
             if(m.size)sender_.enqueue(m);
         }
         if(sender_.pending()){
@@ -74,8 +94,13 @@ public:
         }
     }
     maplink::MapStore& mapStore(){return maps_;}
+    navlink::NavigationStore& navigation(){return navigation_;}
+    bool navigationMode()const{return navigationMode_;}
+    void navigationCamera(const maps::MapCamera& camera,std::uint64_t now){if(navigationMode_)navigation_.camera(camera,now);}
     unsigned txStackMargin()const{return writer_.stackMargin();}
     unsigned txRejected()const{return writer_.rejected();}
+    RecordWriter::Diagnostics txDiagnostics()const{return writer_.diagnostics();}
+    const maplink::Demux::Diagnostics& rxDiagnostics()const{return demux_.diagnostics();}
     ClusterState state(std::uint64_t now)const {
         auto state=receiver_.state(now);state.phone=phone_.phone(now,receiver_.latest().session);
         if(state.phone.available()&&state.phone.pairingRequested)state.phone.displayName=identity_.label(now,receiver_.latest().session,status_.latest().pairing);
@@ -113,8 +138,11 @@ private:
     void synchronizeMapSession(std::uint64_t now){
         const auto p=phone_.phone(now,receiver_.latest().session);
         maps_.session(receiver_.latest().session,p.connectionId,receiver_.fresh(now)&&p.available()&&p.connected);
+        navigation_.session(receiver_.latest().session,p.connectionId,receiver_.fresh(now)&&p.available()&&p.connected);
     }
     maplink::MapStore maps_;RecordWriter writer_;maplink::Demux demux_;maplink::Assembler assembly_;maplink::Sender sender_;
+    navlink::NavigationStore navigation_;bool navigationMode_=false,navStatusPending_=true,interestPending_=false,routeNeedPending_=false;
+    std::uint64_t lastNavCapability_=0,lastNavStatus_=0,lastInterest_=0;
     std::uint64_t lastCapability_=0,lastMapStatus_=0;bool statusPending_=true;
     QueueHandle_t events_=nullptr;
     gearlink::Receiver receiver_;

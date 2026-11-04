@@ -21,6 +21,7 @@ i2c_master_dev_handle_t expander=nullptr, touch=nullptr;
 StaticSemaphore_t syncStorage;
 SemaphoreHandle_t sync=nullptr;
 unsigned flushes=0, longestFlush=0;
+unsigned touchErrors=0;
 portMUX_TYPE frameMux=portMUX_INITIALIZER_UNLOCKED;
 void* frameBuffers[2]{};
 
@@ -145,35 +146,46 @@ void initialize() {
     lv_display_set_buffers(display,first,second,width*height*2,LV_DISPLAY_RENDER_MODE_DIRECT);
 }
 
-bool releasedTouch(int& x,int& y) {
+bool readTouch(maps::Touch& event) {
     static int64_t sampled=0;
     static bool pressed=false;
+    static int x=0,y=0;
     static unsigned failures=0;
+    static int64_t lastContact=0;
+    static bool blocked=false;
     const auto now=esp_timer_get_time();
     if(now-sampled<30000) return false;
     sampled=now;
     uint8_t status=0;
     if(!touchRead(0x814e,&status,1)) {
-        pressed=false;
+        ++touchErrors;blocked=true;
+        const bool cancel=pressed;pressed=false;event={maps::TouchPhase::Cancel,x,y};
         if(++failures==1 || failures%100==0) ESP_LOGW(tag,"GT911 read failed (%u)",failures);
-        return false;
+        return cancel;
     }
     failures=0;
-    if(!(status&0x80)) return false;
+    if(!(status&0x80)) {
+        if(pressed&&now-lastContact>500000){pressed=false;blocked=true;event={maps::TouchPhase::Cancel,x,y};return true;}
+        return false;
+    }
     const unsigned count=status&15;
-    bool tapped=false;
-    if(count==1) {
+    event={maps::TouchPhase::Cancel,x,y};
+    bool report=pressed;
+    if(count>1)blocked=true;
+    if(count==0)blocked=false;
+    if(count==1&&!blocked) {
         uint8_t point[7]{};
         if(touchRead(0x814f,point,sizeof point)) {
             const int tx=point[1]|(point[2]<<8), ty=point[3]|(point[4]<<8);
-            if(tx<width && ty<height) { x=tx; y=ty; pressed=true; }
-            else pressed=false;
-        } else pressed=false;
-    } else { tapped=pressed&&count==0; pressed=false; }
+            if(tx<width && ty<height) { x=tx; y=ty;event={pressed?maps::TouchPhase::Move:maps::TouchPhase::Press,x,y};pressed=true;report=true;lastContact=now; }
+            else {++touchErrors;blocked=true;pressed=false;}
+        } else {++touchErrors;blocked=true;pressed=false;}
+    } else {if(pressed&&count==0)event={maps::TouchPhase::Release,x,y};pressed=false;}
     const uint8_t clear[]={0x81,0x4e,0};
-    if(i2c_master_transmit(touch,clear,sizeof clear,10)!=ESP_OK) { pressed=false; return false; }
-    return tapped;
+    if(i2c_master_transmit(touch,clear,sizeof clear,10)!=ESP_OK) {++touchErrors;blocked=true;event={maps::TouchPhase::Cancel,x,y};pressed=false;return true;}
+    return report;
 }
+unsigned touchFailures(){return touchErrors;}
 unsigned flushCount() { return flushes; }
 unsigned maxFlushUs() { return longestFlush; }
 }

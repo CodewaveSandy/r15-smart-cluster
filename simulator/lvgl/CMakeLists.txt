@@ -62,6 +62,6 @@ set_target_properties(r15-map-preview PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMA
  MACOSX_BUNDLE_GUI_IDENTIFIER "dev.r15smartcluster.map-preview")
 target_link_libraries(r15-map-preview PRIVATE cluster_ui SDL2::SDL2)
 target_compile_options(r15-map-preview PRIVATE -Wall -Wextra -Wpedantic)
-add_executable(r15-map-firmware-preview MACOSX_BUNDLE firmware_map_preview.cpp)
+add_executable(r15-map-firmware-preview MACOSX_BUNDLE firmware_map_preview.cpp navigation_preview.cpp)
 target_link_libraries(r15-map-firmware-preview PRIVATE cluster_ui SDL2::SDL2)
 target_compile_options(r15-map-firmware-preview PRIVATE -Wall -Wextra -Wpedantic)

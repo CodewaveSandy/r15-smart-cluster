@@ -17,6 +17,7 @@
 #include "components/LifecycleOverlay.h"
 #include "TouchNavigation.h"
 #include "components/MapPage.h"
+#include "shared/application/MapGesture.h"
 
 namespace cluster::ui {
 // Owns the root and fixed-size component members. Components are destroyed
@@ -32,7 +33,11 @@ public:
     Dashboard(const Dashboard&)=delete;
     Dashboard& operator=(const Dashboard&)=delete;
     void mapState(const MapPageState& value){mapState_=value;}
-    void update(const ClusterState&,const ViewOptions&,const Lifecycle&,std::uint64_t now);
+    void update(const ClusterState&,ViewOptions&,const Lifecycle&,std::uint64_t now);
+    bool mapPointer(ViewOptions& view,const Lifecycle& life,maps::Touch touch){
+        if(!touchVisible_||!touchMenuReady_||life.phase()!=Phase::Running||!view.map||view.phone){mapGesture_.cancel();return false;}
+        return mapGesture_.consume(touch,view.mapCamera);
+    }
     std::optional<SettingsEffect> touch(ViewOptions& view,const ClusterState& state,const Lifecycle& life,int x,int y) {
         if(!touchVisible_||life.phase()!=Phase::Running) return std::nullopt;
         return settingsTouch(view,state,life,x,y,touchMenuReady_);
@@ -53,6 +58,7 @@ private:
     RideInfoPanel rideInfo_;
     FuelGauge fuel_;
     MapPage map_;MapPageState mapState_;
+    maps::MapGesture mapGesture_;
     LifecycleOverlay overlay_;
     bool initialized_=false, previousLight_=false, previousShift_=false;
     bool touchVisible_=false,touchMenuReady_=false;

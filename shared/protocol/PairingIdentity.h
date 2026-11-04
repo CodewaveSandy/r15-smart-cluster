@@ -8,7 +8,8 @@ inline bool name(const std::uint8_t* bytes,unsigned size,Name& out) {
     if(!size||size>32)return false;
     bool visible=false;Name parsed{};
     for(unsigned i=0;i<size;++i){if(bytes[i]<32||bytes[i]>126)return false;parsed[i]=char(bytes[i]);visible|=bytes[i]!=32;}
-    if(!visible)return false;out=parsed;return true;
+    if(!visible)return false;
+    out=parsed;return true;
 }
 struct Packet {std::uint32_t vehicle=0,pairing=0,sequence=0,uptime=0;Name label{};};
 using Bytes=std::array<std::uint8_t,packetSize>;

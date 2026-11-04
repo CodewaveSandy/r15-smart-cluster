@@ -74,12 +74,15 @@ extern "C" void app_main() {
     const int flags=fcntl(STDIN_FILENO,F_GETFL,0);
     if(flags>=0) fcntl(STDIN_FILENO,F_SETFL,flags|O_NONBLOCK);
     ESP_LOGI(tag,"Keys: l layout, t theme, d moving demo/unknown, w test warnings, n trip, i info, u units, b boot, o shutdown, v live UART, p parked fixture, s Settings, q Back, [/] focus, Enter select. Touch: center demo, top-left layout, top-right theme, bottom-left trip, bottom-middle info, fuel area shutdown; tap black screen to boot.");
-    int x=0,y=0;bool previousPairRequest=false;
+    bool previousPairRequest=false,touchTap=false;
+    int touchStartX=0,touchStartY=0;
     uint64_t report=nowMs(),clockRequest=0,formattedMinute=~uint64_t(0);
     cluster::ClockPreferences formattedPreferences;int formattedOffset=9999;
-    unsigned previousFlushes=cluster::board::flushCount();
+    unsigned previousFlushes=cluster::board::flushCount();std::uint64_t lastLoop=0,maxLoopGap=0,maxUiUs=0;
     for(;;) {
         const auto now=nowMs();
+        if(lastLoop)maxLoopGap=std::max(maxLoopGap,now-lastLoop);
+        lastLoop=now;
         if(!wallClock.available(now)&&now-clockRequest>=5000){std::printf("@CLOCK REQUEST\n");clockRequest=now;}
         vehicleUart.poll(now);
         if(live)vehicleUart.synchronizeClock(wallClock,now);
@@ -96,10 +99,16 @@ extern "C" void app_main() {
             previousPairRequest=state.phone.available()&&state.phone.pairingRequested;
         }
         char command=0;
-        if(cluster::board::releasedTouch(x,y)) {
-            if(const auto effect=dashboard.touch(view,state,life,x,y)) {
-                dispatch(*effect,now);
-            } else command=cluster::board::benchTouchAction(life.phase(),x,y);
+        cluster::maps::Touch touch;
+        if(cluster::board::readTouch(touch)) {
+            if(touch.phase==cluster::maps::TouchPhase::Press){touchTap=true;touchStartX=touch.x;touchStartY=touch.y;}
+            if(touch.phase==cluster::maps::TouchPhase::Cancel||std::abs(touch.x-touchStartX)>=6||std::abs(touch.y-touchStartY)>=6)touchTap=false;
+            if(dashboard.mapPointer(view,life,touch))touchTap=false;
+            if(touch.phase==cluster::maps::TouchPhase::Release&&touchTap){
+                if(const auto effect=dashboard.touch(view,state,life,touch.x,touch.y))dispatch(*effect,now);
+                else command=cluster::board::benchTouchAction(life.phase(),touch.x,touch.y);
+                touchTap=false;
+            }
         }
         char input[16];
         const auto length=std::max<ssize_t>(0,read(STDIN_FILENO,input,sizeof input));
@@ -171,12 +180,35 @@ extern "C" void app_main() {
         const auto total=cluster::maplink::get(mapStatus.data(),32),offset=cluster::maplink::get(mapStatus.data(),28);
         if(stage==cluster::maplink::State::Receiving)std::snprintf(mapTransfer,sizeof mapTransfer,"%s map · %u%%",vehicleUart.mapStore().scene()?"Updating":"Loading",unsigned(total?offset*100/total:0));
         else std::snprintf(mapTransfer,sizeof mapTransfer,"%s",stage==cluster::maplink::State::Verifying?"Checking map...":stage==cluster::maplink::State::Failed?"Map update failed · Retry":stage==cluster::maplink::State::Unsupported?"Map unavailable":vehicleUart.mapStore().scene()?"Offline road map":"Share map from phone");
-        const char* locationLabels[]={"Waiting for timed location","Waiting for location","Current location · north up","Location stale · marker hidden","Location accuracy low","Outside downloaded area","Location sharing stopped","Location invalid"};
+        const char* locationLabels[]={"Waiting for timed location","Waiting for location","Current location · north up","Location stale · marker hidden","Accuracy limited · no precise fix","Location available · outside shared map","Location sharing stopped","Location invalid"};
         cluster::ui::MapPageState mapView;mapView.scene=vehicleUart.mapStore().scene();mapView.pose=vehicleUart.mapStore().pose(now);mapView.transfer=mapTransfer;mapView.location=locationLabels[mapStatus[68]];
-        dashboard.mapState(mapView);dashboard.update(state,view,life,now);
+        char navTransfer[64],navLocation[64],navCoverage[64],navGuidance[120];
+        if(vehicleUart.navigationMode()){
+            auto& nav=vehicleUart.navigation();mapView.navigation=true;mapView.scene=nav.scene();mapView.pose=nav.pose(now);
+            if(nav.attribution()==2)mapView.attribution="OpenStreetMap / OpenMapTiles / OpenFreeMap";
+            if(nav.stage()==cluster::navlink::Stage::Receiving)std::snprintf(navTransfer,sizeof navTransfer,"Receiving object · %u%%",nav.total()?nav.accepted()*100/nav.total():0);
+            else std::snprintf(navTransfer,sizeof navTransfer,"%s",nav.error()!=cluster::navlink::Error::None?"Map request needs retry":nav.stage()==cluster::navlink::Stage::Verifying?"Verifying object...":!nav.active()?"Cached map · sharing stopped":"Shared map");
+            const char* fixes[]={"Waiting for location","Current location · north up","Approximate location","Location stale · last known","Location invalid","Location sharing stopped","Waiting for timed location"};
+            const auto f=nav.fixState(now);if(f==cluster::navlink::Fix::Precise||f==cluster::navlink::Fix::Approximate)std::snprintf(navLocation,sizeof navLocation,"%s · +/- %.0f m",f==cluster::navlink::Fix::Approximate?"Approximate":"GPS",nav.accuracyCm()/100.0);
+            else if(f==cluster::navlink::Fix::Stale&&mapView.pose.quality!=cluster::Quality::Stale)std::snprintf(navLocation,sizeof navLocation,"Location stale · marker hidden");
+            else std::snprintf(navLocation,sizeof navLocation,"%s",fixes[unsigned(f)]);
+            const char* coverage[]={"Map detail missing here","Map detail partly cached","Viewport map cached"};std::snprintf(navCoverage,sizeof navCoverage,"%s",coverage[unsigned(nav.coverage())]);nav.guidanceText(navGuidance,sizeof navGuidance,now);
+            mapView.transfer=navTransfer;mapView.location=navLocation;mapView.coverage=navCoverage;mapView.guidance=navGuidance;
+        }
+        const auto uiStarted=esp_timer_get_time();dashboard.mapState(mapView);dashboard.update(state,view,life,now);
+        vehicleUart.navigationCamera(view.mapCamera,now);
         lv_timer_handler();
+        maxUiUs=std::max(maxUiUs,std::uint64_t(esp_timer_get_time()-uiStarted));
         if(now-report>=10000) {
             ESP_LOGI(tag,"MAP ready=%d tx_queue_full=%u tx_stack_margin=%u",int(vehicleUart.mapStore().ready()),vehicleUart.txRejected(),vehicleUart.txStackMargin());
+            const auto d=vehicleUart.mapStore().diagnostics(now);const auto tx=vehicleUart.txDiagnostics();
+            const auto rx=vehicleUart.rxDiagnostics();
+            const auto nav=vehicleUart.navigation().metrics();ESP_LOGI(tag,"NAV2 mode=%d ready=%d commands=%u rejected=%u duplicate=%u data_bytes=%u verified=%u evicted=%u hash_failures=%u",int(vehicleUart.navigationMode()),int(vehicleUart.navigation().ready()),unsigned(nav.commands),unsigned(nav.rejected),unsigned(nav.duplicates),unsigned(nav.bytes),unsigned(nav.verified),unsigned(nav.evicted),unsigned(nav.hashFailures));
+            ESP_LOGI(tag,"MAP rx_fragments=%u framing_drops=%u crc_drops=%u frame_timeouts=%u",unsigned(rx.fragments),unsigned(rx.framingDrops),unsigned(rx.crcDrops),unsigned(rx.timeouts));
+            ESP_LOGI(tag,"MAP commands=%u invalid=%u wrong_session=%u duplicates=%u failures=%u data_bytes=%u receive_ms=%llu verify_ms=%llu source=%u accuracy_cm=%u age_bound_ms=%llu anchor_age_ms=%llu map=%d inside=%d",
+                unsigned(d.commands),unsigned(d.invalid),unsigned(d.wrongSession),unsigned(d.duplicates),unsigned(d.failures),unsigned(d.dataBytes),
+                (unsigned long long)d.receiveMs,(unsigned long long)d.verifyMs,unsigned(d.source),d.accuracyCm,(unsigned long long)d.sourceAgeUpperMs,(unsigned long long)d.anchorAgeMs,int(d.hasMap),int(d.inside));
+            ESP_LOGI(tag,"MAP tx_bytes=%u write_errors=%u critical_wait_ms=%u ui_max_us=%llu loop_gap_ms=%llu touch_errors=%u",tx.bytes,tx.writeErrors,tx.maxCriticalWaitMs,(unsigned long long)maxUiUs,(unsigned long long)maxLoopGap,cluster::board::touchFailures());
             ESP_LOGI(tag,"UART RX GPIO38: accepted=%u overruns/errors=%u fresh=%d source=%s",
                 vehicleUart.accepted(),vehicleUart.overruns(),int(vehicleUart.fresh(now)),live?"UART":"BENCH");
             const unsigned frames=cluster::board::flushCount();

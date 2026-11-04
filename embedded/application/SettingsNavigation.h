@@ -36,7 +36,7 @@ inline void clockSaveResult(DisplayOptions& options,bool saved) {
 inline bool canOpenSettings(const ClusterState&,const Lifecycle& life) {return life.phase()==Phase::Running;}
 inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction action,const ClusterState& state,const Lifecycle& life) {
     if(action==SettingsAction::Back) {
-        if(options.map){options.map=false;return SettingsEffect::None;}
+        if(options.map){if(options.mapPan)options.mapPan=false;else options.map=false;return SettingsEffect::None;}
         if(options.clock){cancelClock(options);return SettingsEffect::None;}
         if(options.phone){
             if(options.phoneForgetConfirmation){options.phoneForgetConfirmation=false;options.phoneFocus=0;}
@@ -59,14 +59,27 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
     if(!options.settings) return SettingsEffect::None;
     if(!canOpenSettings(state,life)) { options.phone=false;options.phoneForgetConfirmation=false;cancelAppearance(options); cancelClock(options); options.settings=false; options.map=false; const auto effect=closeRadio(options);return state.phone.pairingRequested?SettingsEffect::PhoneReject:effect; }
     if(options.map){
-        if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.mapFocus=(options.mapFocus+1)%5;
-        else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.mapFocus=(options.mapFocus+4)%5;
+        if(options.mapPan){
+            if(action==SettingsAction::Next)options.mapPanFocus=(options.mapPanFocus+1)%5;
+            else if(action==SettingsAction::Previous)options.mapPanFocus=(options.mapPanFocus+4)%5;
+            else if(action==SettingsAction::Select){
+                if(options.mapPanFocus==4)options.mapPan=false;
+                else {const int dx[]={96,-96,0,0},dy[]={0,0,72,-72};options.mapCamera.drag(dx[options.mapPanFocus],dy[options.mapPanFocus]);}
+            }else if(action==SettingsAction::Left)options.mapCamera.drag(96,0);
+            else if(action==SettingsAction::Right)options.mapCamera.drag(-96,0);
+            else if(action==SettingsAction::Up)options.mapCamera.drag(0,72);
+            else if(action==SettingsAction::Down)options.mapCamera.drag(0,-72);
+            return SettingsEffect::None;
+        }
+        if(action==SettingsAction::Next||action==SettingsAction::Right||action==SettingsAction::Down)options.mapFocus=(options.mapFocus+1)%6;
+        else if(action==SettingsAction::Previous||action==SettingsAction::Left||action==SettingsAction::Up)options.mapFocus=(options.mapFocus+5)%6;
         else if(action==SettingsAction::Select){
             if(options.mapFocus==0)options.map=false;
-            else if(options.mapFocus==1)options.mapOverview=false;
-            else if(options.mapFocus==2)options.mapOverview=true;
-            else if(options.mapFocus==3){options.mapOverview=false;if(options.mapZoom>1)--options.mapZoom;}
-            else if(options.mapFocus==4){options.mapOverview=false;if(options.mapZoom<3)++options.mapZoom;}
+            else if(options.mapFocus==1){options.mapCamera.follow();}
+            else if(options.mapFocus==2){options.mapCamera.area();}
+            else if(options.mapFocus==3){options.mapCamera.zoom();if(options.mapZoom>1)--options.mapZoom;}
+            else if(options.mapFocus==4){options.mapCamera.zoom();if(options.mapZoom<options.mapCamera.zoomLimit())++options.mapZoom;}
+            else if(options.mapFocus==5){options.mapPan=true;options.mapPanFocus=0;options.mapCamera.browse();}
         }
     } else if(options.clock) {
         if(options.clockSaving)return SettingsEffect::None;
@@ -169,7 +182,7 @@ inline SettingsEffect settingsAction(DisplayOptions& options,SettingsAction acti
                 options.appearanceFocus=options.light?1:0; options.appearanceSaveFailed=false; options.appearanceSaving=false;
             } else if(options.settingsFocus==1) {
                 options.phone=true;options.phoneFocus=0;options.phoneForgetConfirmation=false;
-            } else if(options.settingsFocus==2){options.map=true;options.mapFocus=1;} else if(options.settingsFocus==3) {
+            } else if(options.settingsFocus==2){options.map=true;options.mapPan=false;options.mapFocus=1;} else if(options.settingsFocus==3) {
                 options.clock=true;options.clockOriginal=options.clockPreferences;options.clockFocus=0;
                 options.clockSaveFailed=false;options.clockSaving=false;
             }

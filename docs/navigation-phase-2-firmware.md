@@ -1,6 +1,20 @@
 # Phase 2 firmware implementation work packages
 
-Updated: 2026-11-03. **Plan only.** Read [the complete journey/architecture](navigation-phase-2.md), RULES.md, architecture/UI/development guides and [v1 bytes](../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification). No firmware, wiring, baud or partition change is made in this planning turn.
+Updated: 2026-11-04. **Firmware implementation complete; built/manual-host-render evidence and physical acceptance are distinct.** The [exact v2 contract](../mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract) is implemented. Old APK/v1/metadata/telemetry security and bytes, pins, baud and partitions are preserved. Android v2 is the next independent target.
+
+## Implementation status and next dependency
+
+| Work package | Implemented result |
+| --- | --- |
+| NAV-F0 | Numeric observed-MTU/admission/backpressure/downstream-ACK, UART encoded/bulk/framing/CRC/timeout/queue/critical-gap, heap/stack/PSRAM, source age/accuracy/anchor/coverage and UI/touch diagnostics. No coordinate/payload/identity logs. Actual board baseline/rate/resource measurements remain bench acceptance. |
+| NAV-F1 | 7Semi user identity plus official maker pinout establishes RGB GPIO48. The vehicle profile sends an application-start zero frame with hardware RMT, then holds low; pin ownership is compile-time guarded. No status colors/blinks. Physical reset/power-cycle timing still needs observation; no ROM/hardwired-power-LED guarantee. |
+| NAV-F2 | Phaseful touch/drag, independent camera, explicit Follow/Area, v1 three/v2 six zoom levels, physical Pan controls, retained geographic marker, lifecycle/Settings/warning precedence. No assumed multi-touch/pinch. |
+| NAV-F3 | Web-Mercator extent4096 semantic cells, source/full-content identity, bounded labels/geometry, twelve complete raw objects+staging, two shared render snapshots, overview/current detail windows and route revisions. Combined map buffers966,712 bytes; allocation failure disables v2 cleanly. |
+| NAV-F4 | Authenticated c019/c01a/c01b; four pending DATA controls with downstream-only cumulative ACK/derived byte credit; latest LOCATION/PROGRESS lanes; incremental SHA/CRC/bounds verification; identical retry/conflict/gap/cancel/Stop/reset rules. Preserved R-safe UART isolation and critical priority; no giant queue, speculative ACK or baud increase. |
+| NAV-F5 | Coalesced missing visible cells/HAVE/halo requests, periodic unfulfilled retries, full-hash reuse, route-window requests near/outside active range, atomic revision+minimum-context activation, monotonic revision rejection, quality-bearing source/coverage/guidance and offline cached browsing. Approximate and previously eligible last-known markers remain visibly distinct. |
+| NAV-F6 | Exact implemented protocol, static normative positive/negative examples, bounded regional converter, explicit already-paired desktop sender and full host integration preview. [Commands/evidence/limits](development.md#phase-2-firmware-integration) distinguish implementation from real-radio/GPS/panel acceptance. |
+
+The previous cache-proof firmware gate is superseded by the user's explicit firmware-first instruction. Firmware now accepts the documented compact cell schema without assuming any MapLibre cache internals. Android must prove its canonical source/cache/renderer bridge, encode those cells/routes and implement the scheduler/requests against the frozen channel. That remaining phone work does not imply an unimplemented firmware endpoint. Physical BLE speed, actual board touch/LED behavior and locked-screen Android continuity are not claimed by host rendering or builds.
 
 ## NAV-F0 — Evidence before optimization
 
@@ -17,17 +31,17 @@ Preserve existing instrument/pairing/clock behavior and collect a comparable 30,
 
 Never log actual coordinates, route/destination, payloads, pairing codes, keys or phone identity. Code currently requests MTU 247 but actual callback is authoritative; do not assume a slow run used 247. Record both board revisions/images, app commit/APK, actual phone/OS and cache state with the run.
 
-Current structural costs: c017 one outstanding display-ACK control; chunk payload up to 200 bytes/53 at MTU 247/96; vehicle sends at most one map fragment per 20 ms sampling iteration; sender delays after each accepted DATA. The TX worker caps encoded bulk at 4,096 B/s. Improve only after measurement. A Wi-Fi ingress change does not remove the downstream UART cost.
+Original v1 baseline costs (before this increment): c017 one outstanding display-ACK control; chunk payload up to 200 bytes/53 at MTU 247/96; vehicle sends at most one map fragment per 20 ms sampling iteration; sender delays after each accepted DATA. The implemented TX worker now drains fragments independently of that acquisition loop, and v2 pipelines four downstream-pending DATA commands. The4,096 B/s encoded cap remains; the old v1 APK still has its original sender pacing. Measure actual before/after speed and critical gaps. A Wi-Fi ingress change does not remove the downstream UART cost.
 
 ## NAV-F1 — Verified LED-off board profile
 
-Identify the illuminated green component using board model/revision and schematic/marking/bench observation. There is no LED control in the current vehicle sources. Record `not controllable / simple GPIO / addressable`, verified pin/protocol/active level and power-cycle latch behavior. Do not assume a common DevKit GPIO or repurpose any acquisition/UART/USB pin.
+Identify the illuminated green component using board model/revision and schematic/marking/bench observation. The original vehicle source had no LED control; the implemented board adapter/profile now performs startup OFF on the verified 7Semi pin. Record `not controllable / simple GPIO / addressable`, verified pin/protocol/active level and power-cycle latch behavior. Do not assume a common DevKit GPIO or repurpose any acquisition/UART/USB pin.
 
 For a controllable LED: minimal board adapter sets OFF early and holds it off across BLE connection, transfer and failures. Include pin-ownership guards. It must not add a new status-light feature or alter external instrument tell-tales. For a power-wired LED: document the hardware limit; no firmware-only promise or physical modification without user authorization. Validate ROM/reset/boot behavior separately from application control.
 
 ## NAV-F2 — Camera and touch independent of radio
 
-Affected boundaries: `CrowPanel` touch adapter → display application camera/input reducer → immutable render snapshot → MapPanel draw owner. Current `releasedTouch()` samples a single contact and exposes a release only; it cannot support drag by adding a widget flag.
+Affected boundaries: `CrowPanel` touch adapter → display application camera/input reducer → immutable render snapshot → MapPanel draw owner. The original release-only adapter has been replaced by bounded `readTouch()` press/move/release/cancel observations; dragging is handled in the application reducer.
 
 - Expose bounded press/move/release/cancel observations, measured contact coordinates and touch-read errors; no hardware polarity/register assumptions beyond the verified driver.
 - Single owner maintains geographic camera center, zoom and Follow/Browse independently of pose. A drag selects Browse, applies screen-to-world deltas and cancels on touch loss; incoming GPS never snaps it back. Follow is explicit. Preserve world/camera wrap and tile seams in the shared projection model.
@@ -41,7 +55,7 @@ Manual preview/panel cases: dot remains fixed in geographic space while camera m
 
 Replace a single-region assumption with a versioned cell identity/projection, content identity, bounded interest queue and route revision. Model/protocol code remains free of LVGL/SDK/RTOS.
 
-Provisional object model (not final bytes):
+Implemented object responsibilities (exact bytes remain in the protocol authority):
 
 | Object | Required content |
 | --- | --- |
@@ -52,15 +66,15 @@ Provisional object model (not final bytes):
 | Route window | Current detailed route geometry/maneuvers, along-route range and revision; split chunks rather than truncate long polylines |
 | Position/progress | Real quality-bearing fix and age/anchor context; separate route progress/matching/guidance quality, not camera coordinates |
 
-Candidate tile-local extent 4096 with Web-Mercator z/x/y requires exact transform/wrap/seam/lat-limit definitions and language-neutral examples. The mobile source/cache spike must prove raw geometry can be extracted before these bytes freeze. Use regional fixture data for deterministic projection inspection, not synthetic physical GPS.
+Candidate tile-local extent 4096 with Web-Mercator z/x/y requires exact transform/wrap/seam/lat-limit definitions and language-neutral examples. The bytes are frozen firmware-first. The mobile source/cache spike still must prove extraction and encode this independently specified cell geometry. Use regional fixture data for deterministic projection inspection, not synthetic physical GPS.
 
-Start from≤32 KiB encoded object/cell,≤4 queued interest requests and≤1 MiB total map/route arena including active/staging/decoded working sets. **These are proposed limits**, not verified free capacity. Include LVGL/fonts/framebuffers/queues and current v1 reservations in the accounting; share/reuse or release arenas safely when changing protocol mode, never reserve both maxima blindly. Vehicle buffers fragments/credits only, not a full route/city. Failure advertises lower capability/unavailable maps while instrumentation remains operational.
+Start from≤32 KiB encoded object/cell,≤4 queued interest requests and≤1 MiB total map/route arena including active/staging/decoded working sets. **These are bounded implementation ceilings**, not observed board heap/FPS evidence. Include LVGL/fonts/framebuffers/queues and current v1 reservations in the accounting; share/reuse or release arenas safely when changing protocol mode, never reserve both maxima blindly. Vehicle buffers fragments/credits only, not a full route/city. Failure advertises lower capability/unavailable maps while instrumentation remains operational.
 
 Cache eviction never touches visible/pinned/current-route objects or an object being rendered; publish through explicit owner-thread lifetime/retirement. Validate each complete cell independently before publication; a partial cell is never visible. Keep compatible complete old cells on stalled/rejected replacements. A route revision publishes with its minimum matching route/current-area context, not new instructions over old geometry.
 
 ## NAV-F4 — Versioned channel and prioritized pipeline
 
-Freeze the exact extension in the existing wire-authority doc before Android transfer implementation. Required contract decisions:
+The exact extension is implemented in the existing wire authority before Android transfer work. Contract requirements implemented:
 
 - New discoverable/versioned endpoint set, backward compatibility, strict reserved fields and operation sizes; c011–c015 and v1 remain intact.
 - Vehicle/display boot + current secured BLE token + navigation session + route revision + object/content identity + transfer sequence/offset. Route revision and independent camera interest are not one reused generation counter.

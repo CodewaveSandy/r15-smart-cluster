@@ -17,7 +17,7 @@ Dashboard::Dashboard(lv_obj_t* parent)
     for(int i=0;i<3;++i) { shiftGradient_.stops[i].color=color(shiftColors[i]); shiftGradient_.stops[i].opa=255; shiftGradient_.stops[i].frac=i*127; }
 }
 Dashboard::~Dashboard()=default;
-void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycle& life,std::uint64_t now) {
+void Dashboard::update(const ClusterState& s,ViewOptions& v,const Lifecycle& life,std::uint64_t now) {
     const bool warning=urgent(s);
     const bool allowed=canOpenSettings(s,life);
     const int settingsProgress=settingsTransition_.update(v.settings&&allowed,now,!allowed);
@@ -33,6 +33,9 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
     const auto animation=animationFrame(life,warning,now);
     touchVisible_=animation.dashboardVisible;
     touchMenuReady_=settingsProgress==1000;
+    if(!touchVisible_||!touchMenuReady_||!v.map||v.phone)mapGesture_.cancel();
+    if(mapState_.scene)v.mapZoom=std::clamp(v.mapZoom,1u,mapState_.scene->mercator?6u:3u);
+    v.mapCamera.update(mapState_.scene,mapState_.pose,v.mapZoom);
     // The opaque lifecycle cover makes dashboard mutations invisible. Resume
     // directly from the latest snapshot on reveal; never replay a hidden backlog.
     if(animation.dashboardVisible) {

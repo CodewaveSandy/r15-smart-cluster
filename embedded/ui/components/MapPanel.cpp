@@ -56,9 +56,16 @@ void MapPanel::update(const maps::Pose& pose,bool overview,bool light,unsigned z
     auto next=pose;
     if(!maps::valid(next))next=maps::Pose{{},0,Quality::Invalid};
     zoom=std::clamp(zoom,1u,3u);
-    if(initialized_&&pose_.point.east==next.point.east&&pose_.point.north==next.point.north&&
-        pose_.headingDegrees==next.headingDegrees&&pose_.directionKnown==next.directionKnown&&pose_.quality==next.quality&&overview_==overview&&light_==light&&zoom_==zoom&&browsing_==browsing)return;
-    initialized_=true;pose_=next;overview_=overview;light_=light;zoom_=zoom;browsing_=browsing;
+    if(initialized_&&!explicitCamera_&&pose_.point.east==next.point.east&&pose_.point.north==next.point.north&&
+        pose_.headingDegrees==next.headingDegrees&&pose_.directionKnown==next.directionKnown&&pose_.quality==next.quality&&pose_.marker==next.marker&&pose_.accuracyMetres==next.accuracyMetres&&overview_==overview&&light_==light&&zoom_==zoom&&browsing_==browsing)return;
+    initialized_=true;explicitCamera_=false;pose_=next;overview_=overview;light_=light;zoom_=zoom;browsing_=browsing;
+    paint(root_.get(),(light?mapDay:mapNight).ground);lv_obj_invalidate(root_.get());
+}
+void MapPanel::update(const maps::Pose& pose,maps::CameraView camera,bool light){
+    auto next=pose;if(!maps::valid(next))next=maps::Pose{{},0,Quality::Invalid};
+    if(initialized_&&explicitCamera_&&camera_.east==camera.east&&camera_.north==camera.north&&camera_.pixelsPerMetre==camera.pixelsPerMetre&&
+       pose_.point.east==next.point.east&&pose_.point.north==next.point.north&&pose_.quality==next.quality&&pose_.directionKnown==next.directionKnown&&pose_.headingDegrees==next.headingDegrees&&pose_.marker==next.marker&&pose_.accuracyMetres==next.accuracyMetres&&light_==light)return;
+    initialized_=explicitCamera_=true;camera_=camera;pose_=next;light_=light;
     paint(root_.get(),(light?mapDay:mapNight).ground);lv_obj_invalidate(root_.get());
 }
 void MapPanel::draw(lv_event_t* e) {
@@ -67,7 +74,8 @@ void MapPanel::draw(lv_event_t* e) {
     auto* layer=lv_event_get_layer(e);lv_area_t area;lv_obj_get_coords(self.root_.get(),&area);
     const auto& style=self.light_?mapDay:mapNight;
     Camera camera{double(self.pose_.point.east),double(self.pose_.point.north),0.48*self.zoom_,double(area.x1+495),double(area.y1+212)};
-    if(self.overview_||(!self.browsing_&&self.pose_.quality!=Quality::Available)) {
+    if(self.explicitCamera_)camera={self.camera_.east,self.camera_.north,self.camera_.pixelsPerMetre,double(area.x1+525),double(area.y1+150)};
+    else if(self.overview_||(!self.browsing_&&self.pose_.quality!=Quality::Available)) {
         int left=20000,right=-20000,bottom=20000,top=-20000;
         for(unsigned i=0;i<self.scene_->routeCount;++i) {
             const auto p=self.scene_->route[i];left=std::min(left,int(p.east));right=std::max(right,int(p.east));
@@ -90,8 +98,10 @@ void MapPanel::draw(lv_event_t* e) {
         const auto rgb=road.kind==maps::RoadKind::Water?style.water:pass==0?style.roadEdge:style.road;
         for(unsigned j=1;j<road.count;++j)line(layer,camera.project(road.points[j-1]),camera.project(road.points[j]),width+(pass==0?std::max(1,int(std::lround(4*factor))):0),rgb,area);
     }
+    for(unsigned i=1;i<self.scene_->overviewCount;++i)if(std::abs(double(self.scene_->routeOverview[i].east)-self.scene_->routeOverview[i-1].east)<maps::worldMetres/2)
+        line(layer,camera.project(self.scene_->routeOverview[i-1]),camera.project(self.scene_->routeOverview[i]),4,style.route,area);
     for(unsigned pass=0;pass<2;++pass)for(unsigned i=1;i<self.scene_->routeCount;++i)
-        line(layer,camera.project(self.scene_->route[i-1]),camera.project(self.scene_->route[i]),pass==0?14:8,pass==0?style.routeEdge:style.route,area);
+        if(std::abs(double(self.scene_->route[i].east)-self.scene_->route[i-1].east)<maps::worldMetres/2)line(layer,camera.project(self.scene_->route[i-1]),camera.project(self.scene_->route[i]),pass==0?14:8,pass==0?style.routeEdge:style.route,area);
     unsigned labels=0;
     std::array<lv_area_t,8> labelBounds{};
     std::array<const char*,8> labelNames{};
@@ -114,26 +124,36 @@ void MapPanel::draw(lv_event_t* e) {
         lv_draw_label_dsc_t d;lv_draw_label_dsc_init(&d);d.font=fonts::caption;d.color=color(style.label);d.text=road.name.data();
         lv_draw_label(layer,&d,&bounds);labelBounds[labels]=bounds;labelNames[labels]=road.name.data();++labels;
     }
-    if(self.scene_->routeCount>0) {
-    const auto destination=camera.project(self.scene_->route[self.scene_->routeCount-1]);
+    if(self.scene_->routeCount>0||self.scene_->overviewCount>0) {
+    const auto destination=camera.project(self.scene_->overviewCount?self.scene_->routeOverview[self.scene_->overviewCount-1]:self.scene_->route[self.scene_->routeCount-1]);
     if(destination.x>=area.x1+8&&destination.x<=area.x2-8&&destination.y>=area.y1+8&&destination.y<=area.y2-8) {
         line(layer,{destination.x-6,destination.y},{destination.x+6,destination.y},11,style.route,area);
         line(layer,{destination.x,destination.y-6},{destination.x,destination.y+6},3,style.marker,area);
     }
     }
-    if(!self.browsing_&&self.pose_.quality==Quality::Available) {
+    if(self.pose_.quality==Quality::Available||(self.pose_.quality==Quality::Stale&&self.pose_.marker==maps::Marker::LastKnown)) {
         const auto center=camera.project(self.pose_.point);
-        if(center.x<area.x1+20||center.x>area.x2-20||center.y<area.y1+20||center.y>area.y2-20)return;
+        if(center.x>=area.x1+20&&center.x<=area.x2-20&&center.y>=area.y1+20&&center.y<=area.y2-20){
         const double a=self.pose_.headingDegrees*3.141592653589793/180;
         const auto point=[&](double x,double y){return Pixel{center.x+x*std::cos(a)+y*std::sin(a),center.y+x*std::sin(a)-y*std::cos(a)};};
-        if(!self.pose_.directionKnown){
+        if(self.pose_.marker!=maps::Marker::Normal){
+            const auto rgb=self.pose_.marker==maps::Marker::LastKnown?style.label:style.route;
+            const double ground=self.scene_->mercator?std::max(0.08,std::cos(self.scene_->originLatE7/1e7*maps::pi/180)):1;
+            const double radius=std::clamp(self.pose_.accuracyMetres*camera.scale/ground,16.0,110.0);
+            for(unsigned i=0;i<32;i+=2){const double a=2*maps::pi*i/32,b=2*maps::pi*(i+1)/32;
+                line(layer,{center.x+radius*std::cos(a),center.y+radius*std::sin(a)},{center.x+radius*std::cos(b),center.y+radius*std::sin(b)},2,rgb,area);}
+            lv_draw_rect_dsc_t d;lv_draw_rect_dsc_init(&d);d.bg_opa=LV_OPA_TRANSP;d.border_width=3;d.border_color=color(rgb);d.border_opa=255;d.radius=LV_RADIUS_CIRCLE;
+            const int x=int(std::lround(center.x)),y=int(std::lround(center.y));const lv_area_t ring{x-9,y-9,x+9,y+9};lv_draw_rect(layer,&d,&ring);
+            if(self.pose_.marker==maps::Marker::LastKnown)dot(layer,center,3,rgb);
+        }else if(!self.pose_.directionKnown){
             dot(layer,center,12,style.route);dot(layer,center,7,style.marker);
         }else{
         triangle(layer,point(0,23),point(-18,-14),point(18,-14),style.route);
         triangle(layer,point(0,18),point(-12,-10),point(12,-10),style.marker);
         }
+        }
     }
-    if(!self.overview_&&(self.browsing_||self.pose_.quality==Quality::Available)) {
+    if(self.explicitCamera_||(!self.overview_&&(self.browsing_||self.pose_.quality==Quality::Available))) {
         const double y=area.y2-9,left=area.x2-119,right=area.x2-23;
         line(layer,{left,y},{right,y},2,style.label,area);
         line(layer,{left,y-4},{left,y+2},2,style.label,area);
