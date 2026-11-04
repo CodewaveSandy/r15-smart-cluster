@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 
 import '../../home/domain/bike_telemetry.dart';
 import '../data/ble_pairing.dart';
+import '../data/ble_access.dart';
 import '../../navigation/domain/map_sharing.dart';
+import '../../navigation/domain/navigation_state.dart';
 import '../data/nearby_platform.dart';
 import '../domain/phone_status.dart';
 
@@ -22,7 +24,22 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
         notifyListeners();
       },
     );
+    unawaited(_checkExistingAccess());
   }
+  Future<void> _checkExistingAccess() async {
+    try {
+      final access = await BleAccess.check();
+      if (_disposed) return;
+      if (access.ready) {
+        await accessReady();
+      } else {
+        _access = false;
+      }
+    } on Object {
+      /* Map access remains independent of BLE availability. */
+    }
+  }
+
   final BlePairing _platform;
   StreamSubscription<Map<String, dynamic>>? _subscription;
   NearbyDevice? _selected;
@@ -34,6 +51,35 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   Completer<void>? _connectionResult;
   bool _nativeStarted = false;
   String? error;
+  NavigationState navigation = NavigationState(null);
+  Map<String, dynamic> navigationMap = const {};
+  bool _mapLoading = false;
+  int _mapLoaded = -1;
+  Future<void> navigationCommand(
+    String method, [
+    Map<String, dynamic> args = const {},
+  ]) async {
+    await _platform.navigation(method, args);
+  }
+
+  Future<void> _loadNavigationMap() async {
+    if (_mapLoading || _disposed) return;
+    _mapLoading = true;
+    try {
+      final raw = await _platform.navigation('mapData');
+      if (!_disposed && raw is Map) {
+        navigationMap = Map<String, dynamic>.unmodifiable(raw);
+        _mapLoaded = (raw['revision'] as num?)?.toInt() ?? -1;
+        notifyListeners();
+      }
+    } on PlatformException {
+      /* Next native observation retries the bounded snapshot. */
+    } finally {
+      _mapLoading = false;
+    }
+  }
+
+  Map<String, dynamic> projection = const {};
   MapSharing mapSharing = const MapSharing();
   BikeTelemetry telemetry = const BikeTelemetry.unavailable();
   PhoneMetadataState _metadata = PhoneMetadataState.notConnected;
@@ -53,7 +99,15 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     clusterName: _selected?.name,
     bluetoothLinkOnly: true,
     metadata: _metadata,
-    navigation: FeatureReadiness.notImplemented,
+    navigation: navigation.location['quality'] == 'permissionRequired'
+        ? FeatureReadiness.permissionRequired
+        : navigation.location['quality'] == 'stale'
+        ? FeatureReadiness.stale
+        : navigation.flag('enabled') &&
+              navigation.location['quality'] == 'precise' &&
+              navigation.route.isNotEmpty
+        ? FeatureReadiness.ready
+        : FeatureReadiness.unavailable,
     notifications: FeatureReadiness.notImplemented,
     music: FeatureReadiness.notImplemented,
   );
@@ -81,6 +135,11 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
             _ => PhoneMetadataState.unavailable,
           }
         : PhoneMetadataState.notConnected;
+    navigation = NavigationState(value['navigation'] as Map?);
+    projection = value['projection'] is Map
+        ? Map<String, dynamic>.unmodifiable(value['projection'] as Map)
+        : const {};
+    if (navigation.mapRevision != _mapLoaded) unawaited(_loadNavigationMap());
     mapSharing = MapSharing.fromNative(value);
     telemetry = _live
         ? telemetryFromNative(value['telemetry'])
@@ -193,7 +252,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
-    if (_foreground) onForeground();
+    if (_foreground) unawaited(_checkExistingAccess());
   }
 
   @override

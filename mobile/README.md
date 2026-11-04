@@ -1,6 +1,6 @@
 # R15 Companion
 
-Next work is the [phase 2 mobile handoff](docs/navigation-phase-2.md): nearby maps on app open, independent phone navigation, search/route preparation and route sharing. Provider/key/cache/firmware gates are in the [full plan](../docs/navigation-phase-2.md); no phase 2 implementation is claimed.
+Android navigation v2 is source-integrated against firmware `52bae3e`: independent live location/maps, private raw-vector cache, motorcycle search/routes, corridor downloads and c019–c01b display sharing. Read the [implementation, key setup and manual APK checklist](docs/navigation-v2-implementation.md). Android compilation/device acceptance remain pending; build only through GitHub Actions.
 
 App workflow: finish code locally, push through the normal Git workflow, let GitHub Actions build the APK, then install with `bash scripts/install-mobile-apk.sh` and test manually. Target modern/latest Android devices at normal text size; skip small-screen/2× text checks unless requested. Do not attempt local Android builds or install an Android SDK/Studio; [app instructions](AGENTS.md#app-build-and-verification-policy-2026-11-03) preserve this user preference.
 

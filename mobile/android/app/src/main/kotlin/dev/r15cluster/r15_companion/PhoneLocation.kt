@@ -15,6 +15,7 @@ internal class PhoneLocation(private val context: Context, private val observed:
     private var running = false
     private var generation = 0
     private var startedAt = 0L
+    private var futureFloor = 0L
     private var latest = PhoneFix()
     private val handler = Handler(Looper.getMainLooper())
     private val callback = object : LocationCallback() {
@@ -22,7 +23,9 @@ internal class PhoneLocation(private val context: Context, private val observed:
             if (!running) return
             val location = result.lastLocation ?: return
             val sampled = location.elapsedRealtimeNanos / 1000000
-            if (sampled < startedAt || sampled <= latest.sampled) return
+            if(sampled<=futureFloor)return
+            if(sampled>SystemClock.elapsedRealtime()) { futureFloor=sampled;latest=PhoneFix(problem="invalid");observed(latest);return }
+            if (sampled <= startedAt || sampled <= latest.sampled) return
             latest = PhoneFix(sampled = sampled, lat = location.latitude, lon = location.longitude,
                 accuracy = if (location.hasAccuracy()) location.accuracy.toDouble() else null,
                 bearing = if (location.hasBearing()) location.bearing.toDouble() else null,
@@ -45,6 +48,7 @@ internal class PhoneLocation(private val context: Context, private val observed:
     fun permitted() = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     private fun precise() = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
     fun start(): Boolean {
+        if (running) return true
         stop()
         if (!permitted()) { observed(PhoneFix(problem = "permissionRequired")); return false }
         if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS) { observed(PhoneFix(problem = "providerUnsupported")); return false }
@@ -57,5 +61,5 @@ internal class PhoneLocation(private val context: Context, private val observed:
         } catch (_: SecurityException) { stop(); observed(PhoneFix(problem = "permissionRequired")); return false }
         handler.post(check); return true
     }
-    fun stop() { ++generation; running = false; handler.removeCallbacks(check); try { provider.removeLocationUpdates(callback) } catch (_: Exception) { }; latest = PhoneFix() }
+    fun stop() { futureFloor=0; ++generation; running = false; handler.removeCallbacks(check); try { provider.removeLocationUpdates(callback) } catch (_: Exception) { }; latest = PhoneFix() }
 }

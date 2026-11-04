@@ -1,6 +1,8 @@
 # R15 Smart Cluster
 
-Phase 2 firmware is implemented: versioned cell/route transfer, bounded display cache, independent camera, quality-bearing location/guidance, missing-cell/window requests and 7Semi RGB-off startup. See [the journey](docs/navigation-phase-2.md), [firmware status](docs/navigation-phase-2-firmware.md) and [exact v2 protocol](mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract). Phone v2 implementation and physical acceptance remain next; the installed v1 APK/bytes remain compatible.
+Android navigation v2 is now [source-integrated](mobile/docs/navigation-v2-implementation.md) against firmware `52bae3e`; phone/provider/transport compilation and physical acceptance remain the GitHub Actions/manual APK gates.
+
+Phase 2 firmware is implemented: versioned cell/route transfer, bounded display cache, independent camera, quality-bearing location/guidance, missing-cell/window requests and 7Semi RGB-off startup. See [the journey](docs/navigation-phase-2.md), [firmware status](docs/navigation-phase-2-firmware.md) and [exact v2 protocol](mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract). Android v2 is source-integrated; Actions APK compilation and physical acceptance remain next; the installed v1 APK/bytes remain compatible.
 
 Phase 1 map/location implementation starts with the [firmware-first integration handoff](docs/map-phase-1.md): real regional OSM roads, phone GPS, transfer/partial-map behavior and Android follow-up. Firmware and Android v1 are implemented; the user installed/flashed them and observed real roads, then reported transfer/marker/coverage/interaction issues. Phase2 firmware is implemented for that next journey; Android v2 and extended physical acceptance remain next.
 

@@ -1,6 +1,6 @@
 # Phase 2 mobile implementation handoff
 
-Updated: 2026-11-04. **Android implementation pending; firmware v2 is now implemented and specified.** Read [the full journey, provider decisions and budgets](../../docs/navigation-phase-2.md), [firmware dependencies](../../docs/navigation-phase-2-firmware.md), mobile/AGENTS.md, current architecture/background-sync and exact protocol guides. Current phase 1 remains a bounded Kotlin/MapLibre/Kolkata prototype, not the new dynamic journey.
+Updated: 2026-11-04. **Android v2 is now source-integrated against the implemented firmware; APK compilation and physical acceptance remain pending.** See [actual implementation, selected cache bridge, key setup and acceptance](navigation-v2-implementation.md). The work packages below remain the design requirements; the linked implementation record distinguishes completed source from unverified device behavior. Read [the full journey, provider decisions and budgets](../../docs/navigation-phase-2.md), [firmware dependencies](../../docs/navigation-phase-2-firmware.md), mobile/AGENTS.md, current architecture/background-sync and exact protocol guides. Current phase 1 remains a bounded Kotlin/MapLibre/Kolkata prototype, not the new dynamic journey.
 
 ## NAV-M0 — Source/cache and lifecycle spike
 

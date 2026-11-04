@@ -6,6 +6,7 @@ import '../features/phone/application/ble_connection.dart';
 import '../features/phone/application/preview_session.dart';
 import '../features/phone/domain/phone_status.dart';
 import '../features/phone/presentation/phone_page.dart';
+import '../features/phone/presentation/ble_access_gate.dart';
 import 'theme/companion_theme.dart';
 import '../features/navigation/presentation/navigation_page.dart';
 
@@ -41,29 +42,7 @@ class _CompanionHomeState extends State<CompanionHome> {
   );
 
   @override
-  void didUpdateWidget(CompanionHome oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.ble?.hasSelection != true &&
-        widget.session?.hasTrust != true &&
-        widget.status.connection != ClusterConnection.connected) {
-      _page = _CompanionPage.bike;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final hasCluster =
-        widget.ble?.hasSelection == true ||
-        widget.session?.hasTrust == true ||
-        widget.status.connection == ClusterConnection.connected;
-    // Preserve the approved first-pair landing. Losing a link retains Home.
-    if (!hasCluster) {
-      return PhonePage(
-        status: widget.status,
-        ble: widget.ble,
-        session: widget.session,
-      );
-    }
     final colors = Theme.of(context).colorScheme;
     final title = switch (_page) {
       _CompanionPage.bike => 'My bike',
@@ -108,11 +87,23 @@ class _CompanionHomeState extends State<CompanionHome> {
               onConnection: () => _select(_CompanionPage.connection),
             ),
             _CompanionPage.navigate => NavigationPage(ble: widget.ble),
-            _CompanionPage.connection => PhonePage(
-              status: widget.status,
-              ble: widget.ble,
-              session: widget.session,
-              embedded: true,
+            _CompanionPage.connection => BleAccessGate(
+              onReady: () {
+                widget.ble?.accessReady();
+                if (widget.session?.hasTrust == true) {
+                  widget.session!.reconnect();
+                }
+              },
+              onBlocked: () {
+                widget.ble?.accessBlocked();
+                widget.session?.pauseForAccess();
+              },
+              child: PhonePage(
+                status: widget.status,
+                ble: widget.ble,
+                session: widget.session,
+                embedded: true,
+              ),
             ),
           },
         ),

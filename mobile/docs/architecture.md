@@ -1,5 +1,10 @@
 # Companion architecture, status and approved UI
 
+## Android v2 source status — 2026-11-04
+
+[Navigation v2 implementation](navigation-v2-implementation.md) supersedes the phase-1/future-navigation statements below for Android source. Home/Navigate no longer require pairing; the existing service owns independent browse/navigation/share/sync intents, one GPS provider and one GATT. A private canonical OpenFreeMap MVT cache supplies local MapLibre GeoJSON and R15O roads; Geoapify motorcycle routes/search use a privately configured key. Native projection/rerouting, full bounded corridor jobs and firmware c019–c01b transfer/HAVE/interest/window/activation are integrated. Existing metadata/telemetry and real pairing/radar remain. Kotlin/Android compilation, provider-key/live-device/locked-screen/display acceptance remain GitHub Actions/manual gates. No local Android build or automated suite is authorized.
+
+
 The user-requested next journey is planned in [phase 2](navigation-phase-2.md) and the [cross-system design](../../docs/navigation-phase-2.md). Phone map/location will be independent of BLE, with dynamic nearby coverage, search and route corridor caching; this is proposed behavior, not implemented phase 1 behavior.
 
 The next map/location scope is defined in the [phase 1 handoff](../../docs/map-phase-1.md): MapLibre/local regional OSM on the phone, native foreground GPS ownership, bounded BLE/UART transfer and LVGL rendering. Firmware and Android phase 1 sources are now integrated. MapLibre0.27.1 and native Google location21.4.0 are pinned; both boards are user-reported flashed. Physical paired transfer/live GPS/background acceptance remains open.

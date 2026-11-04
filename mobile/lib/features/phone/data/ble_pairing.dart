@@ -20,6 +20,12 @@ class BlePairing {
     });
   }
 
+  Future<dynamic> navigation(
+    String method, [
+    Map<String, dynamic> args = const {},
+  ]) =>
+      _channel.invokeMethod<dynamic>('navigation', {'method': method, ...args});
+
   Future<void> startMapSharing() =>
       _channel.invokeMethod<void>('startMapSharing');
   Future<void> stopMapSharing() =>

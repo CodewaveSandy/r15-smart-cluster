@@ -43,6 +43,8 @@ class MainActivity : FlutterActivity() {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             sync = (binder as ClusterSyncService.LocalBinder).service
             if (observingLink) sync?.observer = linkObserver
+            sync?.visible(observingLink)
+            maybeOfferMaps()
             linkEvents?.success(linkSnapshot())
         }
         override fun onServiceDisconnected(name: ComponentName) {
@@ -69,6 +71,20 @@ class MainActivity : FlutterActivity() {
             .setPositiveButton("Continue") { _, _ -> requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 104) }
             .setNegativeButton("Later", null).show()
     }
+    private fun maybeOfferMaps() {
+        if(!observingLink || isFinishing)return
+        val prefs=getSharedPreferences("navigation",MODE_PRIVATE)
+        if(prefs.getBoolean("consent",false) || prefs.getBoolean("introAsked",false))return
+        prefs.edit().putBoolean("introAsked",true).apply()
+        android.app.AlertDialog.Builder(this).setTitle("Maps around your location")
+            .setMessage("Allow location and download nearby roads from OpenFreeMap when this app is open. Viewed areas go to the map provider. Search and route endpoints go to Geoapify only when you use them. Maps stay privately cached. Idle location stops after the app is hidden; active navigation continues until you stop it.")
+            .setNegativeButton("Later",null)
+            .setPositiveButton("Enable") { _,_->
+                sync?.navigationCommand("enable",emptyMap<Any,Any>())
+                if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)
+                    requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION),106)
+            }.show()
+    }
     private val found = linkedMapOf<String, Map<String, Any>>()
     private val recentlySeen = linkedMapOf<String, Long>()
     private val adapter get() = (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -88,6 +104,24 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "linkStatus" -> result.success(linkSnapshot())
+                    "navigation" -> {
+                        val method=call.argument<String>("method")?:error("Missing command")
+                        val args=call.arguments as? Map<*,*>?:emptyMap<Any,Any>()
+                        check(sync!=null) { "Navigation service is starting; retry" }
+                        if(method in listOf("enable","start","share"))check(observingLink) { "Open app before starting location" }
+                        if(method=="enable") {
+                            sync?.navigationCommand("enable",args)
+                            if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)
+                                requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.ACCESS_FINE_LOCATION),106)
+                            result.success(null)
+                        } else if(method=="start" || method=="share") {
+                            check(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED) { "Enable location first" }
+                            explainNotification()
+                            val intent=Intent(this,ClusterSyncService::class.java).setAction(ClusterSyncService.NAVIGATE).putExtra("share",method=="share")
+                            if(Build.VERSION.SDK_INT>=26)startForegroundService(intent) else startService(intent)
+                            result.success(null)
+                        } else result.success(sync?.navigationCommand(method,args))
+                    }
                     "startMapSharing" -> {
                         if (!observingLink || sync == null) { result.error("foreground", "Open the connected app before sharing location.", null); return@setMethodCallHandler }
                         mapStartRequested = true
@@ -170,11 +204,12 @@ class MainActivity : FlutterActivity() {
                     }
                     else -> result.notImplemented()
                 }
-            } catch (error: Exception) { if (pending === result) finishError("unavailable", "Nearby connection is unavailable.") else result.error("storage", "Protected pairing storage is unavailable.", null) }
+            } catch (error: Exception) { if (pending === result) finishError("unavailable", "Nearby connection is unavailable.") else result.error("unavailable", error.message?.takeIf { !it.contains("http",true) && !it.contains("apiKey",true) }?.take(200) ?: "Operation unavailable. Retry from the app.", null) }
         }
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if(requestCode==106) { sync?.visible(observingLink);sync?.refresh();return }
         if (requestCode == 105) {
             val allowed = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             if (!allowed) { mapStartRequested = false; sync?.stopMapSharing("Location access denied. Allow it in app settings, then Start sharing.") }
@@ -316,12 +351,15 @@ class MainActivity : FlutterActivity() {
     }
     override fun onResume() {
         super.onResume(); observingLink = true
+        if(sync!=null)maybeOfferMaps()
         if (mapStartRequested && (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)) { mapStartRequested = false; sync?.startMapSharing() }
         sync?.observer = linkObserver
+        sync?.visible(true)
         sync?.refresh(); linkEvents?.success(linkSnapshot())
     }
     override fun onPause() {
         observingLink = false
+        sync?.visible(false)
         if (sync?.observer === linkObserver) sync?.observer = null
         super.onPause()
     }

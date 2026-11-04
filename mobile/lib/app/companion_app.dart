@@ -7,7 +7,6 @@ import '../features/phone/application/ble_connection.dart';
 import '../features/phone/data/ble_pairing.dart';
 import '../features/phone/application/preview_session.dart';
 import 'companion_home.dart';
-import '../features/phone/presentation/ble_access_gate.dart';
 import 'theme/companion_theme.dart';
 import 'widgets/opening_screen.dart';
 
@@ -60,28 +59,18 @@ class _StartupState extends State<_Startup> {
 
   @override
   Widget build(BuildContext context) => _showHome
-      ? BleAccessGate(
-          onReady: () {
-            _ble?.accessReady();
-            if (widget.session?.hasTrust == true) widget.session!.reconnect();
-          },
-          onBlocked: () {
-            _ble?.accessBlocked();
-            widget.session?.pauseForAccess();
-          },
-          child: widget.session == null
-              ? AnimatedBuilder(
-                  animation: _ble!,
-                  builder: (context, _) =>
-                      CompanionHome(status: _ble!.status, ble: _ble),
-                )
-              : AnimatedBuilder(
-                  animation: widget.session!,
-                  builder: (context, _) => CompanionHome(
-                    status: widget.session!.status,
-                    session: widget.session,
-                  ),
+      ? widget.session == null
+            ? AnimatedBuilder(
+                animation: _ble!,
+                builder: (context, _) =>
+                    CompanionHome(status: _ble!.status, ble: _ble),
+              )
+            : AnimatedBuilder(
+                animation: widget.session!,
+                builder: (context, _) => CompanionHome(
+                  status: widget.session!.status,
+                  session: widget.session,
                 ),
-        )
+              )
       : const OpeningScreen();
 }

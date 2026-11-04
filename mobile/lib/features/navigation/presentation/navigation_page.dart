@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -9,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../phone/application/ble_connection.dart';
-import '../domain/map_sharing.dart';
+import '../domain/navigation_state.dart';
 
 class NavigationPage extends StatefulWidget {
   const NavigationPage({required this.ble, super.key});
@@ -19,243 +20,790 @@ class NavigationPage extends StatefulWidget {
 }
 
 class _NavigationPageState extends State<NavigationPage> {
+  final _search = TextEditingController();
   String? _error;
   bool _busy = false;
-  Future<void> _start() async {
-    final allowed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Share map & location?'),
-        content: const Text(
-          'Your phone sends the central Kolkata road map and fresh location to your paired cluster, including while locked. Allow Precise location for the cluster pointer. No location history is saved. Stop sharing here or from the notification. This region covers central Kolkata only; route search and directions are not included.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Continue'),
-          ),
-        ],
-      ),
-    );
-    if (allowed == true && mounted) {
-      await _command(() => widget.ble!.startMapSharing());
-    }
-  }
-
-  Future<void> _command(Future<void> Function() run) async {
+  final _mapKey = GlobalKey<_LiveMapState>();
+  NavigationState get _state => widget.ble?.navigation ?? NavigationState(null);
+  Future<void> _command(
+    String method, [
+    Map<String, dynamic> args = const {},
+  ]) async {
+    if (widget.ble == null) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await run();
+      await widget.ble!.navigationCommand(method, args);
     } on PlatformException catch (e) {
       if (mounted) {
-        setState(() => _error = e.message ?? 'Map sharing unavailable');
+        setState(() => _error = e.message ?? 'Navigation unavailable');
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final map = widget.ble?.mapSharing ?? const MapSharing();
-    final native = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+  Future<void> _enable() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Maps around you'),
+        content: const Text(
+          'Allow location to show your position and download nearby roads from OpenFreeMap. Viewed areas are sent to the map provider. Destination searches and route endpoints go to Geoapify when you use those features. Maps stay privately cached on this phone. Navigation or sharing continues while locked until you stop it. Idle browsing stops location shortly after the app closes.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Later'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Enable maps & location'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true && mounted) await _command('enable');
+  }
+
+  Future<void> _settings() async {
+    final input = TextEditingController();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Search & motorcycle routing'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Kolkata · West Bengal',
-              style: Theme.of(context).textTheme.headlineSmall,
+            const Text(
+              'Create a free Geoapify project at myprojects.geoapify.com. Enter its API key here. It is encrypted privately on this device and excluded from backups. Your provider plan and quota apply; maps work without a key.',
             ),
-            const SizedBox(height: 8),
-            const Text('Offline central-area roads · north up'),
             const SizedBox(height: 16),
-            SizedBox(
-              height: (constraints.maxHeight * .5).clamp(260.0, 480.0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: RegionalMap(observation: map),
+            TextField(
+              controller: input,
+              obscureText: true,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: const InputDecoration(
+                labelText: 'Geoapify API key',
+                hintText: 'Blank removes the saved key',
               ),
             ),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            if (_state.flag('keyConfigured'))
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('A key is currently saved.'),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved == true && mounted) {
+      await _command('key', {'value': input.text.trim()});
+    }
+    input.dispose();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _state,
+        location = _state.location,
+        route = _state.route,
+        download = _state.download;
+    final projection = widget.ble?.projection ?? const <String, dynamic>{};
+    final native = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _search,
+                  enabled:
+                      native && s.flag('enabled') && s.flag('keyConfigured'),
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: s.flag('keyConfigured')
+                        ? 'Search a destination'
+                        : 'Set up search in map settings',
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    suffixIcon: _search.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              _search.clear();
+                              unawaited(_command('search', {'text': ''}));
+                            },
+                          ),
+                  ),
+                  onChanged: (text) {
+                    setState(() {});
+                    unawaited(_command('search', {'text': text}));
+                  },
+                ),
+              ),
+              IconButton(
+                onPressed: native ? _settings : null,
+                tooltip: 'Map settings and provider key',
+                icon: const Icon(Icons.tune),
+              ),
+            ],
+          ),
+        ),
+        if (s.suggestions.isNotEmpty)
+          const Text('Search © Geoapify', style: TextStyle(fontSize: 11)),
+        if (s.flag('searching') || s.flag('routing'))
+          const LinearProgressIndicator(),
+        if (s.suggestions.isNotEmpty)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 190),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final item in s.suggestions)
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.place_outlined),
+                    title: Text(item['label'] as String),
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      unawaited(_command('select', item));
+                    },
+                  ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: _LiveMap(
+                  key: _mapKey,
+                  state: s,
+                  data: widget.ble?.navigationMap ?? const {},
+                  onCamera: (lat, lon, zoom) {
+                    if (s.flag('enabled')) {
+                      unawaited(
+                        _command('camera', {
+                          'lat': lat,
+                          'lon': lon,
+                          'zoom': zoom,
+                        }),
+                      );
+                    }
+                  },
+                ),
+              ),
+              Positioned(
+                right: 12,
+                top: 12,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      map.message,
-                      style: Theme.of(context).textTheme.titleMedium,
+                    FloatingActionButton.small(
+                      heroTag: 'follow',
+                      onPressed: () {
+                        unawaited(_command('resumeBrowse'));
+                        _mapKey.currentState?.follow();
+                      },
+                      tooltip: 'Follow my location',
+                      child: const Icon(Icons.my_location),
                     ),
-                    const SizedBox(height: 10),
-                    Text(map.locationLabel),
-                    if (map.sharing) ...[
-                      const SizedBox(height: 8),
-                      Text(map.clusterLocationLabel),
-                    ],
-                    if (map.sharing && !map.clusterActive) ...[
-                      const SizedBox(height: 12),
-                      LinearProgressIndicator(
-                        value: map.state == 'transferring'
-                            ? map.progress
-                            : null,
+                    const SizedBox(height: 8),
+                    FloatingActionButton.small(
+                      heroTag: 'overview',
+                      onPressed: route.isEmpty
+                          ? null
+                          : () => _mapKey.currentState?.overview(),
+                      tooltip: 'Route overview',
+                      child: const Icon(Icons.route),
+                    ),
+                  ],
+                ),
+              ),
+              if (!s.flag('enabled'))
+                Center(
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Your current location and surrounding roads',
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: native && !_busy ? _enable : null,
+                            child: const Text('Enable maps & location'),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${map.accepted} / ${map.total} bytes accepted by display${map.state == 'checking' ? ' · validating' : ''}',
+                    ),
+                  ),
+                ),
+              if (s.flag('mapLoading'))
+                const Positioned(
+                  left: 16,
+                  top: 16,
+                  child: Chip(
+                    avatar: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    label: Text('Loading nearby roads'),
+                  ),
+                ),
+              const Positioned(
+                left: 6,
+                bottom: 4,
+                child: ColoredBox(
+                  color: Color(0xddffffff),
+                  child: Padding(
+                    padding: EdgeInsets.all(3),
+                    child: Text(
+                      '© OpenStreetMap · OpenMapTiles · OpenFreeMap',
+                      style: TextStyle(color: Colors.black87, fontSize: 10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .34,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _locationLabel(location),
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                if (location['quality'] == 'permissionRequired' ||
+                    location['quality'] == 'disabled' ||
+                    location['quality'] == 'gpsDisabled' ||
+                    location['quality'] == 'approximate')
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: () => widget.ble?.appSettings(),
+                        child: const Text('App permissions'),
+                      ),
+                      TextButton(
+                        onPressed: () => widget.ble?.locationSettings(),
+                        child: const Text('Location settings'),
                       ),
                     ],
-                    if (_error != null || map.error != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        _error ?? map.error!,
+                  ),
+                for (final error in [
+                  _error,
+                  s.text('mapError'),
+                  s.text('message'),
+                  download['error'] as String?,
+                ])
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        error,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 16),
-                    if (map.sharing)
-                      OutlinedButton.icon(
-                        onPressed: _busy
-                            ? null
-                            : () =>
-                                  _command(() => widget.ble!.stopMapSharing()),
-                        icon: const Icon(Icons.stop_circle_outlined),
-                        label: const Text('Stop map sharing'),
+                    ),
+                if (route.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    route['label'] as String? ?? 'Selected route',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text(
+                    '${_distance(route['remaining'] ?? route['distance'])} · estimated ${(((route['remainingSeconds'] ?? route['seconds']) as num? ?? 0) / 60).ceil()} min · motorcycle',
+                  ),
+                  if (s.flag('navigating') &&
+                      (route['offRoute'] == true ||
+                          route['instruction'] != null))
+                    Text(
+                      route['offRoute'] == true
+                          ? 'Off route — awaiting a verified replacement'
+                          : '${_distance(route['maneuverDistance'])} · ${route['instruction']}',
+                    ),
+                  if (download['busy'] == true ||
+                      download['ready'] == true ||
+                      download['error'] != null) ...[
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: (download['total'] as num? ?? 0) > 0
+                          ? ((download['done'] as num? ?? 0) /
+                                    (download['total'] as num))
+                                .clamp(0, 1)
+                          : null,
+                    ),
+                    Text(
+                      download['ready'] == true
+                          ? 'Route corridor cached · offline detail through z${download['zoom'] ?? 14}'
+                          : '${download['done'] ?? 0}/${download['total'] ?? 0} corridor tiles · ${((download['bytes'] as num? ?? 0) / 1048576).toStringAsFixed(1)} MiB',
+                    ),
+                    if (download['error'] != null)
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          TextButton(
+                            onPressed: () => _command('download', {
+                              'zoom': download['zoom'] ?? 14,
+                            }),
+                            child: const Text('Retry download'),
+                          ),
+                          TextButton(
+                            onPressed: () => _command('download', {
+                              'zoom':
+                                  ((download['zoom'] as num? ?? 14).toInt() - 1)
+                                      .clamp(8, 14),
+                            }),
+                            child: const Text('Use coarser offline detail'),
+                          ),
+                        ],
                       ),
-                    if (!map.sharing || map.state == 'failed')
-                      FilledButton.icon(
-                        onPressed: !_busy && native && widget.ble?.live == true
-                            ? _start
-                            : null,
-                        icon: const Icon(Icons.near_me_outlined),
-                        label: Text(
-                          map.state == 'failed'
-                              ? 'Retry map sharing'
-                              : 'Share map & location',
+                  ],
+                  if (s.flag('sharing')) ...[
+                    const SizedBox(height: 6),
+                    Text(_displayLabel(projection)),
+                    if ((projection['total'] as num? ?? 0) > 0)
+                      LinearProgressIndicator(
+                        value:
+                            ((projection['offset'] as num? ?? 0) /
+                                    (projection['total'] as num))
+                                .clamp(0, 1),
+                      ),
+                    Text(
+                      '${projection['objects'] ?? 0} display objects · ${projection['bytesPerSecond'] ?? 0} B/s · ${projection['offset'] ?? 0}/${projection['total'] ?? 0} bytes',
+                    ),
+                  ],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (!s.flag('navigating'))
+                        FilledButton.icon(
+                          onPressed: _busy ? null : () => _command('start'),
+                          icon: const Icon(Icons.navigation_outlined),
+                          label: const Text('Start navigation'),
+                        ),
+                      if (!s.flag('sharing'))
+                        FilledButton.tonalIcon(
+                          onPressed: _busy || widget.ble?.live != true
+                              ? null
+                              : () => _command('share'),
+                          icon: const Icon(Icons.screen_share_outlined),
+                          label: const Text('Share route'),
+                        ),
+                      if (s.flag('sharing'))
+                        OutlinedButton(
+                          onPressed: () => _command('stopSharing'),
+                          child: const Text('Stop sharing'),
+                        ),
+                      OutlinedButton(
+                        onPressed: () => _command('end'),
+                        child: Text(
+                          s.flag('navigating')
+                              ? 'End navigation'
+                              : 'Clear route',
                         ),
                       ),
-                    if (!native)
-                      const Text(
-                        'Phone location sharing is currently available on Android.',
-                      ),
-                    if (native && widget.ble?.live != true)
-                      const Text('Connect your cluster to start sharing.'),
-                    if (map.quality == 'gpsDisabled')
-                      TextButton(
-                        onPressed: widget.ble?.locationSettings,
-                        child: const Text('Open location settings'),
-                      ),
-                    if (map.quality == 'accuracyLow' ||
-                        map.quality == 'permissionRequired')
-                      TextButton(
-                        onPressed: widget.ble?.appSettings,
-                        child: const Text('Location permission settings'),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Map attribution'),
-                  content: const SingleChildScrollView(
-                    child: SelectableText(
-                      '© OpenStreetMap contributors\nODbL 1.0\nhttps://www.openstreetmap.org/copyright\nhttps://opendatacommons.org/licenses/odbl/1-0/\n\nCentral Kolkata extract, 2 November 2026. MapLibre renders the phone map. This is a regional road snapshot, without live traffic or route guidance.',
+                    ],
+                  ),
+                  if (widget.ble?.live != true)
+                    const Text(
+                      'Phone navigation works independently. Connect the cluster to share your route.',
+                    ),
+                  const Text(
+                    'Routing © Geoapify · estimates exclude live traffic. Offline search and rerouting require internet.',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                ],
+                if (s.text('mapError') != null)
+                  TextButton(
+                    onPressed: () => _command('retry'),
+                    child: const Text('Retry maps'),
+                  ),
+                if (s.flag('enabled') && !s.flag('navigating'))
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => _command('clearCache'),
+                      child: const Text('Clear cached maps'),
                     ),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
-              ),
-              child: const Text('© OpenStreetMap contributors · ODbL'),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
+  }
+
+  String _locationLabel(Map<String, dynamic> p) {
+    final quality = p['quality'] as String? ?? 'waiting';
+    final accuracy = p['accuracy'] as num?;
+    final suffix = accuracy == null ? '' : ' · ±${accuracy.round()} m';
+    return switch (quality) {
+      'precise' => 'Current location$suffix',
+      'approximate' =>
+        'Approximate location$suffix — guidance waits for precise GPS',
+      'stale' => 'Location stale$suffix',
+      'permissionRequired' => 'Location permission required',
+      'stopped' => 'Location stopped · tap Follow to resume browsing',
+      'disabled' || 'gpsDisabled' => 'Turn on phone Location services',
+      'invalid' => 'Invalid location; no live pointer',
+      'providerUnavailable' ||
+      'providerUnsupported' => 'Location provider unavailable',
+      _ => 'Waiting for a fresh location$suffix',
+    };
+  }
+
+  String _distance(dynamic value) {
+    final m = (value as num? ?? 0).toDouble();
+    return m >= 1000 ? '${(m / 1000).toStringAsFixed(1)} km' : '${m.round()} m';
+  }
+
+  String _displayLabel(Map<String, dynamic> p) {
+    if (p['error'] != null) return p['error'] as String;
+    final coverage = switch (p['coverage']) {
+      2 => 'roads ready',
+      1 => 'partial roads',
+      _ => 'waiting for roads',
+    };
+    final quality = switch (p['quality']) {
+      1 => 'precise pointer',
+      2 => 'approximate pointer',
+      3 => 'stale location',
+      _ => 'waiting for live location',
+    };
+    final stage = switch (p['stage']) {
+      2 => 'receiving',
+      3 => 'verifying',
+      4 => 'object verified',
+      6 => 'cache reused',
+      5 => 'stopped',
+      _ => 'preparing',
+    };
+    return 'Display: $stage · $coverage · $quality · ${p['camera'] == 1 ? 'free browse' : 'follow'}${p['geometryCeiling'] == true ? ' · zoom in for detail' : ''}';
   }
 }
 
-Map<String, dynamic> _decodeRoads(String value) =>
-    jsonDecode(value) as Map<String, dynamic>;
-Future<Map<String, dynamic>>? _roads;
+const _empty = <String, dynamic>{
+  'type': 'FeatureCollection',
+  'features': <Object>[],
+};
 
-/// Map rendering owns no GPS subscription or BLE work. The service supplies one
-/// fresh observation; all road/font resources are local and licensed.
-class RegionalMap extends StatefulWidget {
-  const RegionalMap({required this.observation, super.key});
-  final MapSharing observation;
+class _LiveMap extends StatefulWidget {
+  const _LiveMap({
+    super.key,
+    required this.state,
+    required this.data,
+    required this.onCamera,
+  });
+  final NavigationState state;
+  final Map<String, dynamic> data;
+  final void Function(double lat, double lon, double zoom) onCamera;
   @override
-  State<RegionalMap> createState() => _RegionalMapState();
+  State<_LiveMap> createState() => _LiveMapState();
 }
 
-class _RegionalMapState extends State<RegionalMap> {
+class _LiveMapState extends State<_LiveMap> {
   MapLibreMapController? _controller;
-  Symbol? _arrow;
-  bool _loaded = false, _updating = false, _follow = true;
-  String? _failure;
-  bool _night = false;
-  Future<Uint8List> _image({
-    String? text,
-    Color color = Colors.white,
-    bool arrow = false,
-  }) async {
+  bool _loaded = false, _updating = false, _again = false, _follow = true;
+
+  int _revision = -1;
+  String? _error;
+  Timer? _cameraTimer;
+  LatLng? _lastFollow;
+  LatLng? get _point {
+    final p = widget.state.location;
+    if (p['lat'] is! num || p['lon'] is! num) return null;
+    return LatLng((p['lat'] as num).toDouble(), (p['lon'] as num).toDouble());
+  }
+
+  Future<void> _style() async {
+    final c = _controller;
+    if (c == null) return;
+    final night = Theme.of(context).brightness == Brightness.dark;
+    try {
+      for (final id in ['roads', 'route', 'accuracy', 'position', 'heading']) {
+        await c.addGeoJsonSource(id, _empty);
+      }
+      await c.addLineLayer(
+        'roads',
+        'water',
+        const LineLayerProperties(lineColor: '#649bb6', lineWidth: 5),
+        filter: ['==', 'kind', 2],
+      );
+      await c.addLineLayer(
+        'roads',
+        'edge',
+        LineLayerProperties(
+          lineColor: night ? '#1f3144' : '#bac6c7',
+          lineWidth: 6,
+          lineJoin: 'round',
+          lineCap: 'round',
+        ),
+        filter: ['!=', 'kind', 2],
+      );
+      await c.addLineLayer(
+        'roads',
+        'road',
+        LineLayerProperties(
+          lineColor: night ? '#647484' : '#ffffff',
+          lineWidth: 3,
+          lineJoin: 'round',
+          lineCap: 'round',
+        ),
+        filter: ['!=', 'kind', 2],
+      );
+      await c.addLineLayer(
+        'route',
+        'route-line',
+        const LineLayerProperties(
+          lineColor: '#3483ed',
+          lineWidth: 5,
+          lineJoin: 'round',
+          lineCap: 'round',
+        ),
+      );
+      await c.addFillLayer(
+        'accuracy',
+        'accuracy-fill',
+        const FillLayerProperties(fillColor: '#3388dd', fillOpacity: .12),
+      );
+      await c.addLineLayer(
+        'accuracy',
+        'accuracy-edge',
+        const LineLayerProperties(
+          lineColor: '#3388dd',
+          lineWidth: 1,
+          lineDasharray: [3, 3],
+        ),
+      );
+      await c.addCircleLayer(
+        'position',
+        'point',
+        const CircleLayerProperties(
+          circleRadius: 7,
+          circleColor: ['get', 'color'],
+          circleStrokeColor: '#287aca',
+          circleStrokeWidth: 3,
+        ),
+      );
+      await c.addFillLayer(
+        'heading',
+        'direction',
+        const FillLayerProperties(
+          fillColor: '#1674d1',
+          fillOutlineColor: '#ffffff',
+        ),
+      );
+      if (!mounted || c != _controller) return;
+      _loaded = true;
+      _revision = -1;
+      await _update();
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _error = 'Map renderer unavailable. Reopen Navigate to retry.',
+        );
+      }
+    }
+  }
+
+  Future<void> _update() async {
+    if (!_loaded) return;
+    if (_updating) {
+      _again = true;
+      return;
+    }
+    final c = _controller;
+    if (c == null) return;
+    _updating = true;
+    try {
+      final revision = (widget.data['revision'] as num?)?.toInt() ?? -1;
+      if (_revision != revision) {
+        final roads = widget.data['roads'] is Map
+            ? Map<String, dynamic>.from(widget.data['roads'] as Map)
+            : _empty;
+        await c.setGeoJsonSource('roads', roads);
+        await c.setGeoJsonSource(
+          'route',
+          widget.data['route'] is Map
+              ? Map<String, dynamic>.from(widget.data['route'] as Map)
+              : _empty,
+        );
+        await _labels(c, roads);
+        _revision = revision;
+      }
+      final p = _point;
+      final location = widget.state.location;
+      final precise = location['quality'] == 'precise';
+      await c.setGeoJsonSource(
+        'position',
+        p == null
+            ? _empty
+            : _features(
+                'Point',
+                [p.longitude, p.latitude],
+                {'color': precise ? '#1674d1' : '#ffffff'},
+              ),
+      );
+      final accuracy = (location['accuracy'] as num?)?.toDouble();
+      await c.setGeoJsonSource(
+        'accuracy',
+        p != null && accuracy != null
+            ? _features('Polygon', [_circle(p, accuracy.clamp(1, 3000))])
+            : _empty,
+      );
+      final bearing = location['bearing'] as num?;
+      await c.setGeoJsonSource(
+        'heading',
+        p != null && bearing != null
+            ? _features('Polygon', [
+                _arrow(p, bearing.toDouble(), c.cameraPosition?.zoom ?? 15),
+              ])
+            : _empty,
+      );
+      if (_follow &&
+          p != null &&
+          (_lastFollow == null ||
+              (_lastFollow!.latitude - p.latitude).abs() +
+                      (_lastFollow!.longitude - p.longitude).abs() >
+                  .00002)) {
+        _lastFollow = p;
+
+        await c.moveCamera(
+          CameraUpdate.newLatLngZoom(
+            p,
+            math.max(14, c.cameraPosition?.zoom ?? 15),
+          ),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _error =
+              'Map update failed. Cached navigation remains available.',
+        );
+      }
+    } finally {
+      _updating = false;
+      if (_again && mounted) {
+        _again = false;
+        unawaited(_update());
+      }
+    }
+  }
+
+  Map<String, dynamic> _features(
+    String type,
+    dynamic coordinates, [
+    Map<String, dynamic> props = const {},
+  ]) => {
+    'type': 'FeatureCollection',
+    'features': [
+      {
+        'type': 'Feature',
+        'properties': props,
+        'geometry': {'type': type, 'coordinates': coordinates},
+      },
+    ],
+  };
+  List<List<double>> _circle(LatLng p, double radius) => List.generate(49, (i) {
+    final a = i * math.pi / 24;
+    return [
+      p.longitude +
+          math.cos(a) *
+              radius /
+              (111195 * math.cos(p.latitude * math.pi / 180)),
+      p.latitude + math.sin(a) * radius / 111195,
+    ];
+  });
+  List<List<double>> _arrow(LatLng p, double bearing, double zoom) {
+    final scale =
+        156543.03392 * math.cos(p.latitude * math.pi / 180) / math.pow(2, zoom);
+    final a = bearing * math.pi / 180;
+    return [
+      const [0.0, 19.0],
+      const [-9.0, -11.0],
+      const [0.0, -5.0],
+      const [9.0, -11.0],
+      const [0.0, 19.0],
+    ].map((q) {
+      final x = q[0] * math.cos(a) + q[1] * math.sin(a),
+          y = q[1] * math.cos(a) - q[0] * math.sin(a);
+      return [
+        p.longitude +
+            x * scale / (111195 * math.cos(p.latitude * math.pi / 180)),
+        p.latitude + y * scale / 111195,
+      ];
+    }).toList();
+  }
+
+  Future<Uint8List> _labelImage(String text) async {
+    final night = Theme.of(context).brightness == Brightness.dark;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final painter = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: color),
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          color: night ? Colors.white : const Color(0xff24394c),
+        ),
       ),
       textDirection: TextDirection.ltr,
+      maxLines: 1,
     )..layout(maxWidth: 220);
-    final width = arrow ? 40 : painter.width.ceil() + 12;
-    final height = arrow ? 40 : painter.height.ceil() + 8;
-    if (arrow) {
-      final path = Path()
-        ..moveTo(20, 2)
-        ..lineTo(5, 35)
-        ..lineTo(20, 28)
-        ..lineTo(35, 35)
-        ..close();
-      canvas.drawPath(path, Paint()..color = Colors.white);
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = const Color(0xff1667bf)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3,
-      );
-    } else {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-          const Radius.circular(3),
-        ),
-        Paint()
-          ..color = (_night ? const Color(0xff101c29) : const Color(0xffe7ede7))
-              .withValues(alpha: .88),
-      );
-      painter.paint(canvas, const Offset(6, 4));
-    }
+    final width = painter.width.ceil() + 12, height = painter.height.ceil() + 8;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        const Radius.circular(4),
+      ),
+      Paint()
+        ..color = night ? const Color(0xdd182a3b) : const Color(0xddebf0eb),
+    );
+    painter.paint(canvas, const Offset(6, 4));
+    painter.dispose();
     final picture = recorder.endRecording();
     final image = await picture.toImage(width, height);
     picture.dispose();
@@ -264,289 +812,159 @@ class _RegionalMapState extends State<RegionalMap> {
     return bytes!.buffer.asUint8List();
   }
 
-  Future<void> _style() async {
-    final c = _controller;
-    if (c == null) return;
-    try {
-      _roads ??= rootBundle
-          .loadString('assets/maps/kolkata.geojson')
-          .then((raw) => compute(_decodeRoads, raw));
-      final roads = await _roads!;
-      if (!mounted || c != _controller) return;
-      await c.addGeoJsonSource('roads', roads);
-      await c.addLineLayer(
-        'roads',
-        'road-edge',
-        LineLayerProperties(
-          lineColor: _night ? '#172938' : '#bac7c6',
-          lineWidth: 7,
-          lineCap: 'round',
-          lineJoin: 'round',
-        ),
-      );
-      await c.addLineLayer(
-        'roads',
-        'road-fill',
-        LineLayerProperties(
-          lineColor: _night ? '#34495b' : '#ffffff',
-          lineWidth: 4,
-          lineCap: 'round',
-          lineJoin: 'round',
-        ),
-      );
-      await c.addGeoJsonSource('position', const {
-        'type': 'FeatureCollection',
-        'features': <Object>[],
-      });
-      await c.addCircleLayer(
-        'position',
-        'position-dot',
-        const CircleLayerProperties(
-          circleRadius: 8,
-          circleColor: '#1667bf',
-          circleStrokeColor: '#ffffff',
-          circleStrokeWidth: 3,
-        ),
-      );
-      await c.addImage('heading', await _image(arrow: true));
-      _arrow = await c.addSymbol(
-        const SymbolOptions(
-          geometry: LatLng(22.56, 88.351),
-          iconImage: 'heading',
-          iconOpacity: 0,
+  Future<void> _labels(
+    MapLibreMapController c,
+    Map<String, dynamic> roads,
+  ) async {
+    await c.clearSymbols();
+    await c.setSymbolIconAllowOverlap(false);
+    final seen = <String>{};
+    var index = 0;
+    for (final raw in roads['features'] as List? ?? const []) {
+      if (index >= 32 || !mounted) break;
+      final feature = raw as Map, props = raw['properties'] as Map;
+      final name = props['name'] as String? ?? '';
+      if (name.isEmpty || !seen.add(name)) continue;
+      final line = feature['geometry']['coordinates'] as List;
+      if (line.isEmpty) continue;
+      final point = line[line.length ~/ 2] as List;
+      final id = 'road-label-${index++}';
+      await c.addImage(id, await _labelImage(name));
+      await c.addSymbol(
+        SymbolOptions(
+          geometry: LatLng(
+            (point[1] as num).toDouble(),
+            (point[0] as num).toDouble(),
+          ),
+          iconImage: id,
           iconSize: 1,
         ),
       );
-      final seen = <String>{};
-      var count = 0;
-      final labelFeatures = (roads['features'] as List)
-          .where((raw) => (raw as Map)['properties']['kind'] == 1)
-          .toList();
-      double labelDistance(dynamic raw) {
-        final coordinates = (raw['geometry']['coordinates'] as List);
-        final point = coordinates[coordinates.length ~/ 2] as List;
-        final x = (point[0] as num).toDouble() - 88.351;
-        final y = (point[1] as num).toDouble() - 22.56;
-        return x * x + y * y;
-      }
-
-      labelFeatures.sort(
-        (a, b) => labelDistance(a).compareTo(labelDistance(b)),
-      );
-      for (final raw in labelFeatures) {
-        final feature = raw as Map;
-        final props = feature['properties'] as Map;
-        final name = props['name'] as String;
-        if (props['kind'] != 1 || name.isEmpty || !seen.add(name)) continue;
-        final coords = (feature['geometry'] as Map)['coordinates'] as List;
-        final point = coords[coords.length ~/ 2] as List;
-        final id = 'road-name-$count';
-        await c.addImage(
-          id,
-          await _image(
-            text: name,
-            color: _night ? const Color(0xffa8bccd) : const Color(0xff3e565e),
-          ),
-        );
-        await c.addSymbol(
-          SymbolOptions(
-            geometry: LatLng(
-              (point[1] as num).toDouble(),
-              (point[0] as num).toDouble(),
-            ),
-            iconImage: id,
-            iconSize: 1,
-          ),
-        );
-        if (++count == 8) break;
-      }
-      if (!mounted || c != _controller) return;
-      _loaded = true;
-      await _position();
-    } on Object {
-      if (mounted && c == _controller) {
-        setState(
-          () => _failure = 'Offline map renderer unavailable. Sharing status remains available below.',
-        );
-      }
     }
   }
 
-  Future<void> _position() async {
-    if (!_loaded || _updating) return;
-    final c = _controller;
-    if (c == null) return;
-    _updating = true;
-    final value = widget.observation;
-    try {
-      final fresh = value.latitude != null && value.longitude != null;
-      final point = LatLng(value.latitude ?? 22.56, value.longitude ?? 88.351);
-      await c.setGeoJsonSource('position', {
-        'type': 'FeatureCollection',
-        'features': [
-          if (fresh && value.bearing == null)
-            {
-              'type': 'Feature',
-              'properties': <String, Object>{},
-              'geometry': {
-                'type': 'Point',
-                'coordinates': [point.longitude, point.latitude],
-              },
-            },
-        ],
-      });
-      if (_arrow != null) {
-        await c.updateSymbol(
-          _arrow!,
-          SymbolOptions(
-            geometry: point,
-            iconOpacity: fresh && value.bearing != null ? 1 : 0,
-            iconRotate: value.bearing ?? 0,
-          ),
-        );
-      }
-      if (fresh && _follow && value.insideRegion) {
-        await c.moveCamera(CameraUpdate.newLatLng(point));
-      }
-    } on Object {
-      if (mounted && c == _controller) {
-        setState(() => _failure = 'Map position display unavailable');
-      }
-    } finally {
-      _updating = false;
-      if (mounted &&
-          (widget.observation.latitude != value.latitude ||
-              widget.observation.longitude != value.longitude ||
-              widget.observation.bearing != value.bearing)) {
-        unawaited(_position());
-      }
+  void follow() {
+    _follow = true;
+    _lastFollow = null;
+    unawaited(_update());
+  }
+
+  Future<void> overview() async {
+    final route = widget.data['route'];
+    if (route is! Map) return;
+    final f = route['features'] as List? ?? [];
+    if (f.isEmpty) return;
+    final points = f.first['geometry']['coordinates'] as List;
+    if (points.length < 2) return;
+    double south = 90, north = -90, west = 180, east = -180;
+    for (final p in points) {
+      final lat = (p[1] as num).toDouble(), lon = (p[0] as num).toDouble();
+      south = math.min(south, lat);
+      north = math.max(north, lat);
+      west = math.min(west, lon);
+      east = math.max(east, lon);
     }
+    _follow = false;
+    await _controller?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(south, west),
+          northeast: LatLng(north, east),
+        ),
+        left: 30,
+        right: 30,
+        top: 30,
+        bottom: 30,
+      ),
+    );
   }
 
   @override
-  void didUpdateWidget(RegionalMap oldWidget) {
+  void didUpdateWidget(_LiveMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.observation.latitude != widget.observation.latitude ||
-        oldWidget.observation.longitude != widget.observation.longitude ||
-        oldWidget.observation.bearing != widget.observation.bearing) {
-      unawaited(_position());
-    }
+    unawaited(_update());
+  }
+
+  @override
+  void dispose() {
+    _cameraTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final night = Theme.of(context).brightness == Brightness.dark;
-    if (_night != night) {
-      _night = night;
-      _loaded = false;
-      _arrow = null;
-    }
-    final style = jsonEncode({
-      'version': 8,
-      'sources': <String, Object>{},
-      'layers': [
-        {
-          'id': 'background',
-          'type': 'background',
-          'paint': {'background-color': night ? '#101c29' : '#e7ede7'},
-        },
-      ],
-    });
     return Stack(
       children: [
         Positioned.fill(
-          child: MapLibreMap(
-            key: ValueKey(night),
-            styleString: style,
-            gestureRecognizers: {
-              Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
+          child: Listener(
+            onPointerDown: (_) {
+              _follow = false;
             },
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(22.56, 88.351),
-              zoom: 14,
-            ),
-            minMaxZoomPreference: const MinMaxZoomPreference(12, 18),
-            rotateGesturesEnabled: false,
-            tiltGesturesEnabled: false,
-            myLocationEnabled: false,
-            compassEnabled: true,
-            attributionButtonPosition: null,
-            onMapCreated: (value) {
-              if (mounted) {
-                setState(() {
-                  _controller = value;
-                  _loaded = false;
-                  _failure = null;
-                });
-              }
-            },
-            onStyleLoadedCallback: _style,
-          ),
-        ),
-        if (_failure != null)
-          Positioned.fill(
-            child: ColoredBox(
-              color: Theme.of(context).colorScheme.surface,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(_failure!, textAlign: TextAlign.center),
+            child: MapLibreMap(
+              key: ValueKey(night),
+              styleString: jsonEncode({
+                'version': 8,
+                'sources': <String, dynamic>{},
+                'layers': [
+                  {
+                    'id': 'background',
+                    'type': 'background',
+                    'paint': {
+                      'background-color': night ? '#101e2c' : '#e7eee6',
+                    },
+                  },
+                ],
+              }),
+              gestureRecognizers: {
+                Factory<OneSequenceGestureRecognizer>(
+                  EagerGestureRecognizer.new,
                 ),
+              },
+              initialCameraPosition: CameraPosition(
+                target: _point ?? const LatLng(0, 0),
+                zoom: _point == null ? 1 : 15,
               ),
-            ),
-          ),
-        Positioned(
-          top: 8,
-          left: 8,
-          right: 8,
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Text(
-                widget.observation.sharing
-                    ? 'Phone map · not cluster receipt'
-                    : 'Kolkata preview · no live location',
-              ),
+              minMaxZoomPreference: const MinMaxZoomPreference(1, 20),
+              trackCameraPosition: true,
+              tiltGesturesEnabled: false,
+              rotateGesturesEnabled: false,
+              myLocationEnabled: false,
+              attributionButtonPosition: null,
+              onMapCreated: (c) {
+                _controller = c;
+                _loaded = false;
+                _error = null;
+              },
+              onStyleLoadedCallback: _style,
+              onCameraIdle: () {
+                final camera = _controller?.cameraPosition;
+                if (camera == null) return;
+                _cameraTimer?.cancel();
+                _cameraTimer = Timer(
+                  const Duration(milliseconds: 250),
+                  () => widget.onCamera(
+                    camera.target.latitude,
+                    camera.target.longitude,
+                    camera.zoom,
+                  ),
+                );
+              },
             ),
           ),
         ),
-        Positioned(
-          right: 8,
-          bottom: 8,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton.filledTonal(
-                onPressed: () {
-                  _follow = true;
-                  unawaited(_position());
-                },
-                tooltip: 'Follow current location',
-                icon: const Icon(Icons.my_location),
+        if (_error != null)
+          Positioned(
+            left: 12,
+            bottom: 28,
+            right: 12,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(_error!),
               ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                onPressed: () {
-                  _follow = false;
-                  _controller?.moveCamera(
-                    CameraUpdate.newLatLngBounds(
-                      LatLngBounds(
-                        southwest: const LatLng(22.546, 88.337),
-                        northeast: const LatLng(22.574, 88.365),
-                      ),
-                      left: 24,
-                      right: 24,
-                      top: 48,
-                      bottom: 56,
-                    ),
-                  );
-                },
-                tooltip: 'Kolkata area overview',
-                icon: const Icon(Icons.map_outlined),
-              ),
-            ],
+            ),
           ),
-        ),
       ],
     );
   }

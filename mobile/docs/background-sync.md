@@ -1,5 +1,8 @@
 # Android background-sync strategy and work plan
 
+[Android v2 native ownership](navigation-v2-implementation.md) is now integrated in source: visible-browse GPS is independent of BLE; explicit navigation/sharing adds location foreground ownership and separate Stop controls. Idle hiding uses a3 s grace. Raw-map/corridor/provider work and route progress live natively, not in a Flutter page/isolate. START_NOT_STICKY/no boot restart remains; a saved route reopens only as a preview. The historical M1/M2 and phase-1 sections below retain their original acceptance context.
+
+
 The next location/navigation changes follow the [phase 2 mobile work packages](navigation-phase-2.md), including independent visible-browse/navigation/share/BLE intents. This planning document does not alter current v1 runtime or trust behavior.
 
 For the next location/map phase, follow the [complete integration handoff](../../docs/map-phase-1.md), particularly the separate sharing intent, location foreground-service lifecycle and firmware-first gates. Existing M1/M2 and B1/B2 acceptance are not superseded.

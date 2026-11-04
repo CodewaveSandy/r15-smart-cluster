@@ -1,5 +1,10 @@
 # Companion development, verification and Mac adapter
 
+## Android navigation v2 — 2026-11-04
+
+The [implementation and full manual APK matrix](navigation-v2-implementation.md) documents the native cache/provider/route/session/GATT integration and private Geoapify-key setup. Local work used Dart formatting/static analysis and source cross-checks only; no APK/Gradle/native compilation, SDK installation, automated suite or physical-device claim. The existing Mobile APK Action supplies Android compilation and universal debug APK packaging after a user push; no dependency/toolchain upgrade was needed. Install from the repository root with `bash scripts/install-mobile-apk.sh`, then exercise independent phone maps, current location/quality, route/corridor/limits, v2 transfer, display camera, reroute/windows, Stop semantics and untethered background behavior.
+
+
 Updated: 2026-11-02. Android is the implemented physical path; iOS shell/device integration remains separate. Read [background-sync](background-sync.md) for the next implementation task and [protocol](protocol.md) for current wire behavior. No automated test files/suites may be created/restored/run in this phase. Use builds/static analysis, numeric diagnostics and manual device checks; preserve runtime validation and normative vectors.
 
 ## Toolchain and launch

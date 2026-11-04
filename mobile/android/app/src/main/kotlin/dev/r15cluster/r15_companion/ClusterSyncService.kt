@@ -13,6 +13,7 @@ import android.os.*
 class ClusterSyncService : Service() {
     companion object {
         const val CONNECT = "dev.r15cluster.CONNECT"
+        const val NAVIGATE = "dev.r15cluster.NAVIGATE"
         const val STOP = "dev.r15cluster.STOP"
         private const val CHANNEL = "cluster-sync"
         private const val NOTIFICATION = 15
@@ -24,9 +25,10 @@ class ClusterSyncService : Service() {
     private val prefs get() = getSharedPreferences("ble-selection", MODE_PRIVATE)
     private var mapWanted = false
     private lateinit var location: PhoneLocation
-    private val mapLoader = java.util.concurrent.Executors.newSingleThreadExecutor()
-    private var mapLoadGeneration = 0
-    private var loadedRegion: MapWire.Region? = null
+    private lateinit var navigation: NavigationSession
+    private var appVisible=false
+    private val idleLocation=Runnable { if(!appVisible && !navigation.navigating && !navigation.sharing)location.stop() }
+    private val locationTick=object: Runnable { override fun run() { if(destroyed)return;navigation.onFix(navigation.fix);handler.postDelayed(this,500) } }
     private var mapError: String? = null
     private var suspended = false
     private var wanted = false
@@ -66,9 +68,17 @@ class ClusterSyncService : Service() {
     override fun onCreate() {
         super.onCreate()
         link = BleBond(applicationContext) { changed(it) }
-        location = PhoneLocation(applicationContext) { value ->
-            if (mapWanted) { link.location(value); if (value.problem == "permissionRequired") stopMapSharing("Location permission revoked. Start sharing again after restoring access.") }
+        navigation=NavigationSession(applicationContext,link.navigation) {
+            mapWanted=navigation.sharing
+            if(!destroyed)observer?.invoke(snapshot())
         }
+        location = PhoneLocation(applicationContext) { value ->
+            navigation.onFix(value)
+            if(value.problem=="permissionRequired" && (navigation.navigating || navigation.sharing)) {
+                navigation.end();updateLocation();updateForeground()
+            }
+        }
+        handler.postDelayed(locationTick,500)
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL, "Cluster connection", NotificationManager.IMPORTANCE_LOW).apply {
@@ -80,6 +90,16 @@ class ClusterSyncService : Service() {
     }
     override fun onBind(intent: Intent): IBinder = binder
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if(intent?.action==NAVIGATE) {
+            try {
+                check(location.permitted()) { "Location permission required" }
+                if(intent.getBooleanExtra("share",false)) { check(wanted) { "Connect cluster first" };navigation.share() } else navigation.start()
+                showNotification("Navigation");updateLocation()
+            } catch(_: Exception) { navigation.pause("Navigation could not start; check location access and selected route");updateLocation();updateForeground() }
+            return START_NOT_STICKY
+        }
+        if(intent?.action=="end-navigation") { navigation.end();updateLocation();updateForeground();return START_NOT_STICKY }
+        if(intent?.action=="stop-all") { navigation.stopAll();stopSync();return START_NOT_STICKY }
         if (intent?.action == "stop-map") { stopMapSharing(); return START_NOT_STICKY }
         if (intent?.action == STOP) { stopSync(); return START_NOT_STICKY }
         // No boot receiver or blind restart from a persisted "connected" flag.
@@ -116,7 +136,7 @@ class ClusterSyncService : Service() {
         changed(link.snapshot())
     }
     fun snapshot(): Map<String, Any?> = link.snapshot() + mapOf(
-        "serviceActive" to wanted, "mapSharing" to mapWanted, "mapError" to mapError, "reconnecting" to retryScheduled,
+        "navigation" to navigation.snapshot(), "serviceActive" to wanted, "mapSharing" to mapWanted, "mapError" to mapError, "reconnecting" to retryScheduled,
         "stopped" to prefs.getBoolean("stopped", false),
         "notificationVisible" to (Build.VERSION.SDK_INT < 24 || getSystemService(NotificationManager::class.java).areNotificationsEnabled()),
     ) + (serviceError?.let { mapOf("error" to it) } ?: emptyMap())
@@ -151,9 +171,10 @@ class ClusterSyncService : Service() {
         observer?.invoke(snapshot())
     }
     private fun showNotification(state: String) {
+        if(navigation.navigating && !location.permitted()) { navigation.pause("Location permission required; restart navigation after restoring access");updateLocation();updateForeground();return }
         if (mapWanted && !location.permitted()) { stopMapSharing("Location permission revoked. Restore access and start sharing again."); return }
-        if (!mapWanted && !permitted()) { stopSync("Bluetooth access unavailable. Open the app to reconnect."); return }
-        val title = state + if (mapWanted) " · Location sharing" else ""
+        if (!navigation.navigating && !mapWanted && !permitted()) { stopSync("Bluetooth access unavailable. Open the app to reconnect."); return }
+        val title = state + if (mapWanted) " · Route sharing" else if(navigation.navigating) " · Phone navigation" else ""
         if (noticeState == title && foreground) return
         noticeState = title
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -164,14 +185,20 @@ class ClusterSyncService : Service() {
             val stopMap = PendingIntent.getService(this, 2, Intent(this, ClusterSyncService::class.java).setAction("stop-map"), flags)
             builder.addAction(Notification.Action.Builder(null, "Stop map sharing", stopMap).build())
         }
+        if(navigation.navigating) {
+            val end=PendingIntent.getService(this,3,Intent(this,ClusterSyncService::class.java).setAction("end-navigation"),flags)
+            builder.addAction(Notification.Action.Builder(null,"End navigation",end).build())
+        }
+        val all=PendingIntent.getService(this,4,Intent(this,ClusterSyncService::class.java).setAction("stop-all"),flags)
+        builder.addAction(Notification.Action.Builder(null,"Stop all",all).build())
         val notification = builder.setSmallIcon(R.drawable.ic_cluster_sync).setContentTitle("R15 Cluster · $title")
             .setContentText("Tap to open the app. Use Stop sync to disconnect.")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .setCategory(Notification.CATEGORY_SERVICE).setVisibility(Notification.VISIBILITY_PRIVATE)
             .addAction(Notification.Action.Builder(null, "Stop sync", stop).build()).build()
         if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION, notification,
-            (if (permitted()) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0) or
-                (if (mapWanted && location.permitted()) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0))
+            (if (wanted && permitted()) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0) or
+                (if ((mapWanted || navigation.navigating) && location.permitted()) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0))
         else startForeground(NOTIFICATION, notification)
         foreground = true
     }
@@ -180,51 +207,58 @@ class ClusterSyncService : Service() {
         suspended = true; serviceError = message; handler.removeCallbacks(retry); retryScheduled = false
         link.disconnect(); showNotification("Waiting for Bluetooth"); observer?.invoke(snapshot())
     }
-    // Called only by a visible Activity after a fresh user action/permission result.
-    fun startMapSharing() {
-        if (!wanted || !location.permitted()) { mapError = "Connect your cluster and allow location before sharing"; observer?.invoke(snapshot()); return }
-        mapWanted = true; mapError = null; val generation = ++mapLoadGeneration
-        try {
-            showNotification(if (link.snapshot()["state"] == "connected") "Connected" else "Reconnecting")
-            if (!location.start()) { stopMapSharing("Location provider unavailable. Check permission and Google Play services."); return }
-        } catch (_: Exception) { stopMapSharing("Android could not start foreground location. Open the app and retry."); return }
-        mapLoader.execute {
-            try {
-                val region = loadedRegion ?: run {
-                    val root = "flutter_assets/assets/maps/"
-                    val manifest = org.json.JSONObject(assets.open(root + "kolkata.manifest.json").bufferedReader().use { it.readText() })
-                    val bytes = assets.open(root + "kolkata.r15b").use { it.readBytes() }
-                    MapWire.region(bytes, manifest.getString("sha256"))
-                }
-                handler.post { if (!destroyed && mapWanted && generation == mapLoadGeneration) { loadedRegion = region; link.shareMap(true, region); observer?.invoke(snapshot()) } }
-            } catch (_: Exception) { handler.post { if (!destroyed && generation == mapLoadGeneration) stopMapSharing("Bundled map validation failed; reinstall the current APK") } }
-        }
+    fun visible(value: Boolean) {
+        appVisible=value;navigation.setVisible(value);handler.removeCallbacks(idleLocation)
+        if(value)updateLocation() else handler.postDelayed(idleLocation,3000)
     }
-    fun stopMapSharing(error: String? = null) {
-        ++mapLoadGeneration; mapWanted = false; mapError = error; location.stop(); link.shareMap(false)
-        if (wanted && permitted()) showNotification(if (link.snapshot()["state"] == "connected") "Connected" else "Reconnecting")
-        else if (wanted) { stopSync(error); return }
-        observer?.invoke(snapshot())
+    private fun updateLocation() {
+        handler.removeCallbacks(idleLocation)
+        if(navigation.allowed && location.permitted() && ((appVisible && navigation.visible) || navigation.navigating || navigation.sharing))location.start()
+        else { location.stop();if(navigation.allowed && !location.permitted())navigation.onFix(PhoneFix(problem="permissionRequired")) }
+    }
+    private fun updateForeground() {
+        noticeState=""
+        if(wanted || navigation.navigating || navigation.sharing)showNotification(if(wanted)"Cluster sync" else "Navigation")
+        else { if(foreground) { if(Build.VERSION.SDK_INT>=24)stopForeground(STOP_FOREGROUND_REMOVE) else stopForeground(true) };foreground=false;stopSelf() }
+    }
+    fun navigationCommand(method: String,args: Map<*,*>): Any? {
+        when(method) {
+            "enable"->{navigation.setVisible(appVisible);navigation.accept();updateLocation()}
+            "resumeBrowse"->{navigation.setVisible(appVisible);if(navigation.fix.problem in listOf("invalid","providerUnavailable","providerUnsupported","gpsDisabled"))location.stop();updateLocation()}
+            "camera"->navigation.camera((args["lat"] as Number).toDouble(),(args["lon"] as Number).toDouble(),(args["zoom"] as Number).toDouble())
+            "search"->navigation.search(args["text"] as? String?:"")
+            "select"->navigation.select(GeoPoint((args["lat"] as Number).toDouble(),(args["lon"] as Number).toDouble()),args["label"] as? String?:"Destination")
+            "key"->navigation.setKey(args["value"] as? String?:"")
+            "stopSharing"->stopMapSharing()
+            "end"->{navigation.end();updateLocation();updateForeground()}
+            "stopAll"->{navigation.stopAll();stopSync()}
+            "download"->navigation.download((args["zoom"] as? Number)?.toInt()?:14)
+            "retry"->navigation.retry()
+            "clearCache"->navigation.clearCache()
+            "mapData"->return navigation.mapData()
+            else->error("Unknown navigation command")
+        }
+        observer?.invoke(snapshot());return null
+    }
+    fun startMapSharing() { navigation.share();mapWanted=true;updateLocation();updateForeground() }
+    fun stopMapSharing(error: String?=null) {
+        navigation.stopSharing();mapWanted=false;mapError=error;link.shareMap(false);updateLocation();updateForeground();observer?.invoke(snapshot())
     }
     fun refresh() { if (wanted) link.refreshMetadata(); observer?.invoke(snapshot()) }
     fun stopSync(error: String? = null) {
-        wanted = false; suspended = false; mapWanted = false; ++mapLoadGeneration; location.stop(); link.shareMap(false); serviceError = error
+        wanted = false; suspended = false; navigation.stopSharing(); mapWanted = false; link.shareMap(false); serviceError = error
         handler.removeCallbacks(retry); retryScheduled = false; retryAttempt = 0
         prefs.edit().putBoolean("stopped", true).apply()
         link.disconnect()
-        if (foreground) {
-            if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else stopForeground(true)
-        }
-        foreground = false; noticeState = ""
+        updateLocation();updateForeground()
         observer?.invoke(snapshot())
-        stopSelf()
     }
     fun forget() { stopSync(); link.forgetSelection(); prefs.edit().putBoolean("stopped", true).apply(); observer?.invoke(snapshot()) }
     override fun onDestroy() {
         destroyed = true; wanted = false; observer = null
         handler.removeCallbacksAndMessages(null)
         unregisterReceiver(radio)
-        location.stop(); mapLoader.shutdownNow(); link.dispose()
+        location.stop(); navigation.dispose(); link.dispose()
         super.onDestroy()
     }
 }
