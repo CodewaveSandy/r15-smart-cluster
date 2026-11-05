@@ -27,9 +27,6 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/components/RideInfoPanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/FuelGauge.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/LifecycleOverlay.cpp"
- "${CLUSTER_ROOT}/embedded/ui/components/MapPanel.cpp"
- "${CLUSTER_ROOT}/embedded/ui/components/MapPage.cpp"
- "${CLUSTER_ROOT}/assets/fonts/lvgl/inter_map_copyright_16.c"
  "${CLUSTER_ROOT}/embedded/ui/Icons.cpp"
  "${CLUSTER_ROOT}/assets/animations/lvgl/r15_signature.c"
  "${CLUSTER_ROOT}/assets/icons/lvgl/cluster_icons_32.c"
@@ -56,12 +53,3 @@ set_target_properties(r15-preview PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_B
  MACOSX_BUNDLE_GUI_IDENTIFIER "dev.r15smartcluster.preview")
 target_link_libraries(r15-preview PRIVATE cluster_ui SDL2::SDL2)
 target_compile_options(r15-preview PRIVATE -Wall -Wextra -Wpedantic)
-add_executable(r15-map-preview MACOSX_BUNDLE map_preview.cpp)
-set_target_properties(r15-map-preview PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
- MACOSX_BUNDLE_BUNDLE_NAME "R15 Map Preview"
- MACOSX_BUNDLE_GUI_IDENTIFIER "dev.r15smartcluster.map-preview")
-target_link_libraries(r15-map-preview PRIVATE cluster_ui SDL2::SDL2)
-target_compile_options(r15-map-preview PRIVATE -Wall -Wextra -Wpedantic)
-add_executable(r15-map-firmware-preview MACOSX_BUNDLE firmware_map_preview.cpp navigation_preview.cpp)
-target_link_libraries(r15-map-firmware-preview PRIVATE cluster_ui SDL2::SDL2)
-target_compile_options(r15-map-firmware-preview PRIVATE -Wall -Wextra -Wpedantic)

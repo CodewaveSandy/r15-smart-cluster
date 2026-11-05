@@ -15,15 +15,6 @@ inline std::optional<SettingsEffect> settingsTouch(DisplayOptions& view,const Cl
     if(!view.settings) return std::nullopt;
     if(!canOpenSettings(state,life)) return reconcileSettings(view,state,life);
     if(!menuReady) return SettingsEffect::None;
-    if(view.map){
-        const int xs[]={314,388,474,550,612,674},widths[]={70,82,72,58,58,118};
-        if(y>=442&&y<480)for(unsigned i=0;i<6;++i)if(x>=xs[i]&&x<xs[i]+widths[i]){
-            if(view.mapPan){if(i<5)view.mapPanFocus=i;else {view.mapPan=false;return SettingsEffect::None;}}
-            else view.mapFocus=i;
-            return settingsAction(view,SettingsAction::Select,state,life);
-        }
-        return SettingsEffect::None;
-    }
     y-=SettingsLayout::bounds.y;
     if(view.phone&&state.phone.available()&&valid(state.phone)&&state.phone.pairingRequested) {
         // Modal consumes backdrop taps; only explicit buttons can approve/reject.
@@ -50,7 +41,7 @@ inline std::optional<SettingsEffect> settingsTouch(DisplayOptions& view,const Cl
         for(unsigned i=0;i<menu.count;++i) if(inside(PhoneLayout::row(i))) focus=int(i);
         if(focus>=0) view.phoneFocus=unsigned(focus);
     } else {
-        for(int i=0;i<4;++i) if(inside(SettingsLayout::tile(i))) focus=i;
+        for(int i=0;i<3;++i) if(inside(SettingsLayout::tile(i))) focus=i;
         if(focus>=0) view.settingsFocus=unsigned(focus);
     }
     return focus>=0?settingsAction(view,SettingsAction::Select,state,life):SettingsEffect::None;

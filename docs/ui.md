@@ -1,8 +1,6 @@
 # UI, Settings and lifecycle
 
-The [phase 2 firmware map page](navigation-phase-2-firmware.md) implements independent drag/zoom/Follow/Browse, approximate/last-known point styles, route overview/detail geometry and quality-gated phone-provided instructions. Android v2 and physical acceptance are separate; the v1 APK retains v1 behavior.
-
-For the upcoming map page, [phase 1 display behavior](map-phase-1.md#5-map-transfer-and-display-behavior) specifies loading, cached-map replacement, fresh/stale position, coverage, physical controls and warning/lifecycle precedence. These states are implemented in the firmware page and inspected in the host preview; physical panel/transport acceptance remains pending.
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
 
 Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation, retained clock sources and full hardware integration remain pending; phone/USB clock sync, persisted formats and connected phone metadata are implemented.
 
@@ -112,7 +110,7 @@ The implemented Settings flow follows [Settings behavior](ui.md#settings-behavio
 
 Radio pages share the compact instrument strip, a status card and bounded context-sensitive action rows. Unknown service quality offers Back, and Forget confirmation defaults to Cancel. See [settings and connectivity](ui.md#settings-behavior) for both radio flows and provisioning boundaries.
 
-Clock & Date is the fourth Settings tile. Keep real time/date in the header, with a separate AM/PM caption in 12-hour mode. Color the top-right gear foreground/amber/red for connected/waiting/stale UART; do not replace the date with UART text. See [Settings](ui.md#clock-date-and-connection-indicator) for source quality, supported formats and cold-power limitations.
+Clock & Date is the third Settings tile. Keep real time/date in the header, with a separate AM/PM caption in 12-hour mode. Color the top-right gear foreground/amber/red for connected/waiting/stale UART; do not replace the date with UART text. See [Settings](ui.md#clock-date-and-connection-indicator) for source quality, supported formats and cold-power limitations.
 
 ## Settings behavior
 
@@ -120,11 +118,11 @@ Updated: 2026-10-29. Settings home, Appearance and unified Phone UI implemented;
 
 ### Visual direction
 
-The user selected the category-grid concept in [settings-concept.png](reference/settings-concept.png). The image is an AI-generated design reference, not evidence of connected radios. Actual host screens retain all dashboard tell-tales below the persistent gear/speed/clock strip. The four categories are Appearance, Phone, Navigation and Clock & Date, with a clear theme-accent focus outline. Both Midnight and Daylight are implemented.
+The user selected the category-grid concept in [settings-concept.png](reference/settings-concept.png). The image is an AI-generated design reference, not evidence of connected radios. Actual host screens retain all dashboard tell-tales below the persistent gear/speed/clock strip. The three categories are Appearance, Phone and Clock & Date, with a clear theme-accent focus outline. Both Midnight and Daylight are implemented.
 
 ### Navigation and access
 
-SettingsHome owns a persistent four-tile tree. SettingsNavigation reduces semantic actions without LVGL, SDL, storage or radio dependencies. The host maps S to Open, Right/Down to next, Left/Up to previous, I to next, Enter to Select, and Backspace/Esc to Back. Focus wraps. Enter opens Appearance, Phone or Clock & Date. Navigation remains pending. Phone status follows normalized phone service observations.
+SettingsHome owns a persistent three-tile tree. SettingsNavigation reduces semantic actions without LVGL, SDL, storage or radio dependencies. The host maps S to Open, Right/Down to next, Left/Up to previous, I to next, Enter to Select, and Backspace/Esc to Back. Focus wraps. Enter opens Appearance, Phone or Clock & Date. The Navigation tile is removed. Phone status follows normalized phone service observations.
 
 Prototype Settings access is unrestricted by speed, data quality, UART status or warnings at the user's request (2026-10-29). Tapping the gear opens it after boot even without a speed observation. Warnings remain live in the persistent tell-tale row; opening Settings does not fabricate stationary speed, neutral or lamps and does not change the UART/demo source. Lifecycle shutdown/off still owns screen visibility and cancels unconfirmed previews. Physical Trip/Info inputs already route over UART; radio commands remain a future integration. This temporary prototype access policy is not a reviewed riding-use policy; restrictions can be added later.
 
@@ -156,9 +154,6 @@ PreferenceFile performs host filesystem operations outside LVGL rendering, using
 
 ### Navigation and future services
 
-Firmware update (2026-11-03): map content x0..799/y142..441 supports single-contact drag with6px threshold and north-up Follow/Browse; +/− offers three v1 or six v2 zoom levels. Incoming fixes update the geographic marker during Browse without moving the camera; Follow is explicit and a dot may leave the viewport. Footer Pan exposes West/East/North/South/Done: Trip cycles, Info selects; Back exits Pan before leaving. Errors/second contact/hidden page/lifecycle cancel gestures; a drag cannot select footer/bench actions. Pinch is not advertised. V2 draws complete cached roads, full-route overview/current detail window, actual uncertainty rings/hollow approximate/gray last-known points, independent GPS/coverage/transfer text and source-qualified route instructions/estimated remaining values. Stale/invalid/no-anchor/wrong-revision observations never give confident guidance. Partial cells/windows never render. V1 strict quality/bbox rules are preserved. Header/tell-tales/warnings, Settings and 2.00s lifecycle ownership are unchanged. See [implementation evidence](development.md#phase-2-firmware-integration).
-
-A host-only 800 × 480 vector-map rendering prototype is now available through `bash scripts/preview.sh --map-preview`. It preserves the compact instrument strip, tell-tales and lifecycle overlay, and adds surrounding synthetic roads, a highlighted sample route, heading marker, maneuver card and sample remaining-distance/time footer. Midnight/Daylight and north-up follow/overview are provided. This is a rendering exploration, not an approved final navigation layout, live GPS/routing, provider projection or firmware feature. A separate `--kolkata-map` mode now loads a real offline central-Kolkata OSM road snapshot with attribution, pan/zoom and area overview; it shows no route, guidance/ETA or position marker. Synthetic movement remains exclusive to the sample mode. Stale position hides the marker and guidance; unavailable map hides the scene; warnings remain visible. See [controls and exact evidence](development.md#lvgl-map-render-preview).
 
 The native phase 1 map page is implemented/build and host-preview verified; Android live maps/GPS, route guidance and physical map acceptance remain pending. The selected direction is a custom moving map with an Android-first Flutter companion app and future iOS support; Android Auto/CarPlay are not required. The unified Phone category replaces rider-facing Bluetooth/Wi-Fi setup. See the [phone journey](../mobile/docs/architecture.md#rider-journey-and-truthful-state). GPS position alone does not provide map rendering. USB clock synchronization and clock-format/timezone editing are implemented; authenticated phone time is also implemented; retained RTC and vehicle network time remain pending. Submenus share Next/Previous/Select/Back; touch can be another input adapter, while physical-switch navigation remains a requirement. Text entry needs a separate provisioning decision.
 

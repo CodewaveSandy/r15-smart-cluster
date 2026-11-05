@@ -1,5 +1,7 @@
 # Development, wiring and commands
 
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
+
 Run these commands in Terminal. Start from the repository root unless a section says otherwise:
 
 ```sh
@@ -57,48 +59,6 @@ These commands target the separate vehicle ESP32, not the display. See the [vehi
 | `bash scripts/flash-vehicle.sh --port /dev/cu.YOUR_VEHICLE_PORT --resume-backup /absolute/path/vehicle-8mb.bin` | Resumes using a previously completed pre-write backup with adjacent saved identity; verifies it against the connected board before writing. Only use while flash still matches that backup. |
 
 After flashing, run the `--vehicle-serial` preview above using the same port. Stop the preview before flashing again. Manual BOOT/reset recovery is described in the vehicle guide.
-
-## LVGL map render preview
-
-```sh
-bash scripts/preview.sh --map-preview
-# Headless, deterministic 800 × 480 captures plus runtime diagnostics:
-SDL_VIDEODRIVER=dummy bash scripts/preview.sh --map-preview --render build/lvgl/map-previews
-```
-
-This is a separate native LVGL 9.2.2/SDL executable (`r15-map-preview`), not a screenshot mockup and not board firmware. It uses the existing Header, compact PrimaryReadout, TellTaleRow and LifecycleOverlay components above a vector MapPanel. The normal dashboard/settings launcher and firmware entry points are unchanged. It does not load/save preferences, open serial/radios, call a provider, or request location. Synthetic local-metre geometry and route progress live only in `simulator/lvgl/MapDemo.h`; the screen always labels the map/sample route and never populates bike speed/gear or wall-clock time from the animation.
-
-| Control | Preview behavior |
-| --- | --- |
-| D / Tab | Midnight↔Daylight / Street↔Track instrument configuration |
-| Space / R | Pause/resume the sample position / restart the route |
-| V | Follow↔whole-route overview; both are north-up |
-| + or = / − | Three fixed follow zoom levels |
-| X / U | Stale position (hide marker/pause guidance) / unavailable map |
-| W | Simultaneous sample engine/coolant warnings in the preserved tell-tale row |
-| O / Esc | Existing two-second ignition lifecycle / quit the preview |
-
-Follow pans a fixed local-plane viewport with the current sample pose; overview fits the entire route. Cached roads and the route remain visible when position is stale, but the marker/ETA guidance is withdrawn; unavailable map hides the scene. Data validity, clipping, road/route geometry, theme styles and fixed capacities are separate from the host animation. No provider, global geographic projection, route search, real maneuver generation, BLE/UART map contract, persistent tile cache, heading-up camera or physical-board performance is established by this preview.
-
-Verification on 2026-11-02: host builds passed with warning flags enabled. Deterministic captures cover both themes/instrument configurations, follow/overview, moved pose, close zoom, arrival, stale/unavailable, simultaneous warnings and boot/shutdown with warning interruption. LVGL diagnostics reported zero warnings; repeated identical paused frames produced zero flushes in all four theme/layout combinations. The synthetic fixture has 20 roads, seven route points and originally used a 2,956-byte bounded scene value; the real-area importer now uses a 204,828-byte-capacity scene (the host and renderer retain their own copies). These sizes exclude LVGL objects/draw tasks/framebuffers/fonts; they are not ESP32 heap/FPS evidence. Native GUI controls for restart/pause, overview, theme/layout and warnings/stale position were manually inspected. No automated test files/suites were created or run. Physical display build/flash, resource measurements, map delivery, provider licensing and B3 acceptance remain pending.
-
-### Real Kolkata OpenStreetMap roads
-
-```sh
-# First use only: one small Overpass download if the raw snapshot is absent.
-python3 scripts/import-osm-map.py --download
-# Reopening the preview is offline; it never contacts a map server:
-bash scripts/preview.sh --kolkata-map
-SDL_VIDEODRIVER=dummy bash scripts/preview.sh --kolkata-map --render build/lvgl/kolkata-map-previews
-```
-
-The selected central-Kolkata bounding box is south/west/north/east `22.546,88.337,22.574,88.365` (roughly 3.1 × 2.9 km), with a local rendering origin at `22.56,88.351`. This is one selected area, not all of Kolkata. Actual OSM road names/geometry include Chowringhee/Jawaharlal Nehru Road, Park Street, Esplanade roads, Mayo Road and surrounding lanes. There is **no calculated route, maneuver/ETA, GPS marker or simulated movement** in this mode. Arrows pan in 100m steps, R recenters, V toggles area overview, +/− zoom, D changes theme; Tab/U/W/O/Esc retain layout/unavailable/sample-warning/lifecycle/quit controls. The synthetic `--map-preview` remains separate.
-
-`import-osm-map.py` uses Python standard-library tools only. It caches the source at ignored `build/maps/kolkata/osm-roads.json`, projects a small-area spherical approximation into local metres, clips to the bounding box, simplifies with a 2m tolerance and splits polylines into at most eight points. All supported fetched road/path classes are retained; service roads and paths are visually omitted at overview scale and drawn thinner close up. Named arterial roads are prioritized; duplicate/overlapping labels are suppressed with a fixed eight-label limit. No road class is a claim of legal motorcycle access. An import exceeding 2,048 chunks fails explicitly instead of silently losing geometry. Road names prefer `name:en`; unsupported characters are normalized/omitted and names longer than 23 ASCII characters are shortened, with counts recorded in provenance. Full Bengali labels require a separate font/text plan.
-
-The host text adapter loads `kolkata.r15map` outside rendering, checks format/version/file size/counts/coordinates/names and atomically supplies a validated scene. The generated `.provenance.json` records query, geographic bounds/origin, OSM timestamp, simplification, counts and source SHA-256; the `.LICENSE.txt` records ODbL/copyright. Source/derived map data remain ODbL data, not firmware assets or public domain. Keep provenance/licence with any redistributed map extract. The screen displays © OpenStreetMap contributors and the copyright/licence URL; a tiny locally generated Inter copyright glyph avoids adding a full Unicode font. The import command reuses an existing source and does not poll Overpass during interaction. Use an explicitly different `--source`/`--output` for a fresh snapshot. The default download is a bounded Overpass POST with a project User-Agent, a timeout and an 8 MiB source ceiling.
-
-Verified 2026-11-02 snapshot: OSM timestamp `2026-11-02T15:08:51Z`, source SHA-256 `38e7324cfa61598decd972af89135a4008736e9a7ae4fc07ed270805804c04b5`; 1,384 input ways -> 1,435 chunks / 4,494 points, with 35 normalized/shortened names. The host scene capacity is 204,828 bytes, and the host/renderer retain separate copies. Host C++ builds and 800 × 480 rendering in both themes/instrument configurations passed; LVGL warnings and unchanged-frame flushes were zero. Map/overview/pan/zoom, labels, unavailable scenes, warning visibility and lifecycle captures were manually inspected. No automated suites, physical display flash, GPS, live routing or phone/UART map transfer occurred. MCU memory/CPU/scanout suitability remains unverified.
 
 ## Phone app and Mac connection
 
@@ -412,130 +372,34 @@ For a full continuity observation window, the read-only USB collector accepts 1.
 
 It sends no data/reset request and prints only bounded `@BLE` diagnostic lines; firmware emits one `@BLE SYNC metadata-expired` line per expiry. Detailed counters/maximum ages are available through authenticated c015 reads by the updated app, not through a new USB command. Ordinary telemetry events are not logged individually, avoiding a new console flood/sampling task. Phone USB/debugging must be disconnected during B1; board USB power/logging remains acceptable for a desk check. Capture numeric app callback gaps and c015 deltas alongside display UART/heap/stack/render diagnostics; absence of serial faults alone is not acceptance.
 
-## Phase 1 map firmware integration
+### Return-UART connection flapping — 2026-11-04
 
-2026-11-02/03 implementation session: firmware source implementation and affected board builds/packaging are complete; **not flashed, radio/physical/real-GPS accepted or bike verified**. No serial board ports were connected during this session. The implementation handoff is [phase 1 maps](map-phase-1.md), with exact implemented v1 bytes in [phone protocol](../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification). Android map/GPS work is still separate.
+The user reports the display alternating between live phone state and missing phone-status/return-UART messages with stable wiring. Source inspection found the display's console-mode `RecordWriter` wrote binary heartbeat and map reply records with `fwrite` but no flush. The pinned IDF5.5.4 `components/newlib/src/reent_syscalls.c::_fstat_r_console` explicitly enables line-buffered stdout/stderr. A complete binary record need not contain LF; its tail could wait for a later binary LF, buffer fill or log. This can exceed the existing1000 ms return-heartbeat deadline. The relevant actual UI message is `Return UART not confirmed - check TX43 to GPIO18`; vehicle RGB GPIO48 is unrelated.
 
-Implemented:
+The shared writer now holds the stdout stream lock across `fwrite` and an immediate `fflush` for each console record. A flush failure counts as a TX write error. The UART1 driver path remains unchanged. No pin/baud/security/CRC/freshness-threshold change or UI debounce hides an actual lost link. This fixes an identified delivery defect consistent with the report; the reported physical symptom is not yet proven resolved.
 
-- Portable R15B package validation/projection, R15X commands, R15K capability and R15S display status; incremental CRC/SHA-256 and bounded escaped R15Q UART framing/demultiplexing. [Normative vectors](../shared/protocol/map-phase-1-vectors.txt) are non-executable data, not an automated suite.
-- Display reserves two binary slots and two decoded scenes from PSRAM only (540,728 bytes at current ceilings); failure disables maps while instruments continue. Its application/LVGL owner stages, hashes/parses in bounded512-byte/16-road steps, then publishes an immutable scene. No scene-sized task-stack copies, flash/NVS map writes, partial-map rendering or synthetic board GPS source.
-- Navigation tile opens the map page under the existing Settings lifecycle. Header/compact instruments/tell-tales and warnings remain; full dashboards remain outside the map page. Touch, serial focus/select/Back and Trip-next/Info-select on the open map page operate Back/Follow/Area/Zoom. Cached maps remain on disconnect/Stop; stale/uncertain/poor-accuracy/outside fixes hide the marker. A valid stationary fix uses a neutral dot; qualified course uses an arrow. Follow reprojects under each active region's origin.
-- Vehicle adds authenticated c016/c017/c018 with authenticated/encrypted status CCCD, current boot/connection/display IDs, downstream resource/credit checks, one pending control/latest location and display-originated ACKs. c013–c015 bytes stay unchanged. All UART1 writes are whole bounded records through a priority worker; GPIO sampling never waits on a map write. Bulk DATA is limited to4096 encoded bytes/sec; critical frames precede every next fragment. Driver RX buffers are2048 bytes, bounded reads remain256 vehicle/512 display bytes per application turn. UART0 console/return records use a separate bounded writer, preserving existing pins/baud and record integrity alongside logs.
-- Numeric diagnostics include internal heap/min/largest block, task stacks, source gap and TX queue-full attempts (backpressure attempts, not proof of dropped/delivered map data). Display reports PSRAM and whether its map reservation succeeded. Runtime resource/timing/coexistence measurements remain a physical gate.
+Verification: both guarded `--build-only` firmware builds/package checks passed on the pinned toolchain; no boards were opened/flashed, no Android build and no automated suites were run. Display factory SHA256 `f3ef86a69f5f5ebde42898058a0237079a7f1dbca15be06b7c34ae9067b9852a`; vehicle compatibility-build SHA256 `06d19f1b3904c449a4aebdb38118faf8ab230633ad97223c764c6a88ca66607c`. The display needs reflashing for this fix; vehicle reflashing is not required for its unchanged UART1 path.
 
-Generate the binary Kolkata region from the already cached source:
+Physical follow-up: with the same wiring, flash the display using its guarded script, then observe Phone state for several minutes first without map sharing and then during a sustained v2 transfer. Check that real connection/name/battery remain steady and `MAP write_errors`, critical wait, RX framing/CRC errors and overruns do not grow unexpectedly. Disconnect a UART wire deliberately only during the normal powered desk bench procedure to confirm the original unavailable-state deadlines still work, then restore it. If flapping remains, capture both boards' existing10-second numeric diagnostics over~60 s; separate return confirmation, R15G freshness, missing R15P status, RX resets and BLE reconnects rather than assuming a physical cable fault or lengthening deadlines.
 
-```sh
-python3 scripts/import-osm-map.py
-```
+### Both-board follow-up after the symptom persisted
 
-Current output: `build/maps/kolkata/kolkata.r15b`, **30,066 bytes**, SHA-256 `3443bb2dab6efe9a91840b0c8f375cfd970398c86c6fac0d23c93327fdd91685`; 1,435 road chunks /4,494 points. The `.manifest.json`, `.geojson`, provenance and licence accompany it. The C++ SHA output in the firmware developer preview matches this Python-generated manifest. This is the same central-Kolkata source timestamp/hash described above, not a new network request or citywide coverage.
+The user reports the stdout-flush change alone did not resolve flapping and clarified that pairing cannot yet be completed; no phone map transfer is involved. Two45 s numeric serial observations found the forward R15G stream at approximately49 accepted packets/s, display RX overruns0 and fresh UART state. Display-reported TX byte counts continued increasing with write_errors0, while the vehicle's decoded return-fragment count stalled around100, with tunnel CRC/framing/timeouts0. This localizes the next investigation to return reception/status confirmation, but does not prove a physical wire fault or distinguish driver flushes from parser/heartbeat loss. These are runtime observations of the then-installed images, not acceptance of the new changes. The serial observer requested deasserted DTR/RTS and sent no data; serial-open/close reset effects were not independently measured.
 
-Build and inspect the actual portable firmware store/tunnel with the native Dashboard map page:
+Both UART receivers previously discarded all buffered data above1536 bytes even without a driver overflow, and processed only one256-byte vehicle/512-byte display read per loop. Both now use a4096-byte driver ring and drain up to1536 bytes in bounded nonblocking chunks per application turn. High backlog alone no longer flushes valid records. Actual UART FIFO/full/frame/parity fault events still invalidate parser/session state; the original1000 ms freshness/security checks remain. No pins, baud, CRC, pairing approval or UI timeout masking changed.
 
-```sh
-cmake -S . -B build/lvgl
-cmake --build build/lvgl
-SDL_VIDEODRIVER=dummy build/lvgl/simulator/lvgl/r15-map-firmware-preview.app/Contents/MacOS/r15-map-firmware-preview --package build/maps/kolkata/kolkata.r15b --render build/lvgl/map-firmware-previews
-```
+Vehicle `@MAP_RX` now additionally records driver resets, RX bytes/high-water backlog, accepted controls, display-session-change count, current control age, maximum control gap and actual return freshness. Display diagnostics add RX bytes/high-water backlog and `PHONE_LINK` numeric quality/unavailable reason, status count/age/max gap. These distinguish the failing lane without phone identity or packet logging.
 
-This host-only developer preview explicitly labels BENCH DEMO and SIMULATED fixes; it has no radio/board injection endpoint. Captures cover17 states in both layouts/themes (68 images): empty, loading0/half, checking, active/no fix, simulated direction arrow/neutral dot, low accuracy, outside coverage, replacement-half, cancel, hash rejection retaining old map, stale, warning, Stop, disconnect and15s timeout retaining old map. Console diagnostics show accepted byte offsets, state/error/location changes and matching SHA; latest run has **0 LVGL warnings**. Manually inspected representative day/night, Street/Track, loading/checking, marker, stale/failure and warning images. The normal dashboard/Settings/Phone developer preview also completed successfully. These are development previews/runtime diagnostics, not resumed automated test suites.
+Both guarded firmware builds/package checks passed without compiler warnings; no automated suites or Android build. New factory hashes: display `8c30ba9f6291b2d0bd75d6de1842b964715eecdfe8e23801eee5b45cb7becaab`, vehicle `aa65f0899bf7181652757700fcb5d2c9e8307afbb619ad24eb41f60f184c7de8`. **Both boards need the new images for this follow-up**, superseding the earlier display-only instruction. The user chose to perform flashing manually. No flashing was performed by the agent. Stable pre-pairing status, successful numeric approval and post-pairing/loaded behavior remain unverified; collect the new counters after both updates before claiming the problem resolved.
 
-Both `bash scripts/flash-vehicle.sh --build-only` and `bash scripts/flash-display.sh --build-only` build/package successfully with pinned ESP-IDF5.5.4; display image partition bounds/application fit are checked. No chip or partition changes and no flashes were performed. One existing `PairingIdentity.h` misleading-indentation compiler warning remains; new map sources compile without warnings. Build hashes below identify this session's packages; rebuilds may change embedded build metadata.
+### Confirmed cause of the pre-pairing regression: vehicle main-stack overflow
 
-For an actual paired-radio transfer, see [map tool commands and peer/MTU constraints](../tools/maps/README.md). The optional desktop sender has syntax/CLI checks only; it has **not** run against a board. It does not synthesize LOCATION, auto-approve pairing, remove the phone bond or claim locked-screen Android coexistence. Firmware physical acceptance still requires identified boards, PSRAM/heap/stack and serial rate/gap measurements, authenticated reconnect/subscription, first/replacement/malformed/stalled transfers and loss/reset recovery. Follow the complete [acceptance matrix](map-phase-1.md#8-phase-1-acceptance-and-evidence), then implement Android against the frozen v1 contract. No automated test suites were added or run.
+This supersedes the earlier flush/backlog hypotheses for the user's repeated pre-pairing flapping. The follow-up capture on the diagnostic images showed vehicle counters returning to startup values every~10.2 s while display counters remained cumulative. A filtered vehicle panic capture then **directly confirmed** `stack overflow in task main has been detected.` at10.3 s,20.4 s and30.6 s, followed by `Rebooting...` and `rst:0xc (RTC_SW_CPU_RST)`. The captured running ELF prefix was `8ed1b8246`. Initial serial opening also produced `USB_UART_CHIP_RESET`; the subsequent periodic software resets occurred while the port remained open. No flash or serial command was sent during the observation.
 
-| Package | SHA-256 |
-| --- | --- |
-| Vehicle `build/vehicle/sevensemi-s3/firmware.factory.bin` | `d1279752b776f2c081b83dc7e88a4a41492b5ad2e9e6f770a4deaeec5ca3cd92` |
-| Display `build/display/crowpanel-v3/r15-display.factory.bin` | `4ecc2bb0f8c528aa3b66ec3bee28ff84ace5706e40bb2fff9f074a44411a386b` |
+Immediately before the crash the vehicle reported driver_resets0, return_fresh1 and low RX high-water values (~240–299 bytes), and the display reported uninterrupted real R15G receipts, no RX overruns and current phone statuses. Thus the logs do not support attributing this reproduction to wiring, RX capacity or map transfer. The visible waiting/session/return-confirmation messages are expected during repeated vehicle reboot/identity re-establishment; no UI debounce should hide them.
 
-Build-time static usage is vehicle23,880 bytes RAM /486,941 bytes app flash; display26,104 bytes RAM /701,375 bytes app flash. These exclude runtime stacks, driver/LVGL allocation, framebuffers and reserved map PSRAM; they are not free-heap/performance measurements.
+The Phase2 changes increased the work/diagnostic call depth while the vehicle retained IDF's default `CONFIG_ESP_MAIN_TASK_STACK_SIZE=3584`. The main task's compiled entry frame alone was1120 bytes (`entry a1,0x460`), before nested driver/formatting/diagnostic calls. The ten-second reporting path overflowed that budget. Source defaults now request8192 bytes and `main.cpp` statically rejects an actual generated setting below8192, preventing an old cached3584-byte SDK configuration from silently rebuilding the faulty image. The existing local generated SDK config was backed up byte-for-byte and verified before updating it; fresh checkouts inherit the tracked defaults. Existing other workspaces with cached SDK configs must explicitly update that setting or regenerate their config, preserving any local hardware settings first.
 
-## Phase 1 user feedback and phase 2 planning
+The extra4608 bytes are RTOS main-task stack allocated from runtime RAM, not an additional raw-map buffer. The display's main stack is already16384 bytes; no display stack/pin/security/protocol change is required. Both-board diagnostics and the earlier source changes remain available, but they must not be represented as having fixed the confirmed crash. Only the vehicle needs reflashing for this stack correction. Afterward capture several consecutive ten-second reports: counters/uptime must remain monotonic, no panic/software-reset loop, healthy main/TX stack margins and return heartbeat gaps below the unchanged deadline. Then validate numeric pairing and ordinary telemetry before map sharing. Automated suites remain prohibited; no Android build is involved. Physical post-correction acceptance remains pending until the user installs this image.
 
-2026-11-03 user report: both boards/APK installed; real map appears, but approximately30KB sharing takes1–2minutes, current marker is hidden, low-accuracy/outside-coverage messages appear, free display drag/pan is absent and a green vehicle-board LED is distracting. No exact MTU, measured stage timings, reported accuracy/anchor diagnostics, flashed/APK hashes or LED circuit identity accompanied this report. Record it as partial user bench evidence, not a completed navigation/continuity/performance acceptance.
-
-The [phase 2 plan](navigation-phase-2.md) and separate [firmware](navigation-phase-2-firmware.md)/[mobile](../mobile/docs/navigation-phase-2.md) work packages document the requested new journey. Location precision permission, actual accuracy, map coverage and transfer readiness are independent. Current central-Kolkata coverage cannot serve arbitrary current locations. The plan includes throughput measurement/pipeline targets, dynamic source/cache, search/motorcycle routes, full phone corridor vs bounded display cache, independent cameras and verified LED-off handling. No firmware/app code, local app build, flash or tests were performed in this planning turn.
-
-
-
-## Phase 2 firmware integration
-
-2026-11-03/04 (final checks2026-11-04): **firmware scope implemented and board-build/manual-host-render verified.** This supersedes the earlier foundations-only status. The user explicitly requested firmware-first completion, so the independently defined semantic-cell/route contract is frozen now; Android still must prove its canonical raw-cache/renderer adapter and encode to it. See [firmware status](navigation-phase-2-firmware.md), [exact c019–c01b contract](../mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract) and [static normative examples](../shared/protocol/navigation-v2-vectors.txt).
-
-No board ports were opened or flashed. No local Android/Gradle/native app compilation, SDK/Studio installation, automated suite or small-screen/2× phone inspection was performed. Git changes remain uncommitted/unpushed. Firmware build scripts/backup/partition guards,115200 baud and existing physical pins are unchanged.
-
-### Implemented path and ownership
-
-- Portable `NavigationProtocol` specifies source descriptor/full object identity, Web-Mercator extent4096 cells, route overview/detail windows, strict revision/source/context rules, quality-bearing LOCATION/PROGRESS and status/interest/window requests. No raw MVT/GIS SDK, radio, LVGL or RTOS dependency enters the shared model/store.
-- Vehicle `NavigationBridge` and authenticated c019/c01a/c01b preserve one trusted bond/GATT owner. Up to four commands remain pending until display ACK; ATT success never commits data. Byte credit derives from the bounded command slots/value limit. Latest location/progress are separate coalesced lanes, each≥500ms, ahead of bulk DATA. Identical retries, conflicting sequence bytes, missing-prefix recovery, urgent cancellation/Stop/End, boot/connection/display invalidation and stale capabilities are explicit. Original c011–c018 bytes remain unchanged. Bonded GATT service-cache subscribers are notified after authenticated connection; no bond erase or approval bypass.
-- The existing single UART TX worker fragments complete messages independently of50Hz acquisition. Critical records precede each new lower-priority record. DATA retains4,096 encoded B/s cap,≤133-byte fragment, safe escaping/demultiplexing and bounded queues. No giant driver backlog, new baud, Wi-Fi ingress or extra radio owner.
-- Display preflights twelve32KiB complete raw slots + one32KiB staging slot, shared v1 binaries and twin render snapshots. Combined map buffers are **966,712 bytes**; each scene204,828 bytes. The guarded allocation is PSRAM-only; inline owner metadata/internal RAM is separately reflected in the build/runtime diagnostics. Source/route content is never stored in NVS. Resource failure disables v2 while instruments continue.
-- SHA/body-CRC validation is incremental≤512 bytes/poll, geometry validation≤16 records/poll. Render staging copies≤16 roads/32 route points per poll and swaps only when complete. Never display a half-received cell/window. Geometry-ceiling pressure reports partial detail. Regional-edge objects can be fully received yet geographically partial; that explicit flag never counts as full tile coverage and cannot downgrade an already complete tile.
-- At most six raw cells form the selected visible working set; target LOD wins, with bounded cached parent/finer fallback. Obsolete zoom levels retire without pinning an entire city. Two halo targets and old/new route context fit within twelve slots. Active snapshots own copied immutable geometry, so raw-cell retirement cannot dangle LVGL pointers. Active/candidate route objects and in-progress build references are protected; unpinned remote content is LRU-evicted.
-- Camera requests coalesce up to four missing visible keys before halo, repeat unfulfilled needs at bounded1s and never change phone routing/camera. Full-SHA HAVE avoids a whole resend; partial staging never resumes across sessions. ROUTE_NEED requests detail near/outside the current range; route activation requires complete matching overview/window/current-area context. Old revisions/conflicting route identities cannot activate. New route candidates suppress old confident guidance; the old complete scene remains until publication.
-- MapPage displays independent source/coverage/transfer/camera/route states, geographic neutral/qualified-course markers, hollow approximate points with actual uncertainty, and gray previously eligible last-known points only up to10s. Live/guidance requires conservative<2s monotonic age and current anchors/context; future/mock/replay/uncertain observations never become live later. Coverage never substitutes for GPS quality, and a valid position outside the former Kolkata area still renders with missing-map status. Phone estimates stay labelled; no GPS/route field populates instrument speed/gear/odometer.
-
-### Camera, touch and physical navigation
-
-Drag within x0..799/y142..441 enters Browse. Incoming fixes move the geographic marker without moving that camera. Follow explicitly recenters; Area fits the complete route overview or current cached roads. V1 has three zoom levels; v2 has six at0.12/0.24/0.48/0.96/1.92/3.84 projected px/m. Scale and accuracy radii include latitude. World east wraps; Mercator north is bounded. A dot can leave the viewport while browsing. Missing detail stays empty/cached, never fabricated.
-
-GT911 uses the proven single-contact registers with30ms sampling. Press/move/release/cancel and6px drag threshold replace release-only taps. Read/clear faults, invalid coordinates, second contact or500ms loss of reports cancel; all contacts must release before a new gesture after fault/multiple contacts. Hidden pages/lifecycle cancel the reducer. A drag consumes its release even over the footer; it cannot toggle the bench demo. Pinch is not claimed.
-
-Footer Pan opens West/East/North/South/Done. Trip cycles focus; Info selects. Next/Previous/Select/Back and serial `[`/`]`/Enter/`q` also work. Back first exits Pan. Existing header/Settings/tell-tales/warnings and2.00s boot/shutdown ownership remain. No held-button combo, touchscreen-only requirement or new wiring.
-
-V1 APK remains compatible and keeps its strict50m/bbox/location contract. New v2 map/source/route behavior requires the upcoming Android encoder/session work; installing this firmware alone cannot make the current v1 APK download surrounding tiles or search routes.
-
-### 7Semi onboard RGB off
-
-The user confirmed7Semi ESP32-S3 DevKit/N8R8. The official [7Semi N8R8 product page](https://7semi.com/7semi-esp32-s3-dev-boardc-1-n8r8-wifi-bluetooth-dual-usb-c-rgb-led/) describes an addressable RGB; its embedded [DevKit pinout](https://cdn11.bigcommerce.com/s-e7ighpotvb/images/stencil/original/image-manager/dc-10123-2-.jpg?t=1788758445) explicitly labels **GPIO48 — RGB LED**. Reference image SHA256 `2897ebd735c3605af4913cdf7051d9fb5e1d5c8a6cfad179f017a48f96b7c646`, inspected2026-11-03. The family diagram establishes the LED mapping, not the exact delivered module memory/revision/cold-power behavior; do not infer those from the photographed module.
-
-The `sevensemi-s3` profile now sets `R15_VEHICLE_LED_KIND=3`, `R15_VEHICLE_LED_GPIO=48`. `BoardLed.h` uses a WS2812-compatible all-zero frame via hardware RMT (10MHz,0.3µs high/0.9µs low zero bits,600µs low latch), releases the channel and holds GPIO low. Zero RGB bytes do not depend on color ordering. This is the selected compatible driver profile, not a claimed measured LED part number. It runs first in app_main, before BLE/input work, and never blinks/colors status. Static guards reject collisions with inputs/UART/USB/reserved memory/strapping pins. GPIO/simple-active-level and hardwired-power profiles remain explicit alternatives for a future verified board, not guesses used here.
-
-Bench acceptance must observe startup, soft reset, full power cycle, pairing, transfer and faults and confirm the RGB stays off after application startup. ROM/bootloader flashes and a hardwired power LED are not a firmware-only guarantee. No physical LED modification was made.
-
-### Build evidence
-
-Both existing guarded build-only scripts pass with pinned ESP-IDF5.5.4, C++17 and affected-source warning flags; latest logs have **no warnings/errors**. Display image/application/partition-fit validation passes. No device accessed:
-
-```sh
-bash scripts/flash-vehicle.sh --build-only
-bash scripts/flash-display.sh --build-only
-```
-
-| Target | Static RAM report | App flash report | Package SHA256 |
-| --- | --- | --- | --- |
-| Vehicle | 26,732 /327,680 bytes | 520,477 /8,388,608 bytes | `b8b82d85868590bd4dfb3a80d154d226ebf276478ee1d71610eaf01503b84180` |
-| Display | 30,104 /327,680 bytes | 755,575 /4,194,304 bytes | `e2c7bf23ace9852d6037f40043cddcac8b1823e58115c8c54f3950042e4363df` |
-
-These are linker/build values, not free runtime heaps/stack margins/FPS/scanout or physical BLE performance. Hashes identify these packages; embedded metadata can change on rebuild.
-
-### Functional tools and manual preview evidence
-
-Prepare bounded developer objects from the existing regional asset; no network/phone location:
-
-```sh
-python3 tools/maps/navigation.py prepare --package mobile/assets/maps/kolkata.r15b --output build/maps/navigation-v2 --demo-route
-cmake --build build/lvgl --target r15-map-firmware-preview r15-map-preview r15-preview --parallel 4
-SDL_VIDEODRIVER=dummy build/lvgl/simulator/lvgl/r15-map-firmware-preview.app/Contents/MacOS/r15-map-firmware-preview --navigation-bundle build/maps/navigation-v2 --render build/lvgl/navigation-v2-previews
-```
-
-The preparer validates/encodes clipped Mercator geometry, bounds object/count/area work, refuses dense overflow without truncation, retains source/licence and marks boundary tiles geographically partial. Source input is unchanged R15B30,066 bytes/SHA `3443bb2dab6efe9a91840b0c8f375cfd970398c86c6fac0d23c93327fdd91685`, derived from the previously documented OSM snapshot. Current developer bundle: **16 cell objects, 35103 encoded bytes, 12 partial edge cells**, plus two128-byte illustrative route objects; descriptor SHA `e4e2b562d264dfcb60dbd0dc70c8d8de3aa3ee9537852302081b6969e203700d`. Different framing/conversion overhead means this is equivalent regional source geometry, not exactly the same30,066 encoded bytes as v1. Manifest, complete object SHA/size, index and licence live under ignored `build/maps/navigation-v2/`. No new provider/account/key or data upload. `--demo-route` is an explicit host illustration on one real road line, **not** calculated routing or physical GPS; native preview labels it HOST SIMULATION/BENCH DEMO.
-
-The actual `NavigationStore`, `NavigationBridge`, full four-command admission/ACK and bidirectional escaped tunnel are exercised by the developer renderer. It captures **38 states ×4 themes/layouts=152 images**, with **zero LVGL warnings**. Coverage includes current point without roads, partial packet hidden, first complete cell, cached working set, point outside the former city with missing roads, return to cache, independent Browse/new fix, approximate/last-known/expired/future-invalid points, route activation, quality-gated instructions, overview, next-window request through the bridge, staged reroute, NOT_READY for missing minimum context, atomic new revision and rejection of older revision, hash failure/cancel/timeout retaining complete cells, warnings, Stop then End clearing the route/offline pan/disconnect, new-session no-source/guidance, full-SHA reuse and shutdown/off/boot. Representative day/night Street/Track, missing/approximate/stale, route/revision/warning and lifecycle images were manually inspected. This is a development renderer/runtime diagnostic tool, **not** a restored automated suite, fake device source or throughput measurement. Legacy v1 store/renderer captures remain available separately with `--package`.
-
-Optional actual radio map-only sender, after normal user-controlled OS/cluster pairing of the selected Mac peer:
-
-```sh
-build/map-tools/bin/python tools/maps/navigation.py send --device YOUR_ALREADY_PAIRED_OS_ID --bundle build/maps/navigation-v2 --mtu 96
-```
-
-Use the existing pinned bleak1.1.1 environment from [map tools](../tools/maps/README.md). MTU247 is opt-in only after verifying the actual negotiated bound; CoreBluetooth does not expose it reliably here. The tool validates bundle hashes, honors bounded DATA windows, waits for display offsets/verification, reports bytes/time, and never auto-approves pairing, replaces bonds, sends synthetic LOCATION, activates demo routes or operates bike controls. It has syntax/CLI/preparation validation, **not physical BLE acceptance**. Do not replace the phone bond just to run it unless explicitly choosing that normal pairing workflow.
-
-### Diagnostics and required physical acceptance
-
-Vehicle `@MAP_BLE` reports observed MTU, admissions/backpressure, admitted payload bytes including retries, maximum actual admission→display ACK and v2 window high-water. `@MAP` reports successful encoded bytes/bulk/fragments, write failures, TX queue-full attempts, max critical enqueue→worker dequeue wait at FreeRTOS tick resolution, source gap, heaps/stacks. `@MAP_RX`/display RX report framing/CRC/timeouts. Display `NAV2` reports commands/rejects/duplicates/accepted DATA/verified objects/evictions/hash failures; ordinary `MAP` retains v1 receive/verify/accuracy/age/anchor/coverage diagnostics. UI/loop/flush maxima and PSRAM/internal heaps/stacks remain visible. Counters/maxima are bounded lifetime numbers and can wrap; use interval deltas. No source coordinate, route/destination, payload, bond secret or phone identity logs. The return UART shares the console physically; binary protocol records are not plaintext diagnostic output.
-
-Before hardware acceptance: compare no-map and sustained transfer source/critical/UI gaps, actual MTU96/≥247 useful vs encoded rate and same-source geometry timings; first useful≤8KiB≤5s and30KB20s/45s are targets, **unmeasured**. Measure both heaps/largest/min/stacks/queues/PSRAM/render/scanout. Check old APK compatibility, security/bond/service discovery, disconnect/reboot/source expiry, incomplete/corrupt/duplicate/gap/cancel/retry, cache pressure and rapid zoom/pan, route/window/revision replacement, physical Pan/Back/touch and both themes/layouts/warnings/lifecycle. Confirm LED-off on the real board. Real GPS, Android locked-screen/notification Stop behavior and source/cache/provider offline proof follow the Android v2 Actions APK; no local app build or automated test suite is authorized.
+The corrected vehicle guarded build/package check passed (66.87 s) with generated `CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192` verified in `build/vehicle/sevensemi-s3/config/sdkconfig.h`. Factory image SHA256 `24e996401e91a7b5e67e780f16ed95cbc7ca7596db9788011cc41003e55025cb`. No post-fix flash was performed; install and sustained crash-free/stack-margin/pairing observations remain pending. This image supersedes `aa65f089...` for the vehicle; the installed display can remain unchanged for this correction.

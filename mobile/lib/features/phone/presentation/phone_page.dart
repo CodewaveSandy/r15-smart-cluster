@@ -113,7 +113,7 @@ class PhonePage extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         status.bluetoothLinkOnly
-                            ? 'Your saved pairing lets this phone reconnect. Open Navigate to share the Kolkata map and current location. Route guidance, notifications and music are not available yet.'
+                            ? 'Your saved pairing lets this phone reconnect and sync supported cluster readings, phone details and time.'
                             : 'The development preview connection is separate from the physical cluster. Feature availability depends on the active session.',
                         style: theme.bodyMedium?.copyWith(
                           color: colors.onSurfaceVariant,

@@ -1,14 +1,10 @@
 # R15 Smart Cluster
 
-Android navigation v2 is now [source-integrated](mobile/docs/navigation-v2-implementation.md) against firmware `52bae3e`; phone/provider/transport compilation and physical acceptance remain the GitHub Actions/manual APK gates.
-
-Phase 2 firmware is implemented: versioned cell/route transfer, bounded display cache, independent camera, quality-bearing location/guidance, missing-cell/window requests and 7Semi RGB-off startup. See [the journey](docs/navigation-phase-2.md), [firmware status](docs/navigation-phase-2-firmware.md) and [exact v2 protocol](mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract). Android v2 is source-integrated; Actions APK compilation and physical acceptance remain next; the installed v1 APK/bytes remain compatible.
-
-Phase 1 map/location implementation starts with the [firmware-first integration handoff](docs/map-phase-1.md): real regional OSM roads, phone GPS, transfer/partial-map behavior and Android follow-up. Firmware and Android v1 are implemented; the user installed/flashed them and observed real roads, then reported transfer/marker/coverage/interaction issues. Phase2 firmware is implemented for that next journey; Android v2 and extended physical acceptance remain next.
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](docs/navigation-removal.md).
 
 A dual-ESP32 instrument cluster for the Yamaha R15 V4, with an 800 x 480 LVGL interface. The vehicle MCU acquires/validates observations and handles calculations/connectivity; the display MCU renders normalized state received over UART.
 
-The native macOS preview includes Street/Track dashboards, Midnight/Daylight themes, Settings, saved Appearance choices and unified Phone settings. Native display and vehicle discrete-input bench firmware communicate over UART with return controls, authenticated BLE pairing/reconnect and phone name/battery/time sync; full telemetry/Wi-Fi/map integration and vehicle verification remain pending. A custom moving map with an Android-first Flutter companion app and future iOS support is planned; embedded map feasibility remains pending.
+The native macOS preview includes Street/Track dashboards, Midnight/Daylight themes, Settings, Appearance, Clock & Date and Phone. Both boards support discrete-input UART, return controls, authenticated BLE pairing/reconnect and phone name/battery/time sync. Android owns the background BLE service and supported telemetry. Physical reliability/background acceptance and real vehicle measurements remain pending.
 
 ## Run the preview
 
@@ -24,7 +20,6 @@ bash scripts/preview.sh
 
 Tab changes layout, D previews themes, arrows adjust speed/RPM, brackets adjust fuel, O simulates ignition and X toggles unavailable data. Press P then S for Settings; arrows cycle focus, Enter selects and Backspace/Esc returns. Esc quits outside Settings.
 
-For the synthetic LVGL map renderer, run `bash scripts/preview.sh --map-preview`. This separate 800 × 480 host preview draws a fictional road network/sample route with follow/overview cameras; it has no real map provider, GPS or board connection. For real central-Kolkata OpenStreetMap roads, run `bash scripts/preview.sh --kolkata-map` after the one-time import. See [map controls and evidence](docs/development.md#lvgl-map-render-preview).
 
 See the [step-by-step preview guide](docs/development.md#host-setup-and-controls), [project documentation](README.md#documentation), [architecture](docs/architecture.md#system-architecture-status-and-roadmap) and [implementation plan](docs/architecture.md#current-status-and-roadmap).
 

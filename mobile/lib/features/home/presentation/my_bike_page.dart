@@ -8,14 +8,13 @@ import '../domain/bike_telemetry.dart';
 class MyBikePage extends StatelessWidget {
   const MyBikePage({
     required this.status,
-    required this.onNavigate,
     required this.onConnection,
     this.telemetry = const BikeTelemetry.unavailable(),
     super.key,
   });
   final PhoneStatus status;
   final BikeTelemetry telemetry;
-  final VoidCallback onNavigate, onConnection;
+  final VoidCallback onConnection;
 
   @override
   Widget build(BuildContext context) {
@@ -141,61 +140,6 @@ class MyBikePage extends StatelessWidget {
                     : 'Connect your cluster to receive available bike readings.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 22),
-              Card(
-                margin: EdgeInsets.zero,
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: onNavigate,
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.near_me_rounded,
-                          color: colors.primary,
-                          size: 34,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Where to next?',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Explore navigation',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: colors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.chevron_right,
-                              color: colors.onPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ),
             ],

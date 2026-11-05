@@ -6,8 +6,6 @@ import 'package:flutter/services.dart';
 import '../../home/domain/bike_telemetry.dart';
 import '../data/ble_pairing.dart';
 import '../data/ble_access.dart';
-import '../../navigation/domain/map_sharing.dart';
-import '../../navigation/domain/navigation_state.dart';
 import '../data/nearby_platform.dart';
 import '../domain/phone_status.dart';
 
@@ -36,7 +34,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
         _access = false;
       }
     } on Object {
-      /* Map access remains independent of BLE availability. */
+      /* Home remains available while Bluetooth access is unavailable. */
     }
   }
 
@@ -51,36 +49,6 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   Completer<void>? _connectionResult;
   bool _nativeStarted = false;
   String? error;
-  NavigationState navigation = NavigationState(null);
-  Map<String, dynamic> navigationMap = const {};
-  bool _mapLoading = false;
-  int _mapLoaded = -1;
-  Future<void> navigationCommand(
-    String method, [
-    Map<String, dynamic> args = const {},
-  ]) async {
-    await _platform.navigation(method, args);
-  }
-
-  Future<void> _loadNavigationMap() async {
-    if (_mapLoading || _disposed) return;
-    _mapLoading = true;
-    try {
-      final raw = await _platform.navigation('mapData');
-      if (!_disposed && raw is Map) {
-        navigationMap = Map<String, dynamic>.unmodifiable(raw);
-        _mapLoaded = (raw['revision'] as num?)?.toInt() ?? -1;
-        notifyListeners();
-      }
-    } on PlatformException {
-      /* Next native observation retries the bounded snapshot. */
-    } finally {
-      _mapLoading = false;
-    }
-  }
-
-  Map<String, dynamic> projection = const {};
-  MapSharing mapSharing = const MapSharing();
   BikeTelemetry telemetry = const BikeTelemetry.unavailable();
   PhoneMetadataState _metadata = PhoneMetadataState.notConnected;
   bool get hasSelection => _selected != null;
@@ -99,15 +67,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     clusterName: _selected?.name,
     bluetoothLinkOnly: true,
     metadata: _metadata,
-    navigation: navigation.location['quality'] == 'permissionRequired'
-        ? FeatureReadiness.permissionRequired
-        : navigation.location['quality'] == 'stale'
-        ? FeatureReadiness.stale
-        : navigation.flag('enabled') &&
-              navigation.location['quality'] == 'precise' &&
-              navigation.route.isNotEmpty
-        ? FeatureReadiness.ready
-        : FeatureReadiness.unavailable,
+    navigation: FeatureReadiness.notImplemented,
     notifications: FeatureReadiness.notImplemented,
     music: FeatureReadiness.notImplemented,
   );
@@ -135,12 +95,6 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
             _ => PhoneMetadataState.unavailable,
           }
         : PhoneMetadataState.notConnected;
-    navigation = NavigationState(value['navigation'] as Map?);
-    projection = value['projection'] is Map
-        ? Map<String, dynamic>.unmodifiable(value['projection'] as Map)
-        : const {};
-    if (navigation.mapRevision != _mapLoaded) unawaited(_loadNavigationMap());
-    mapSharing = MapSharing.fromNative(value);
     telemetry = _live
         ? telemetryFromNative(value['telemetry'])
         : const BikeTelemetry.unavailable();
@@ -155,10 +109,6 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  Future<void> startMapSharing() => _platform.startMapSharing();
-  Future<void> stopMapSharing() => _platform.stopMapSharing();
-  Future<void> locationSettings() => _platform.locationSettings();
-  Future<void> appSettings() => _platform.appSettings();
   Future<void> accessReady() async {
     _access = true;
     await onForeground();
@@ -194,7 +144,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     _busy = false;
     _commandPending = false;
     telemetry = const BikeTelemetry.unavailable();
-    _platform.accessLost().catchError((Object _) {});
+    _platform.disconnect().catchError((Object _) {});
   }
 
   Future<void> select(NearbyDevice device) async {

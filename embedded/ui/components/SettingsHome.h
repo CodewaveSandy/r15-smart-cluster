@@ -11,6 +11,6 @@ public:
 private:
     ObjectOwner root_;
     lv_obj_t *title_,*subtitle_,*back_;
-    std::array<lv_obj_t*,4> tiles_{},icons_{},names_{},details_{};
+    std::array<lv_obj_t*,3> tiles_{},icons_{},names_{},details_{};
 };
 }

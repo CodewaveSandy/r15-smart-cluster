@@ -1,8 +1,6 @@
 # Firmware background-sync strategy and work plan
 
-For the next navigation phase, use the [firmware work packages](navigation-phase-2-firmware.md) and [complete journey](navigation-phase-2.md). Separate map/navigation/connection lifetimes are proposed; existing v1/B1/B2 behavior and acceptance evidence are preserved.
-
-Map firmware source/build work is complete under the [phase 1 firmware-first handoff](map-phase-1.md#6-firmware-first-implementation-order), then Android integration. It adds the separate v1 map protocol extension; existing background-sync/B1/B2 gates remain applicable.
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
 
 Updated: 2026-11-01. Status: firmware continuity diagnostics and authenticated discrete-input telemetry are implemented/build-verified; mobile integration and physical B1/B2 remain pending. Start here for firmware work. App developers start at [the mobile plan](../mobile/docs/background-sync.md). [Current BLE protocol](../mobile/docs/protocol.md) is the single wire-contract authority; [bench wiring](development.md#vehicle-ble-uart-bench) remains authoritative for physical connections.
 
@@ -35,14 +33,6 @@ Navigation input needs distinct per-stream sequence and route generation, curren
 Keep bounded latest-state mailboxes for replaceable observations and bounded ordered queues for semantic actions. Separate urgent status/input work from optional bulk transfer. Handle reconnect, reboot, duplicates, malformed frames, missing callbacks, overflow and backpressure without corrupting state. Retain CRC for UART corruption detection; CRC is not authentication. New protocol vectors may be normative data; automated test suites remain deferred per user instruction.
 
 Firmware F2 build gate is passed; physical F2 exit remains pending: app implements the supplied contract and compatible bounded path; actual phone receives real quality-bearing telemetry, source expiry is visible, subscriptions restore after reconnect and input/display behavior survives concurrent load. Agree numeric rates and deadlines from measurement, not assumptions.
-
-## F3 navigation and map feasibility
-
-Phone owns GPS, search/routing/rerouting and permitted map preparation. Vehicle owns radios and bounded forwarding; display owns validated navigation/cache and rendering. First evaluate compact maneuvers/position/route geometry over BLE; this is an intermediate milestone, not fulfillment of the required moving road map.
-
-At 115200 8N1 UART the theoretical raw ceiling is 11,520 bytes/s before framing and existing traffic. An 800 × 480 RGB565 frame is 768,000 bytes (about 66.7 seconds raw). Do not stream dashboard-sized pixels. Measure usable end-to-end bandwidth, latency, parser service and radio/acquisition contention. Keep reviewed pins/baud unchanged until a separate board-validated change is justified.
-
-Bulk map delivery needs provider/data-rights approval, bounded geometry/chunks, region/version/route identity, integrity, credits/backpressure, resumable transfer, cancellation, atomic activation and measured caches. Wi-Fi remains a proposal: authenticate/bind it to the trusted peer, validate BLE/Wi-Fi coexistence and phone cellular internet behavior, then evaluate actual UART/display throughput. PSRAM capacity alone is not feasibility evidence.
 
 ## Joint acceptance B1: locked-screen continuity
 

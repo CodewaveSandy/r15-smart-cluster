@@ -22,7 +22,6 @@ while read -r name size source subset; do
       speed) symbols='0123456789' ;;
       lap) symbols='0123456789:.' ;;
       clock) symbols='0123456789:' ;;
-      copyright) symbols='©' ;;
       *) echo "Unknown font subset: $subset" >&2; exit 1 ;;
     esac
     args+=(--symbols "$symbols" --range 8212)
@@ -38,7 +37,6 @@ done <<'FONTS'
 inter_caption_12 12 inter/Inter-Medium.ttf text
 inter_label_14 14 inter/Inter-Medium.ttf text
 inter_value_16 16 inter/Inter-Medium.ttf text
-inter_map_copyright_16 16 inter/Inter-Medium.ttf copyright
 inter_rpm_16 16 inter/Inter-SemiBold.ttf rpm
 inter_unit_18 18 inter/Inter-Medium.ttf text
 inter_heading_23 23 inter/Inter-SemiBold.ttf text

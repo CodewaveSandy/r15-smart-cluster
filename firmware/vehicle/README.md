@@ -1,5 +1,7 @@
 # Vehicle ESP32: configurable discrete input test
 
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../../docs/navigation-removal.md).
+
 Separate ESP-IDF 5.5.4 / C++17 image for the user-photographed 7SEMI ESP32-S3 DevKit, reported N8R8. Generic DevKitC-1 profile selects 8 MB flash with PSRAM unused; verify module/flash before flashing. Never flash this image onto the display.
 
 ## Wiring and configuration
@@ -87,15 +89,3 @@ Vehicle BLE bonding, return controls, saved reconnect and authenticated connecte
 
 
 Background-sync firmware now adds authenticated c013 capability reads, c014 discrete-input full snapshots/notifications (5Hz maximum) and c015 health counters/maxima under the existing c010 service. Existing c011/c012 and UART formats stay compatible. It exposes actual gear/lamp/button samples only; speed/RPM/fuel/bike voltage are Unsupported. App background service and physical B1/B2 remain pending. See [firmware handoff](../../docs/background-sync.md#supplied-firmware-implementation-and-app-handoff) and [exact wire contract](../../mobile/docs/protocol.md#background-sync-capabilities-and-telemetry-c013c015). No navigation/Wi-Fi capability is advertised.
-
-## Phase 1 maps
-
-Map firmware is implemented and build/host-preview verified; physical transfer/resource/load acceptance and Android GPS remain pending. See the [implementation handoff](../../docs/map-phase-1.md), [exact wire contract](../../mobile/docs/protocol.md#phase-1-map-extension--implementation-specification) and [build/bench evidence](../../docs/development.md#phase-1-map-firmware-integration). Existing guarded flash commands, pins, baud rate, bond storage and partition policies are preserved.
-
-### Backup read stops at varying percentages
-
-The 8MiB pre-write backup must finish and verify before any firmware write. A `Serial data stream stopped` failure during `read-flash` indicates a transport interruption, not a compiler failure or a confirmed firmware defect. The script now defaults to115200, reports the selected baud and explicitly identifies incomplete-backup failures. Do not bypass the backup or use `--resume-backup` with an incomplete file.
-
-Close monitors/clock helpers, use a reliable USB data cable and a direct Mac port. If a native-USB connection keeps dropping, use the vehicle board's documented USB-to-UART bridge socket and select the newly enumerated port; do not assume it keeps the native USB port name. Reducing UART baud may help a bridge connection, but does not establish that a native-USB dropout is fixed. Enter BOOT/download mode before retry and do not reset during the transfer. [Espressif troubleshooting](https://docs.espressif.com/projects/esptool/en/latest/esp32/troubleshooting.html).
-
-Checked shell syntax/help and reviewed guard ordering; no physical read/write was attempted as part of this script change.

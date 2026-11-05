@@ -1,10 +1,6 @@
 # System architecture, status and roadmap
 
-Android navigation v2 is now [source-integrated](../mobile/docs/navigation-v2-implementation.md) against firmware `52bae3e`; phone/provider/transport compilation and physical acceptance remain the GitHub Actions/manual APK gates.
-
-[Phase 2 firmware](navigation-phase-2-firmware.md) now implements independently verified semantic cells, route overview/detail windows, current-session activation, an independent display camera, labelled source quality and bounded credit-controlled transport. Twelve complete raw objects plus staging and two shared render snapshots stay below the 1 MiB map-buffer ceiling; vehicle handles only bounded commands/latest observations, not a city or route database. The v2 c019–c01b contract is [frozen](../mobile/docs/protocol.md#phase-2-navigation-extension--implemented-firmware-contract); existing v1/metadata/telemetry remain compatible. Android source/cache/encoding integration is recorded in the linked implementation handoff; Actions compilation and physical performance/acceptance remain separate gates.
-
-The [phase 1 map/location handoff](map-phase-1.md) specifies the next firmware-first integration: bounded regional geometry, real phone fixes and atomic map activation. Native map transport/store/page and location-quality handling are implemented and build/host-preview verified; physical board acceptance and Android GPS remain pending.
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
 
 Updated: 2026-11-01. Shared host/native display UI, vehicle discrete inputs, return UART, authenticated BLE pairing/reconnect and phone metadata/clock synchronization are implemented. Core pairing/reconnect and phone metadata behavior are user bench-confirmed. The vehicle now also implements authenticated discrete-input telemetry/capabilities/health for the app handoff. Android background/telemetry integration, full vehicle measurements, Wi-Fi and navigation/maps remain pending; extended hardware/load acceptance remains separate. [Implementation status and gates](architecture.md#current-status-and-roadmap) distinguish host evidence from hardware readiness.
 
@@ -64,9 +60,9 @@ Decision recorded 2026-10-21: the product has **three independently built deploy
 
 | Target | Destination and responsibility | Build tooling | Current evidence |
 | --- | --- | --- | --- |
-| Display firmware | Display ESP32: LVGL, instruments, map rendering and display-owned preferences | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Vendor V3.0 baseline flashed by user; R15 ESP-IDF target under `firmware/display`, initial user panel observations recorded, current updates pending panel measurements |
+| Display firmware | Display ESP32: LVGL, instruments and display-owned preferences | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Vendor V3.0 baseline flashed by user; R15 ESP-IDF target under `firmware/display`, initial user panel observations recorded, current updates pending panel measurements |
 | Vehicle firmware | Other ESP32: acquisition, validation, calculations, physical inputs, Wi-Fi/BLE and bounded phone-data forwarding | Separate ESP-IDF/CMake project/configuration and firmware image; C++17 | Discrete-input UART, return controls, BLE pairing/reconnect and metadata implemented; full telemetry/Wi-Fi pending |
-| Companion app | Android phone first; GPS, routing/map preparation, permitted notifications/media; future iOS | Flutter/Dart, Android Gradle for APK/AAB; future iOS Xcode tooling | Android pairing/reconnect, Home and phone metadata implemented; background/telemetry/navigation pending |
+| Companion app | Android phone first; BLE sync and planned notification guidance; future iOS | Flutter/Dart, Android Gradle for APK/AAB; future iOS Xcode tooling | Android pairing/reconnect, Home and phone metadata implemented; background/telemetry/navigation pending |
 | Host cluster preview | Mac development simulation using shared display sources; no ESP32 flashing | Existing CMake/SDL2/LVGL target | Implemented; `bash scripts/preview.sh` |
 
 Mobile launcher: `bash scripts/preview-mobile.sh`. It runs only the phone app; it does not start or pair with the Mac preview. The opt-in [Wi-Fi Mac phone-service bridge](../mobile/docs/development.md#mac-preview-adapter) substitutes for the vehicle service during development and is not a fourth product firmware.
@@ -92,20 +88,6 @@ Track source age and local monotonic receipt age separately. A fresh UART heartb
 On display boot show unavailable readings until compatible valid state arrives. Link timeout masks affected values and makes status visible. Reconnect needs a new compatible session/full snapshot. Do not turn unknown warning states into reassuring inactive states; define a visible unknown/fault treatment before vehicle use. Preserve immediate valid warning activation; decorative transitions cannot delay it.
 
 Brightness/backlight fault handling, watchdog coverage, acquisition overrun and MCU restart diagnostics need bench tests. A watchdog is recovery machinery, not proof of safe indication. Initial vehicle tests remain passive/read-only with OEM functionality retained.
-
-## Source map
-
-| Path | Implemented responsibility |
-| --- | --- |
-| `shared/model/` | Portable normalized observations, quality and validation |
-| `embedded/application/` | Lifecycle, preferences schema, semantic actions and menu state |
-| `embedded/presentation/` | Bounded formatting, quality policies and animation/transition math |
-| `embedded/ui/` | LVGL composition, components, geometry, typography and themes |
-| `simulator/lvgl/` | SDL host, keyboard adapter, preference file adapter and timed radio fixtures |
-
-| `assets/`, `scripts/`, `tools/fonts/` | Licensed bundled assets, reproducible conversion and preview/audit tools |
-
-The `firmware/display` board adapter uses ESP-IDF RGB/I2C APIs with pins, timings and touch reset derived from the user-tested Elecrow V3.0 example. PlatformIO orchestrates this separate ESP-IDF/CMake target; it does not use Arduino. The existing portable v3 discrete-input codec now serves the GPIO17→GPIO38 bench link; phone status/control/identity/metadata sidebands are implemented, while full vehicle telemetry and route guidance remain pending. The phase 1 map package/transport/store/page contract is now implemented/build verified; physical acceptance and Android GPS remain pending. No empty firmware or protocol folders imply an implementation. Shared model and application/presentation logic stay independent of LVGL, FreeRTOS and device SDKs.
 
 ## Current UI composition
 
@@ -147,7 +129,7 @@ Other harness signals require individual measured voltage/polarity, pull-up/load
 
 ## Requirements that need resolution
 
-On 2026-10-21 the user selected an Android-first Flutter companion app with future iOS support, retaining exactly two ESP32s. Android Auto/CarPlay and the existing Google Maps app are not requirements. A real moving road map, directions, notifications and music information remain requirements; embedded rendering, licensed map delivery and end-to-end bandwidth remain feasibility gates. Phone owns GPS/routing/map preparation; vehicle MCU owns radios and bounded forwarding; display MCU owns LVGL/map presentation. Audio stays phone-to-headset initially. See the [companion architecture](../mobile/docs/architecture.md#companion-architecture-status-and-approved-ui), [journey](../mobile/docs/architecture.md#rider-journey-and-truthful-state) and [implementation plan](../mobile/docs/architecture.md#current-status-and-roadmap). BLE plus Wi-Fi does not by itself prove map capability. Do not silently replace the moving map with arrows or a route on an empty background.
+The current product direction retains two ESP32s and an Android-first companion. Custom map projection has been retired in favor of planned Google Maps notification-derived turn guidance; see [the replacement plan](turn-by-turn-plan.md).
 
 The seven-inch board's physical envelope, viewing angle, brightness, weather exposure and OEM fit need measurement. Purchasing the board does not establish mechanical or environmental suitability.
 
@@ -176,12 +158,6 @@ Optional pairing labels use a narrowly scoped write-only vehicle GATT service an
 
 Connected phone metadata is now vehicle-validated through an authenticated BLE write, then forwarded over bounded CRC-protected R15M frames tied to the vehicle boot and BLE connection. Display owns clock synchronization and rendering. See [metadata contract and app handoff](../mobile/docs/protocol.md#connected-metadata-c012); core physical metadata acceptance is user-confirmed; extended fault/load acceptance remains pending.
 
-
-## Host map rendering prototype
-
-The isolated `r15-map-preview` target now composes the existing instrument/tell-tale/lifecycle components with an owner-thread `MapPanel`. It draws bounded local-metre road polylines, route, labels and position geometry through the existing LVGL line/triangle draw primitives. It adds no map widget dependency, network/file operations, RTOS task, full-screen texture or runtime SVG renderer. A validated fixed-capacity `shared/model/MapScene.h` value holds at most 2,048 road chunks × eight points and512-point detail plus512-point route overview; invalid input is rejected before scene replacement, and primitive segments are clipped to the map viewport. This is a rendering model, not a frozen geographic/wire protocol.
-
-Producers are the explicitly fictional host fixture and a host-only importer for a small central-Kolkata OSM snapshot. The importer projects geographic coordinates into a local plane, clips/simplifies/splits geometry and retains provenance/ODbL notices; the renderer never fetches/parses OSM. Basemap-only scenes have no route or position marker. The 204,828-byte scene ceiling is now explicitly reserved twice in display PSRAM alongside two64KiB binary slots; reservation failure disables maps, and it is never a task-stack allocation. The native display links the renderer through the Navigation page, borrowing immutable active storage. Host evidence and remaining physical resource/performance gates are recorded in [development](development.md#phase-1-map-firmware-integration). Phase 1 regional OSM provenance/projection, bounded delivery, atomic caching and fix freshness are specified/implemented in the [handoff](map-phase-1.md). Live Android GPS, route generation and ESP32 memory/render/scanout/load acceptance remain gates before hardware readiness. No routing or real-bike capability is inferred from rendered sample geometry.
 
 ## Resource accounting and target verification
 

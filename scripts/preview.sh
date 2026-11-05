@@ -1,16 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-if [[ "${1:-}" == --kolkata-map ]]; then
-  shift
-  map_file="$root/build/maps/kolkata/kolkata.r15map"
-  if [[ ! -f "$map_file" ]]; then
-    echo 'Import the small map snapshot first, from repository root:' >&2
-    echo '  python3 scripts/import-osm-map.py --download' >&2
-    exit 1
-  fi
-  set -- --map-preview --map-file "$map_file" "$@"
-fi
 bridge_pid=""
 cleanup() {
   if [[ -n "$bridge_pid" ]]; then
@@ -67,15 +57,6 @@ PYSOCKET
 fi
 cmake -S "$root" -B "$root/build/lvgl" -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build "$root/build/lvgl" --parallel 4
-if [[ "${1:-}" == --map-preview ]]; then
-  shift
-  if [[ "$(uname -s)" == Darwin ]]; then
-    "$root/build/lvgl/r15-map-preview.app/Contents/MacOS/r15-map-preview" "$@"
-  else
-    "$root/build/lvgl/r15-map-preview" "$@"
-  fi
-  exit $?
-fi
 if [[ "$(uname -s)" == Darwin ]]; then
   "$root/build/lvgl/r15-preview.app/Contents/MacOS/r15-preview" "$@"
 else

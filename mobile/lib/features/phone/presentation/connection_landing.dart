@@ -85,7 +85,7 @@ class ConnectionLanding extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Pair your smart cluster to bring your bike and navigation together.',
+                          'Pair your smart cluster to see supported bike readings and sync your phone.',
                           style: text.bodyLarge?.copyWith(
                             color: colors.onSurfaceVariant,
                             height: 1.5,

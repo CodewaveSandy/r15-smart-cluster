@@ -20,20 +20,6 @@ class BlePairing {
     });
   }
 
-  Future<dynamic> navigation(
-    String method, [
-    Map<String, dynamic> args = const {},
-  ]) =>
-      _channel.invokeMethod<dynamic>('navigation', {'method': method, ...args});
-
-  Future<void> startMapSharing() =>
-      _channel.invokeMethod<void>('startMapSharing');
-  Future<void> stopMapSharing() =>
-      _channel.invokeMethod<void>('stopMapSharing');
-  Future<void> accessLost() => _channel.invokeMethod<void>('bleAccessLost');
-  Future<void> locationSettings() =>
-      _channel.invokeMethod<void>('locationSettings');
-  Future<void> appSettings() => _channel.invokeMethod<void>('accessSettings');
   Future<void> disconnect() => _channel.invokeMethod<void>('disconnectLink');
   Future<void> forgetSelection() =>
       _channel.invokeMethod<void>('forgetSelection');

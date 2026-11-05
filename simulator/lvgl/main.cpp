@@ -554,7 +554,7 @@ int main(int argc,char** argv) {
                     dashboard.update(sample,view,life,clockBase+3000);capture(output/("clock-header-pm-"+suffix+".bmp"));
                     if(!dashboard.touch(view,sample,life,750,40)||!view.settings)throw std::runtime_error("Unknown speed still blocks Settings");
                     dashboard.update(sample,view,life,clockBase+4000);dashboard.update(sample,view,life,clockBase+4280);
-                    if(!dashboard.touch(view,sample,life,600,380)||!view.clock)throw std::runtime_error("Clock tile touch failed");
+                    if(!dashboard.touch(view,sample,life,200,380)||!view.clock)throw std::runtime_error("Clock tile touch failed");
                     auto clockSample=cluster::presentation::clockText(1793212500,330,view.clockPreferences);
                     view.time=clockSample.time;view.date=clockSample.date;view.period=clockSample.period;
                     dashboard.update(sample,view,life,clockBase+4300);capture(output/("clock-settings-"+suffix+".bmp"));

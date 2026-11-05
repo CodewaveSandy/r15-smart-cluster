@@ -1,27 +1,17 @@
 # Companion architecture, status and approved UI
 
-## Android v2 source status — 2026-11-04
-
-[Navigation v2 implementation](navigation-v2-implementation.md) supersedes the phase-1/future-navigation statements below for Android source. Home/Navigate no longer require pairing; the existing service owns independent browse/navigation/share/sync intents, one GPS provider and one GATT. A private canonical OpenFreeMap MVT cache supplies local MapLibre GeoJSON and R15O roads; Geoapify motorcycle routes/search use a privately configured key. Native projection/rerouting, full bounded corridor jobs and firmware c019–c01b transfer/HAVE/interest/window/activation are integrated. Existing metadata/telemetry and real pairing/radar remain. Kotlin/Android compilation, provider-key/live-device/locked-screen/display acceptance remain GitHub Actions/manual gates. No local Android build or automated suite is authorized.
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../../docs/navigation-removal.md).
 
 
-The user-requested next journey is planned in [phase 2](navigation-phase-2.md) and the [cross-system design](../../docs/navigation-phase-2.md). Phone map/location will be independent of BLE, with dynamic nearby coverage, search and route corridor caching; this is proposed behavior, not implemented phase 1 behavior.
+The current next journey is Google Maps notification-derived guidance; see [the mobile plan](turn-by-turn.md).
 
-The next map/location scope is defined in the [phase 1 handoff](../../docs/map-phase-1.md): MapLibre/local regional OSM on the phone, native foreground GPS ownership, bounded BLE/UART transfer and LVGL rendering. Firmware and Android phase 1 sources are now integrated. MapLibre0.27.1 and native Google location21.4.0 are pinned; both boards are user-reported flashed. Physical paired transfer/live GPS/background acceptance remains open.
-
-Updated: 2026-11-02. Android pairing/reconnect, Concept 01 Home/bottom navigation and authenticated phone metadata are implemented. Native foreground ownership and c013–c015 telemetry integration are implemented in source; latest APK packaging and physical B1/B2 background/telemetry acceptance remain pending. Phase 1 local maps/native GPS are source-integrated; APK/device acceptance, route guidance and native iOS remain pending. Read [implementation plan](architecture.md#current-status-and-roadmap) and [background work plan](background-sync.md) for the next task; approved visuals remain in [visual design](architecture.md#approved-visual-design).
+Updated: 2026-11-05. Android pairing/reconnect, My bike Home, native foreground BLE continuity, phone metadata and c013–c015 telemetry are source-integrated. The Navigate tab and custom maps/GPS are removed. Background/device acceptance remains separate; no local Android build is permitted.
 
 ## Ownership and dependency boundaries
 
-```text
-OS services + reviewed map/routing provider
-  -> Phone service/session: GPS, routes, metadata, connection
-  -> Vehicle ESP32: authenticated radios, bounded validation/forwarding,
-                    acquisition/calculations/physical inputs
-  -> Display ESP32: normalized state/cache -> presenter -> one LVGL owner
-```
+The current path is Android BLE → vehicle MCU → UART → display MCU. Android notification-derived guidance is a separate planned addition.
 
-Flutter/Dart shares UI/domain logic; Kotlin/Swift own platform-specific services. Phone owns search/routing/rerouting and permitted map preparation, notifications and media. Vehicle owns radios and acquisition, not the routing engine. Display owns presentation and map rendering/cache. Retain two MCUs; no Android Auto/CarPlay receiver or extra processor is assumed. A real surrounding-road moving map, route and position remain the product goal; arrows alone are an intermediate milestone. Provider rights and embedded bandwidth/render feasibility must be established first. Audio stays phone/headset.
+Flutter/Dart owns app presentation; Kotlin owns Android BLE and background sync. Vehicle owns acquisition/radios and display owns LVGL presentation. Google Maps notification-derived turn guidance is planned separately; maps, GPS, provider routing and route caches are removed. Audio remains on phone/headset.
 
 Independent Flutter/Gradle/Xcode and CMake/ESP-IDF builds permit independent releases. Protocol compatibility/capabilities must be explicit. Domain values carry quality/source/units and import no Flutter/OS SDKs. Widgets render immutable state and emit intents; application owners coordinate bounded cancellable work; adapters own packets, provider APIs, permissions and storage. Use constructor composition, not a service locator/event bus or unused repository hierarchy. Add feature folders and dependencies only when consumed. Measure/coalesce changing observations rather than rebuilding the entire app/map.
 
@@ -43,11 +33,9 @@ Startup checks required BLE permission/radio access and rechecks on foreground r
 
 First-time riders see the approved bike landing and real bounded radar. Only case-sensitive `R15 Cluster` prefix matches are shown, all retained results together with stable decorative placement, fitted full two-line names, pinch zoom and reduced-motion behavior. Positions do not measure proximity. Selecting a result stops scanning and begins the actual OS numeric comparison; name/address/advertisement match is not trust. Keep one real GATT after successful pairing.
 
-Saved riders enter My bike Home: truthful connection status, bike art, real Available gear and honest speed/fuel/bike-voltage placeholders and Where to next. My bike/Navigate bottom tabs retain the same connection owner; status/settings opens the connection page and Back restores the previous tab. Navigate currently explains pending services. No fake map or sample 0/N/fuel/voltage is permitted in normal runtime. Light/dark, small screens, large text and reduced motion stay supported.
+Home remains available without pairing. It shows truthful connection status, bike art, real Available gear and honest unsupported speed/fuel/bike-voltage placeholders. The connection button opens the existing BLE access gate and pairing page; Back returns Home. Navigate, its bottom bar and Where to next are removed.
 
 Keep saved bond, live BLE, authenticated endpoint acceptance, field freshness, telemetry readiness and navigation readiness distinct. Disconnect/Stop preserves trust; app Forget clears the selection and explains Android plus cluster cleanup. Partial/asymmetric trust failures remain visible. Do not silently re-pair, erase trust or promise remote Forget.
-
-Future ride: select a phone destination -> reviewed route overview -> Start ride while visible -> foreground location/session work continues with the screen locked -> explicit End ride. No initial cluster keyboard. A navigation view retains speed/gear/warnings and non-touch Back controls. Warnings outrank bounded optional banners; stale GPS/route, BLE loss and Wi-Fi bulk loss are independent. No phone dependency may block instrumentation or either 2.00-second lifecycle sequence. Settings access remains unrestricted per current user instruction, not old speed-gate proposals.
 
 ## Security, privacy and release
 
@@ -59,50 +47,9 @@ Permissions/data are least-privilege. Notifications and previews are separately 
 
 Pin Flutter/native tools/dependencies, commit locks/generated project source and keep SDKs/builds/captures local. App IDs are provisional; release signing/store ownership remain pending. Before distribution review enrollment/revocation/replay, malformed/flood input, transport/at-rest security, backup exclusions, licenses/privacy disclosures and signed build ownership. Debug signing is never production signing. Manual checks/builds/static analysis apply during this phase; automated suites remain deferred by RULES.md.
 
-## Current status and roadmap
-
-Updated: 2026-11-02. This is current status, not a chronological changelog. [Development](development.md#current-evidence-and-remaining-checks) holds concise evidence. No automated tests/suites may be authored/restored/run until requested; use formatting/static analysis, affected builds and real-device manual checks.
-
-### Implemented baseline
-
-| Area | Actual state |
-| --- | --- |
-| Foundation | Pinned Flutter/Android and generated iOS shell; explicit composition and local fonts/artwork |
-| Access/discovery | Android startup/resume permission/radio checks; real exact-prefix radar with bounded scanning/results/cancellation |
-| Pairing/link | OS numeric comparison, enrollment name, one retained GATT, saved selection, native background retry/cooldown, explicit Disconnect/Stop/Forget-selection |
-| Home | Approved Concept 01 My bike/Navigate tabs, bike art, truthful connection; independent quality-bearing readings; real gear and Unsupported measurements |
-| Phone metadata | Authenticated c012 name, actual phone battery, UTC/local offset; MTU/callback ordering, retries, periodic/event coalescing and expiry |
-| Background/telemetry | Foreground connection owner, notification/Stop, strict capability/telemetry/health decoding and timed expiry; APK packaging and B1/B2 pending |
-| Mac preview | Separate BLE discovery/TLS application session with protected saved trust and host IPC |
-| Not implemented | Automatic process recovery, GPS/route/map provider, embedded navigation delivery, broader phone services, native iOS integrations |
-
-Core Android first pair/name/live-link, saved reconnect after board power cycle, Disconnect/Connect, relaunch and connected metadata are physically user-confirmed. Extended faults, locked-screen runtime, performance/energy and iOS are separate gates. Old completed handoff instructions are consolidated into [protocol](protocol.md); they are not upcoming tasks.
-
-### Next work in order
-
-| Gate | Deliverable | Completion evidence/dependency |
-| --- | --- | --- |
-| M1 / joint B1 | [Background BLE continuity](background-sync.md#m1-implement-background-ble-continuity-first): service owns existing GATT/metadata, notification/Stop, native background recovery | Current firmware suffices; 60-minute untethered locked-screen run, Activity recreation, loss/recovery and Stop behavior; no pairing/UI regression |
-| M2 / joint B2 | Consume the supplied c013–c015 firmware capability/telemetry/health contract in the M1 service | App decoder/subscription/expiry are source-integrated; APK packaging and physical delivery/load checks are pending |
-| M3a | Select map/routing provider and validate licensed embedded delivery plus two-MCU bandwidth/cache/render feasibility | Primary provider docs, costs/keys/attribution/offline limits and actual target measurements before SDK commitment |
-| M3b / joint B3 | Search, destination/route overview, active location/navigation independent of UI, reroute/arrival/End ride and reviewed cluster transfer | M1/M2 foundation plus provider/firmware contract; real locked-screen GPS and display behavior, stale/cancel/offline recovery and measured energy |
-| Later | Supported notification/media features, separate iOS implementation and release evaluation | Scoped permission/accessory contracts, independent native device evidence and explicit signing/distribution authorization |
-
-M1/M2 source integration is ready for APK packaging and joint acceptance; firmware developer follows [F1](../../docs/background-sync.md#work-independently-f1-continuity-baseline). Current M2 uses the supplied frozen firmware contract; later M3 wire changes require coordinated protocol review, not mobile-side invention or unrequested firmware changes. The initial firmware milestone may need no source change. Source integration, APK packaging and physical acceptance are separate evidence gates.
-
-### Preserve at every stage
-
-Read mobile/AGENTS.md, [architecture](architecture.md#companion-architecture-status-and-approved-ui), [visual design](architecture.md#approved-visual-design), [protocol](protocol.md) and the current milestone plan; inspect affected source. Keep exact-prefix real discovery, explicit OS approval, current metadata semantics, Mac adapter and approved Home intact. Use immutable quality/source/unit values and lifecycle-safe bounded native work. No fake telemetry or ready flags from saved bonds. Preserve typography/assets, dark/light, small-screen/2x text, reduced motion and connection-page Back behavior.
-
-Use affected formatting/static analysis/builds, numeric diagnostics and physical acceptance; distinguish implemented, built, preview-inspected, device-verified and bike-verified. Keep revision/phone/OS/duration/debug/power context with results. Logs contain no secrets, labels/addresses, routes or payloads. Current development excludes automated suites; protocol vectors/runtime checks remain required. Update the existing guide for its topic rather than adding another completion report.
-
-### Decisions still required
-
-Provider/data rights/cost/keys/offline coverage; precise navigation quality/freshness and route/map representation; actual firmware feature rates/buffers and UART budget; authenticated Wi-Fi topology and cellular internet; OS process-death/restart policy; iOS capability support; release identity/signing/privacy requirements. Keep Android service continuity and licensed moving-map feasibility as distinct gates; successful BLE metadata does not prove navigation.
-
 ## Approved visual design
 
-Approved by the user: 2026-10-30. Status: approved baseline; landing/radar and Home/bottom tabs implemented, navigation remains planned.
+Approved by the user: 2026-10-30. Status: approved baseline; landing/radar and Home/connection implemented; the Navigate tab is removed.
 
 ![Approved Concept 01](reference/approved-concept-01.png)
 
@@ -145,32 +92,56 @@ Selecting Connect leads to a separate matching-code/approval state before any co
 
 Implemented Home refinement (2026-10-31): follow Concept 01's My bike hierarchy with a local side-profile bike illustration, connection pill, quality-bearing speed/gear/fuel/bike-battery tiles and Where to next card. Use the concept's two bottom icon tabs, My bike and Navigate, with a blue selected icon/label/underline. There is no drawer. The header connection shortcut and status pill open the same connection page. Navigate currently explains pending destination/map services; it never shows a fake route. Connection changes leave saved-device Home usable; Forget app selection restores first-time landing. At large text the metric grid becomes one column and all content scrolls.
 
-Bike name and confirmed connection status above a prominent bike illustration. A reusable 2 x 2 telemetry section initially presents speed, gear, fuel and bike battery voltage, followed by the Where to next card and the two-destination navigation bar. Fields are independent, quality-bearing observations with units and source. Unsupported/unavailable/stale values show an explicit placeholder/status; connected does not mean telemetry is supported. Bike battery voltage is distinct from phone battery.
+Bike name and confirmed connection status above a prominent bike illustration. A reusable 2 x 2 telemetry section initially presents speed, gear, fuel and bike battery voltage, with connection access; the navigation card and bottom bar are removed. Fields are independent, quality-bearing observations with units and source. Unsupported/unavailable/stale values show an explicit placeholder/status; connected does not mean telemetry is supported. Bike battery voltage is distinct from phone battery.
 
 The board's 0 km/h, N, 64% and 12.6 V are design samples only. Current firmware/app contracts do not provide all these readings to the phone. Development fixtures are explicitly labelled and isolated from the normal app. Home remains usable when disconnected and during reconnection; do not repeatedly force onboarding after link loss.
-
-#### Navigation
-
-One destination leads through search/results, destination detail and route overview before Start ride. The overview fits the full route and shows route duration, distance and estimated arrival. Active navigation follows position, shows the next maneuver at the top and keeps the compact trip/cluster sheet at the bottom. Recenter, route overview, stop confirmation and rerouting are explicit actions/states. The full-route overview and the following-camera view are separate camera modes.
-
-Show surrounding roads, route path and moving position. Distinguish PHONE GPS speed from bike speed. GPS loss/low accuracy stops a live-position claim; stale bike data is independent of GPS quality. Cover denied location, approximate location, no fix, offline/no route, search failure, reroute cancellation, link loss, stale route generations and unsupported projection. Audio stays on the phone/headset.
-
-“Google map type” describes the interaction, not an approved vendor. Provider selection must establish Android/iOS support, search/routing, data rights, attribution, cost and the separately permitted path to the embedded display. A phone map alone does not fulfill cluster projection. Do not forward a provider's rendered tiles or pixels without permitted support.
 
 ### Fidelity and motion acceptance
 
 Current user override (2026-10-30): manual testing for this phase; defer new automated test cases and golden-test authoring. Automated test files were removed by user instruction on 2026-10-31; defer re-creation until requested. Visual comparisons and builds still apply, with device observations reported separately from host captures.
 
-Use a 390 x 844 logical-pixel dark reference composition derived from the board. Save deterministic manual screen captures and reviewed visual references for opening, scanning, discovered, approval, Home, route overview and active navigation. Fix time, fixture data and animation phase for comparisons. Compare hierarchy, bike crop, spacing, typography, card geometry, map overlays and colors side by side; record justified accessibility/platform differences. Text and final artwork must be sharper and more accurate than the generated board.
+Use a 390 x 844 logical-pixel dark reference composition derived from the board. Save deterministic manual screen captures and reviewed visual references for opening, scanning, discovered, approval, Home and connection. Fix time, fixture data and animation phase for comparisons. Compare hierarchy, bike crop, spacing, typography, card geometry and colors side by side; record justified accessibility/platform differences. Text and final artwork must be sharper and more accurate than the generated board.
 
 Also inspect 320 x 568, a larger Android phone, 2x text, light mode, reduced motion, keyboard-open search, system insets and all unavailable/permission states. Validate Android on the user's phone; validate iOS separately on macOS/Xcode and an iPhone. Automated golden tests remain deferred; manual captures supplement actual device review.
 
-Profile on the physical Android device in profile mode after each animation/map milestone. Target smooth 60 Hz presentation where the device supports it (about 16.7 ms frame budget), without claiming an unmeasured guarantee. Record build/device, UI/raster frame percentiles, jank, memory and test duration. Restrict rebuilds to changed values, isolate map repainting, stop hidden animations and cancel subscriptions. Use bounded caches, throttled/coalesced observations and decoded artwork sized for display. Add isolates or caching only when profiling justifies them.
+Profile on the physical Android device in profile mode after each animation milestone. Target smooth 60 Hz presentation where the device supports it (about 16.7 ms frame budget), without claiming an unmeasured guarantee. Record build/device, UI/raster frame percentiles, jank, memory and test duration. Restrict rebuilds to changed values, isolate map repainting, stop hidden animations and cancel subscriptions. Use bounded caches, throttled/coalesced observations and decoded artwork sized for display. Add isolates or caching only when profiling justifies them.
 
-## Phase 1 map/location owner
+## Current status and roadmap
 
-`ClusterSyncService` owns explicit, nonpersisted map-sharing intent and `PhoneLocation` (FusedLocationProviderClient), separately from ordinary BLE sync intent. `BleBond` retains sole GATT ownership; its optional map operations share the existing serialized metadata/telemetry queue. `MapWire` validates exact v1 capability/status/command and complete regional packages, while `MapSync` tracks display ACKs, generations, timing, retry/flow control and coalesced source updates. No Flutter page owns GPS, GATT or background timers.
+Updated: 2026-11-02. This is current status, not a chronological changelog. [Development](development.md#current-evidence-and-remaining-checks) holds concise evidence. No automated tests/suites may be authored/restored/run until requested; use formatting/static analysis, affected builds and real-device manual checks.
 
-Navigate renders local regional GeoJSON using MapLibre with a local background/road style and at most eight road-name icons rendered from the bundled Flutter font. No remote glyph endpoint, tile URL, API key or map screenshot stream is involved. One latest typed location observation drives the dot/qualified-course arrow. The phone map is independent of cluster activation; display ACK offsets and ACTIVE are shown separately. Outside the prepared central-Kolkata region, coverage is explicitly unavailable for the cluster pointer. No route/search/ETA/traffic is claimed.
+### Implemented baseline
 
-Start sharing requires a visible user action, disclosure and coarse/fine permission handling. Notification Stop map sharing stops location/map work while preserving ordinary sync; Disconnect/Stop sync cancels both. Radio loss while sharing keeps the location owner alive locally and suspends/reconnects BLE under saved-peer policy. Process death/force-stop/reboot still requires reopening and a new visible Start sharing. Nothing restores a persisted live fix or records GPS history. [Exact phase 1 wire contract](protocol.md#phase-1-map-extension--implementation-specification), [verification/physical checklist](development.md#phase-1-map-location-integration).
+| Area | Actual state |
+| --- | --- |
+| Foundation | Pinned Flutter/Android and generated iOS shell; explicit composition and local fonts/artwork |
+| Access/discovery | Android startup/resume permission/radio checks; real exact-prefix radar with bounded scanning/results/cancellation |
+| Pairing/link | OS numeric comparison, enrollment name, one retained GATT, saved selection, native background retry/cooldown, explicit Disconnect/Stop/Forget-selection |
+| Home | Approved Concept 01 My bike/Navigate tabs, bike art, truthful connection; independent quality-bearing readings; real gear and Unsupported measurements |
+| Phone metadata | Authenticated c012 name, actual phone battery, UTC/local offset; MTU/callback ordering, retries, periodic/event coalescing and expiry |
+| Background/telemetry | Foreground connection owner, notification/Stop, strict capability/telemetry/health decoding and timed expiry; APK packaging and B1/B2 pending |
+| Mac preview | Separate BLE discovery/TLS application session with protected saved trust and host IPC |
+| Not implemented | Automatic process recovery, GPS/route/map provider, embedded navigation delivery, broader phone services, native iOS integrations |
+
+Core Android first pair/name/live-link, saved reconnect after board power cycle, Disconnect/Connect, relaunch and connected metadata are physically user-confirmed. Extended faults, locked-screen runtime, performance/energy and iOS are separate gates. Old completed handoff instructions are consolidated into [protocol](protocol.md); they are not upcoming tasks.
+
+### Next work in order
+
+| Gate | Deliverable | Completion evidence/dependency |
+| --- | --- | --- |
+| M1 / joint B1 | [Background BLE continuity](background-sync.md#m1-implement-background-ble-continuity-first): service owns existing GATT/metadata, notification/Stop, native background recovery | Current firmware suffices; 60-minute untethered locked-screen run, Activity recreation, loss/recovery and Stop behavior; no pairing/UI regression |
+| M2 / joint B2 | Consume the supplied c013–c015 firmware capability/telemetry/health contract in the M1 service | App decoder/subscription/expiry are source-integrated; APK packaging and physical delivery/load checks are pending |
+| Later | Supported notification/media features, separate iOS implementation and release evaluation | Scoped permission/accessory contracts, independent native device evidence and explicit signing/distribution authorization |
+
+M1/M2 source integration is ready for APK packaging and joint acceptance; firmware developer follows [F1](../../docs/background-sync.md#work-independently-f1-continuity-baseline). Current M2 uses the supplied frozen firmware contract; later M3 wire changes require coordinated protocol review, not mobile-side invention or unrequested firmware changes. The initial firmware milestone may need no source change. Source integration, APK packaging and physical acceptance are separate evidence gates.
+
+### Preserve at every stage
+
+Read mobile/AGENTS.md, [architecture](architecture.md#companion-architecture-status-and-approved-ui), [visual design](architecture.md#approved-visual-design), [protocol](protocol.md) and the current milestone plan; inspect affected source. Keep exact-prefix real discovery, explicit OS approval, current metadata semantics, Mac adapter and approved Home intact. Use immutable quality/source/unit values and lifecycle-safe bounded native work. No fake telemetry or ready flags from saved bonds. Preserve typography/assets, dark/light, small-screen/2x text, reduced motion and connection-page Back behavior.
+
+Use affected formatting/static analysis/builds, numeric diagnostics and physical acceptance; distinguish implemented, built, preview-inspected, device-verified and bike-verified. Keep revision/phone/OS/duration/debug/power context with results. Logs contain no secrets, labels/addresses, routes or payloads. Current development excludes automated suites; protocol vectors/runtime checks remain required. Update the existing guide for its topic rather than adding another completion report.
+
+### Decisions still required
+
+
+Next: implement notification-derived Google Maps guidance against the reviewed [turn-by-turn plan](turn-by-turn.md). Real phone notification/device, locked-screen BLE continuity and physical display acceptance remain required. No custom map provider or GPS engine is planned.

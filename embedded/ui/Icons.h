@@ -4,7 +4,7 @@
 #include <cstdint>
 extern "C" { LV_FONT_DECLARE(cluster_icons_32); LV_FONT_DECLARE(cluster_icons_30); }
 namespace cluster::ui {
-enum class Icon { Left, Right, HighBeam, TractionControl, Abs, Engine, Coolant, Message, Call, Hazard, Phone, Fuel, Appearance, Bluetooth, Wifi, Navigation, Settings, Clock };
+enum class Icon { Left, Right, HighBeam, TractionControl, Abs, Engine, Coolant, Message, Call, Hazard, Phone, Fuel, Appearance, Bluetooth, Wifi, Settings, Clock };
 struct IconDefinition { Icon kind; std::uint32_t codepoint; const char* glyph; };
 inline constexpr std::array<IconDefinition,18> iconDefinitions{{
     {Icon::Left,0xF0731,u8"\U000F0731"},
@@ -22,7 +22,6 @@ inline constexpr std::array<IconDefinition,18> iconDefinitions{{
     {Icon::Appearance,0xF03D8,u8"\U000F03D8"},
     {Icon::Bluetooth,0xF00AF,u8"\U000F00AF"},
     {Icon::Wifi,0xF05A9,u8"\U000F05A9"},
-    {Icon::Navigation,0xF07D9,u8"\U000F07D9"},
     {Icon::Settings,0xF0493,u8"\U000F0493"},
     {Icon::Clock,0xF0150,u8"\U000F0150"}
 }};

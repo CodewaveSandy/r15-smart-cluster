@@ -1,11 +1,9 @@
 # Android background-sync strategy and work plan
 
-[Android v2 native ownership](navigation-v2-implementation.md) is now integrated in source: visible-browse GPS is independent of BLE; explicit navigation/sharing adds location foreground ownership and separate Stop controls. Idle hiding uses a3 s grace. Raw-map/corridor/provider work and route progress live natively, not in a Flutter page/isolate. START_NOT_STICKY/no boot restart remains; a saved route reopens only as a preview. The historical M1/M2 and phase-1 sections below retain their original acceptance context.
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../../docs/navigation-removal.md).
 
 
-The next location/navigation changes follow the [phase 2 mobile work packages](navigation-phase-2.md), including independent visible-browse/navigation/share/BLE intents. This planning document does not alter current v1 runtime or trust behavior.
-
-For the next location/map phase, follow the [complete integration handoff](../../docs/map-phase-1.md), particularly the separate sharing intent, location foreground-service lifecycle and firmware-first gates. Existing M1/M2 and B1/B2 acceptance are not superseded.
+The next location/navigation changes follow the [phase 2 mobile work packages](../../docs/archive/custom-navigation/mobile/docs/navigation-phase-2.md), including independent visible-browse/navigation/share/BLE intents. This planning document does not alter current v1 runtime or trust behavior.
 
 Updated: 2026-11-02. Status: Android M1/M2 source integration implemented; Dart analysis and native Kotlin compilation checked locally. Android APK packaging and physical B1/B2 acceptance remain pending for this revision. Firmware handoff remains implemented/build-verified. Start here for mobile implementation independently of firmware work. Read mobile/AGENTS.md, [architecture](architecture.md#companion-architecture-status-and-approved-ui), [current protocol](protocol.md) and [development](development.md). Firmware work starts at [the firmware plan](../../docs/background-sync.md). The shared first acceptance gate is B1 in that plan.
 
@@ -13,7 +11,7 @@ Updated: 2026-11-02. Status: Android M1/M2 source integration implemented; Dart 
 
 The rider connects while the app is visible, later starts a route, locks the screen and pockets the phone. Active device sync and eventually location/navigation must continue independently of Flutter pages. Explicit Disconnect/Stop must still win.
 
-The implemented Android path now places the single `BleBond` and native retry policy in `ClusterSyncService`, a started `connectedDevice` foreground service. `MainActivity` binds for commands/snapshots and detaches its observer on pause; UI disposal, Activity destruction and navigation do not send Disconnect. Dart observes native connection/metadata/telemetry state. Capabilities, CCCD subscription, timed telemetry reads and health decoding are integrated into the same serialized ATT owner. Modern location permissions, local MapLibre maps and native foreground location/map sharing are now source-integrated; automatic process recovery remains absent. Prior foreground device success is not locked-screen acceptance.
+The implemented Android path now places the single `BleBond` and native retry policy in `ClusterSyncService`, a started `connectedDevice` foreground service. `MainActivity` binds for commands/snapshots and detaches its observer on pause; UI disposal, Activity destruction and navigation do not send Disconnect. Dart observes native connection/metadata/telemetry state. Capabilities, CCCD subscription, timed telemetry reads and health decoding are integrated into the same serialized ATT owner. Location is used only for BLE scans on Android 11 and older; custom maps and GPS are removed; automatic process recovery remains absent. Prior foreground device success is not locked-screen acceptance.
 
 ## Implemented Android policy and remaining acceptance
 
@@ -95,24 +93,6 @@ Use the joint B1 matrix and then: inspect real gear N/1..6 and invalid/no-select
 
 Verify current metadata and telemetry run simultaneously for 60 minutes locked with the phone untethered; the cluster still displays correct name/battery/time, actual source input changes reach phone, acquisition/source/host gaps remain observed and no queues/heap/stacks grow without explanation. Independently reset each board and cycle radio/range, verify current capabilities/baselines and no code/bond replacement on valid saved reconnect. Preserve warnings, Settings/non-touch navigation and two-second lifecycle artwork. Record phone/OS, revisions/image hashes, numeric ATT/MTU/CCCD results, maximum valid callback gaps/source ages and health deltas. B1/B2 remain pending until these actual observations exist.
 
-## M3 active navigation and pocket operation
-
-After provider selection and licensed embedded-delivery feasibility, keep GPS/routing/rerouting and route progress in an owner that lives as long as the foreground ride service. If using Dart/provider SDK logic, explicitly design its background engine/isolate lifetime; it cannot depend on a disposed UI engine. Flutter pages show snapshots and issue Start/End/recenter intents. Rendering a phone map while visible is separate from maintaining route computation while locked.
-
-Add the `location` foreground-service type and `FOREGROUND_SERVICE_LOCATION` permission where required, modern `ACCESS_COARSE_LOCATION`/`ACCESS_FINE_LOCATION`, runtime precise/approximate handling and current Location services checks. Start location service work from visible Start ride with granted permissions, before pocketing. Foreground location service access can continue with the screen off; do not automatically require “Allow all the time” merely for this flow. Evaluate `ACCESS_BACKGROUND_LOCATION` separately if the chosen restart/background-start/provider requirements need it. Degrade GPS/navigation independently from BLE when denied/revoked. [Location permission guidance](https://developer.android.com/develop/sensors-and-location/location/permissions).
-
-Add main-manifest `INTERNET` for real provider/network operations; it currently exists only in debug/profile manifests. Review provider keys, restrictions, attribution, quotas, offline/reroute behavior and permitted embedded data transfer before adding dependencies. Keep audio with phone/headset. iOS needs its own native BLE/location background assessment and device verification; Android configuration is not transferable.
-
-Use BLE for reviewed compact navigation data only within measured limits. Wi-Fi bulk maps remain a coordinated firmware dependency; verify cellular internet routing, authentication, resume/backpressure and route cancellation. Do not assume Wi-Fi avoids the 115200 UART bottleneck or that full moving maps are already feasible. B3 acceptance covers locked-screen GPS quality/expiry, reroute/route generations, data loss/recovery, offline/provider failures, real display navigation and foreground-service energy over a representative ride. Initial bench checks precede any bike observation.
-
 ## Handoff and definition of done
 
 Give the firmware developer app revision/APK build, phone/OS, service lifecycle policy, supported protocol revision and B1/B2/B3 results with numeric diagnostics. Never log keys, names/addresses, route history or payloads. Both sides record the same gate result; “app stayed connected” alone is insufficient. M1/M2 can now be implemented independently against the supplied firmware contract; B1/B2 require actual joint acceptance. M3 still depends on provider/data-rights and navigation/map firmware review. No fake telemetry or navigation-ready claim is permitted.
-
-## M3 phase 1 maps and location — implemented source
-
-The user reports both updated boards flashed on2026-11-03 and requested Android integration. The app now implements the [phase 1 handoff](../../docs/map-phase-1.md), including c016/c017/c018, MTU247 request (actual≥96), display-ACK transfer/progress/activation and native foreground Fused Location Provider. No M1/M2 telemetry bytes or trust policy were changed. The map tick only schedules through the existing ATT owner; metadata and telemetry retain priority. Transfers have one outstanding control, at most15 DATA writes/sec, two-second end-to-end ACK/read fallback, bounded identical retries and connection/session invalidation.
-
-Map sharing has its own explicit user intent, notification Stop action, permission/quality/coverage states and latest-fix slot. GPS is service-owned through page/engine detachment. Ordinary Stop still stops both. Bluetooth loss while actively sharing suspends the link and retains local location ownership; it never restores trust or retries authentication indefinitely. The same START_NOT_STICKY/process-death policy is retained. Route guidance/global coverage are not this phase.
-
-See [actual verification and pending APK/device checks](development.md#phase-1-map-location-integration). Both user-reported flashes establish installation only, not F-MAP-0/F-MAP-4/B1/B2/live map acceptance. No automated suites were added or run.
