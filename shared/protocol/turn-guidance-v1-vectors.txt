@@ -1,0 +1,52 @@
+TURN GUIDANCE V1 STATIC NORMATIVE EXAMPLES
+Non-executable data. See docs/turn-guidance-protocol.md. No phone notification/device claim.
+Integers little-endian; final CRC32 ISO-HDLC; boot=1 connection=2 display=3 stream=11.
+Phone elapsed=T0=110000; display receipt DB=10000; T1=110020.
+
+OPEN length=48 CRC=f75e0f87 (wire little-endian)
+Accepted new stream, waiting, no old anchor/content.
+52 31 35 55 01 01 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 01 00 00 00 00 00 00 00 ff ff ff ff 04 00 00 00 01 00 00 00 f7 5e 0f 87
+
+TIME_REQUEST length=52 CRC=62b0cfcb (wire little-endian)
+Echo sequence2/T0/DB in display Status.
+52 31 35 55 01 02 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 02 00 00 00 00 00 00 00 ff ff ff ff 08 00 00 00 b0 ad 01 00 00 00 00 00 62 b0 cf cb
+
+TIME_CONFIRM length=76 CRC=85b0321e (wire little-endian)
+Accepted within1000 ms of DB; RTT20 ms.
+52 31 35 55 01 03 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 03 00 00 00 00 00 00 00 ff ff ff ff 20 00 00 00 02 00 00 00 00 00 00 00 b0 ad 01 00 00 00 00 00 c4 ad 01 00 00 00 00 00 10 27 00 00 00 00 00 00 85 b0 32 1e
+
+LEFT_SNAPSHOT length=224 CRC=699ffdf4 (wire little-endian)
+One atomic224-byte snapshot; English ASCII/known source age. New revision1.
+52 31 35 55 01 04 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 04 00 00 00 01 00 00 00 00 00 00 00 b4 00 00 00 01 01 7f 02 c8 00 00 00 70 30 00 00 28 05 00 00 00 1a 0b 09 d8 ad 01 00 00 00 00 00 d8 ad 01 00 00 00 00 00 54 75 72 6e 20 6c 65 66 74 20 6f 6e 74 6f 20 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 45 54 41 20 32 31 3a 31 30 00 00 00 00 00 00 00 69 9f fd f4
+
+PRESENCE length=48 CRC=0653b4a3 (wire little-endian)
+Keeps transport live; source-change110040 and revision1 remain fixed.
+52 31 35 55 01 05 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 05 00 00 00 01 00 00 00 ff ff ff ff 04 00 00 00 07 00 00 00 06 53 b4 a3
+
+STOP length=48 CRC=7acc8554 (wire little-endian)
+Closes stream11. Delayed sequence4 cannot restore it; new Open needs another stream and forward sequence.
+52 31 35 55 01 06 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 06 00 00 00 00 00 00 00 ff ff ff ff 04 00 00 00 01 00 00 00 7a cc 85 54
+
+INVALID_CONFLICTING_RETRY length=48 CRC=cc1e1d0c (wire little-endian)
+CRC-valid conflicting sequence6 after STOP; reject Sequence, retain tombstone/ordinary info.
+52 31 35 55 01 05 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 06 00 00 00 01 00 00 00 ff ff ff ff 04 00 00 00 07 00 00 00 cc 1e 1d 0c
+
+UNKNOWN_AGE_SNAPSHOT_SHAPE length=224 CRC=0426b885 (wire little-endian)
+Valid byte shape with canonical Unknown source age. Requires a fresh open stream; never a bright arrow/distance/ETA even with valid clock.
+52 31 35 55 01 04 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 07 00 00 00 02 00 00 00 ff ff ff ff b4 00 00 00 01 01 7f 00 c8 00 00 00 70 30 00 00 28 05 00 00 00 1a 0b 09 ff ff ff ff ff ff ff ff d8 ad 01 00 00 00 00 00 54 75 72 6e 20 6c 65 66 74 20 6f 6e 74 6f 20 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 45 54 41 20 32 31 3a 31 30 00 00 00 00 00 00 00 04 26 b8 85
+
+INVALID_RESERVED length=224 CRC=1b795c63 (wire little-endian)
+Reject Invalid even though CRC is correct; no mutation/publication.
+52 31 35 55 01 04 28 01 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 04 00 00 00 01 00 00 00 00 00 00 00 b4 00 00 00 01 01 7f 02 c8 00 00 00 70 30 00 00 28 05 00 00 00 1a 0b 09 d8 ad 01 00 00 00 00 00 d8 ad 01 00 00 00 00 00 54 75 72 6e 20 6c 65 66 74 20 6f 6e 74 6f 20 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 45 54 41 20 32 31 3a 31 30 00 00 00 00 00 00 00 1b 79 5c 63
+
+INVALID_CRC length=224 CRC=699ffdf5 (wire little-endian)
+Reject Invalid. Partial transport records containing these bytes never publish.
+52 31 35 55 01 04 28 00 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 04 00 00 00 01 00 00 00 00 00 00 00 b4 00 00 00 01 01 7f 02 c8 00 00 00 70 30 00 00 28 05 00 00 00 1a 0b 09 d8 ad 01 00 00 00 00 00 d8 ad 01 00 00 00 00 00 54 75 72 6e 20 6c 65 66 74 20 6f 6e 74 6f 20 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 50 61 72 6b 20 53 74 72 65 65 74 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 45 54 41 20 32 31 3a 31 30 00 00 00 00 00 00 00 69 9f fd f5
+
+READY_GATT_CAPABILITY length=80
+Authenticated connection with fresh real display capability and negotiated MTU247. UART announcement has actual MTU0 and a separately recomputed CRC.
+52 31 35 46 01 00 50 01 01 00 00 00 02 00 00 00 03 00 00 00 e0 00 e3 00 f7 00 01 00 ff 01 60 20 10 02 d0 07 88 13 00 00 30 75 00 00 c0 d4 01 00 30 75 00 00 f4 01 a8 61 24 27 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 23 04 32 2e
+
+PUBLISHED_VISIBLE_LEFT_STATUS length=112
+Consumed Snapshot4, published visible model, known age23 ms, clock/transport live. Admission alone cannot generate this record; only display can.
+52 31 35 57 01 00 70 bf 01 00 00 00 02 00 00 00 03 00 00 00 0b 00 00 00 04 00 00 00 01 00 00 00 01 02 00 00 17 00 00 00 38 27 00 00 00 00 00 00 38 27 00 00 00 00 00 00 02 00 00 00 00 00 00 00 b0 ad 01 00 00 00 00 00 10 27 00 00 00 00 00 00 d8 ad 01 00 00 00 00 00 38 27 00 00 00 00 00 00 00 00 00 00 00 00 00 00 17 00 00 00 63 4e a0 4d

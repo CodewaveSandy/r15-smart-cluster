@@ -19,6 +19,9 @@
 #include "freertos/task.h"
 #include <fcntl.h>
 #include <unistd.h>
+#include "sdkconfig.h"
+static_assert(CONFIG_ESP_MAIN_TASK_STACK_SIZE>=16384,
+    "Display LVGL owner requires its existing 16384-byte main stack; update the generated display sdkconfig");
 
 namespace {
 constexpr char tag[]="r15-bench";
@@ -174,11 +177,15 @@ extern "C" void app_main() {
             ESP_LOGI(tag,"Preferences save %s",saved?"committed":"failed");
         }
         life.advance(now); dispatch(cluster::reconcileSettings(view,state,life),now);
-        const auto uiStarted=esp_timer_get_time();dashboard.update(state,view,life,now);
+        const auto uiStarted=esp_timer_get_time();
+        dashboard.guidance(live?vehicleUart.guidanceState(nowMs()):cluster::guidance::TurnGuidanceState{});
+        dashboard.update(state,view,life,now);
         lv_timer_handler();
+        if(live)vehicleUart.guidancePublished(nowMs(),dashboard.guidanceVisible());
         maxUiUs=std::max(maxUiUs,std::uint64_t(esp_timer_get_time()-uiStarted));
         if(now-report>=10000) {
-            const auto tx=vehicleUart.txDiagnostics();
+            const auto tx=vehicleUart.txDiagnostics();const auto g=vehicleUart.guidanceDiagnostics();const auto f=vehicleUart.framingDiagnostics();const auto guide=vehicleUart.guidanceState(now);
+            ESP_LOGI(tag,"GUIDANCE accepted=%u rejected=%u duplicate=%u expired=%u quality=%u source_age_ms=%u tx_fragments=%u framed_bytes=%u rx_fragments=%u crc_drops=%u framing_drops=%u timeouts=%u",g.accepted,g.rejected,g.duplicates,g.expired,unsigned(guide.quality),guide.ageMs,tx.fragments,tx.framedBytes,f.fragments,f.crcDrops,f.framingDrops,f.timeouts);
             ESP_LOGI(tag,"UART TX bytes=%u errors=%u queue_full=%u stack_margin=%u critical_wait_ms=%u ui_max_us=%llu loop_gap_ms=%llu touch_errors=%u",tx.bytes,tx.writeErrors,vehicleUart.txRejected(),vehicleUart.txStackMargin(),tx.maxCriticalWaitMs,(unsigned long long)maxUiUs,(unsigned long long)maxLoopGap,cluster::board::touchFailures());
             ESP_LOGI(tag,"UART RX GPIO38: accepted=%u overruns/errors=%u fresh=%d source=%s rx_bytes=%u max_backlog=%u",
                 vehicleUart.accepted(),vehicleUart.overruns(),int(vehicleUart.fresh(now)),live?"UART":"BENCH",vehicleUart.rxBytes(),vehicleUart.maxBacklog());

@@ -56,7 +56,8 @@ extern "C" void app_main() {
     cluster::gearlink::Packet packet;packet.session=esp_random();if(!packet.session)packet.session=1;
     static cluster::board::BlePhone phone;phone.initialize(packet.session);
     static cluster::board::RecordWriter writer;ESP_ERROR_CHECK(writer.initialize(UART_NUM_1)?ESP_OK:ESP_FAIL);
-    static cluster::uartrecords::Receiver demux;
+    static cluster::uartrecords::Receiver demux;static cluster::uartrecords::Assembler guidanceAssembly;
+    static_assert(sizeof(cluster::guidance::Bridge)+sizeof(cluster::board::RecordWriter)+sizeof(cluster::uartrecords::Assembler)+sizeof(cluster::uartrecords::Receiver)+2*sizeof(cluster::guidance::Message)<4096,"Vehicle fixed guidance transport budget");
     std::uint64_t report=0;
     unsigned rxDriverResets=0,rxBytes=0,maxRxBacklog=0,rxControls=0,displayChanges=0;
     std::uint64_t lastControlAt=0,maxControlGap=0;
@@ -71,7 +72,7 @@ extern "C" void app_main() {
             if(event.type==UART_FIFO_OVF||event.type==UART_BUFFER_FULL||event.type==UART_FRAME_ERR||event.type==UART_PARITY_ERR)fault=true;
         size_t waiting=0;ESP_ERROR_CHECK(uart_get_buffered_data_len(UART_NUM_1,&waiting));
         maxRxBacklog=std::max(maxRxBacklog,unsigned(waiting));
-        if(fault){++rxDriverResets;uart_flush_input(UART_NUM_1);xQueueReset(linkEvents);controls.reset();gate.invalidate();demux.reset();}
+        if(fault){++rxDriverResets;uart_flush_input(UART_NUM_1);xQueueReset(linkEvents);controls.reset();gate.invalidate();demux.reset();guidanceAssembly.reset();writer.resetFrames();}
         else for(unsigned budget=1536;budget;){
             std::uint8_t bytes[256];const int count=uart_read_bytes(UART_NUM_1,bytes,std::min<unsigned>(sizeof bytes,budget),0);
             if(count<0){++rxDriverResets;controls.reset();gate.invalidate();break;}
@@ -86,6 +87,11 @@ extern "C" void app_main() {
                         if(gate.receive(controls.latest(),at,snapshot.pairing,request,newDisplay))gate.queued(phone.post(request));
                         if(newDisplay){++displayChanges;if(snapshot.pairing)phone.post({cluster::phonelink::Action::Reject,snapshot.pairing});}
                     }
+                },[&](const std::uint8_t* frame,unsigned n,std::uint64_t at){
+                    guidanceAssembly.push(frame,n,at,2,[&](const std::uint8_t* b,unsigned size,std::uint64_t received){
+                        cluster::guidance::Message m;m.size=size;std::copy_n(b,size,m.bytes.begin());
+                        if(cluster::guidance::validCapability(m)||cluster::guidance::validStatus(m))phone.guidanceDownstream(m,received);
+                    });
                 });
         }
 
@@ -134,8 +140,12 @@ extern "C" void app_main() {
                 writer.post(bytes.data(),bytes.size());
             }
         }
+        if(phone.takeGuidanceReset())writer.resetFrames();
+        cluster::guidance::Message guidance;
+        if(phone.takeGuidance(guidance))writer.postFramed(guidance.bytes.data(),guidance.size,1,guidance.bytes[5]==std::uint8_t(cluster::guidance::Command::Clear));
         if(now-report>=10000){
-            const auto tx=writer.diagnostics();
+            const auto tx=writer.diagnostics();const auto g=phone.guidanceDiagnostics();const auto framing=demux.diagnostics();
+            std::printf("@GUIDANCE accepted=%u rejected=%u duplicates=%u max_ack_ms=%u tx_fragments=%u tx_framed_bytes=%u rx_fragments=%u crc_drops=%u framing_drops=%u frame_timeouts=%u\n",g.accepted,g.rejected,g.duplicates,g.maxAckMs,tx.fragments,tx.framedBytes,framing.fragments,framing.crcDrops,framing.framingDrops,framing.timeouts);
             std::printf("@UART_RX driver_resets=%u rx_bytes=%u max_backlog=%u return_fresh=%d controls=%u display_changes=%u control_age_ms=%llu max_control_gap_ms=%llu\n",rxDriverResets,rxBytes,maxRxBacklog,int(gate.fresh(now)),rxControls,displayChanges,(unsigned long long)(lastControlAt?now-lastControlAt:0),(unsigned long long)maxControlGap);
             report=now;std::printf("@UART_TX heap_free=%u heap_min=%u largest=%u stack=%u tx_queue_full=%u tx_stack=%u sample_gap_ms=%u uart_bytes=%u write_errors=%u critical_wait_ms=%u\n",
                 unsigned(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL)),unsigned(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)),unsigned(uxTaskGetStackHighWaterMark(nullptr)),writer.rejected(),writer.stackMargin(),unsigned(maxSourceGap),tx.bytes,tx.writeErrors,tx.maxCriticalWaitMs);

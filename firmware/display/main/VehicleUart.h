@@ -1,6 +1,7 @@
 #pragma once
 #include "shared/protocol/GearPacket.h"
 #include "shared/protocol/UartRecords.h"
+#include "shared/application/TurnGuidanceStore.h"
 #include "firmware/common/RecordWriter.h"
 #include "shared/protocol/PhoneLink.h"
 #include "shared/protocol/PairingIdentity.h"
@@ -8,6 +9,7 @@
 #include "embedded/application/SettingsNavigation.h"
 #include <cstdio>
 #include "driver/uart.h"
+#include "esp_timer.h"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -18,7 +20,8 @@ namespace cluster::board {
 class VehicleUart {
 public:
     void initialize(std::uint32_t session=1) {
-        phone_.initialize(session);
+        phone_.initialize(session);guidance_.initialize(session);
+        static_assert(sizeof(guidance::Store)+sizeof(RecordWriter)+sizeof(uartrecords::Receiver)+sizeof(uartrecords::Assembler)+sizeof(guidance::TurnGuidanceState)+2*sizeof(guidance::Message)<4096,"Display fixed guidance transport budget");
         ESP_ERROR_CHECK(writer_.initialize(UART_NUM_0,true)?ESP_OK:ESP_FAIL);
         uart_config_t cfg{};cfg.baud_rate=115200;cfg.data_bits=UART_DATA_8_BITS;
         cfg.parity=UART_PARITY_DISABLE;cfg.stop_bits=UART_STOP_BITS_1;
@@ -29,9 +32,10 @@ public:
     }
     void reset() {
         ESP_ERROR_CHECK(uart_flush_input(UART_NUM_1));
-        xQueueReset(events_);receiver_.reset();status_.reset();identity_.reset();metadata_.reset();phone_.reset();demux_.reset();
+        xQueueReset(events_);receiver_.reset();status_.reset();identity_.reset();metadata_.reset();phone_.reset();demux_.reset();assembly_.reset();guidance_.invalidate(lastPoll_);writer_.resetFrames();
     }
     void poll(std::uint64_t now) {
+        lastPoll_=now;
         // Inspect at most the driver's eight queued events each UI cycle.
         uart_event_t event{};bool fault=false;
         for(unsigned i=0;i<8&&xQueueReceive(events_,&event,0)==pdTRUE;++i)
@@ -58,15 +62,29 @@ public:
                         phone_.update(status_.latest(),at);
                     }
                 }
+            },[&](const std::uint8_t* frame,unsigned n,std::uint64_t at){
+                assembly_.push(frame,n,at,1,[&](const std::uint8_t* b,unsigned size,std::uint64_t){
+                    const auto actual=std::uint64_t(esp_timer_get_time()/1000);guidanceSession(actual);guidance::Message m;m.size=size;std::copy_n(b,size,m.bytes.begin());
+                    if(size>=4&&guidance::magic(b,'U'))guidance_.consume(m,actual);
+                });
             });
         }
-
+        guidanceSession(now);guidance_.poll(now);
         phonelink::Packet control;
         if(phone_.outgoing(now,control)) {
             const auto bytes=phonelink::encode(control);
             writer_.post(bytes.data(),bytes.size());
         }
+        if(now-lastCapability_>=1000){const auto b=guidance_.capability(now);writer_.postFramed(b.data(),b.size(),2);lastCapability_=now;}
+        else if(now-lastGuidanceStatus_>=500){sendGuidanceStatus(now);}
     }
+    guidance::TurnGuidanceState guidanceState(std::uint64_t now)const{return guidance_.view(now);}
+    void guidancePublished(std::uint64_t now,bool visible){
+        const auto before=guidance_.status(now);guidance_.published(now,visible);
+        if(!(before[7]&4)||bool(before[7]&128)!=visible)sendGuidanceStatus(now);
+    }
+    guidance::Store::Diagnostics guidanceDiagnostics()const{return guidance_.diagnostics();}
+    const uartrecords::Receiver::Diagnostics& framingDiagnostics()const{return demux_.diagnostics();}
     unsigned txStackMargin()const{return writer_.stackMargin();}
     unsigned txRejected()const{return writer_.rejected();}
     RecordWriter::Diagnostics txDiagnostics()const{return writer_.diagnostics();}
@@ -109,6 +127,12 @@ public:
     std::uint64_t statusAge(std::uint64_t now)const{return lastStatusAt_&&now>=lastStatusAt_?now-lastStatusAt_:0;}
     std::uint64_t maxStatusGap()const{return maxStatusGap_;}
 private:
+    void guidanceSession(std::uint64_t now){
+        const auto p=phone_.phone(now,receiver_.latest().session);
+        guidance_.session(receiver_.latest().session,p.connectionId,receiver_.fresh(now)&&p.available()&&p.connected,now);
+    }
+    void sendGuidanceStatus(std::uint64_t now){const auto b=guidance_.status(now);writer_.postFramed(b.data(),b.size(),2);lastGuidanceStatus_=now;}
+    guidance::Store guidance_;uartrecords::Assembler assembly_;std::uint64_t lastCapability_=0,lastGuidanceStatus_=0,lastPoll_=0;
     RecordWriter writer_;uartrecords::Receiver demux_;
     QueueHandle_t events_=nullptr;
     gearlink::Receiver receiver_;

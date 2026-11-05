@@ -14,6 +14,7 @@
 #include "components/PrimaryReadout.h"
 #include "components/RideInfoPanel.h"
 #include "components/FuelGauge.h"
+#include "components/TurnGuidanceCard.h"
 #include "components/LifecycleOverlay.h"
 #include "TouchNavigation.h"
 
@@ -30,6 +31,8 @@ public:
     ~Dashboard();
     Dashboard(const Dashboard&)=delete;
     Dashboard& operator=(const Dashboard&)=delete;
+    void guidance(const guidance::TurnGuidanceState& value){guidanceState_=value;}
+    bool guidanceVisible()const{return guidanceVisible_;}
     void update(const ClusterState&,const ViewOptions&,const Lifecycle&,std::uint64_t now);
     std::optional<SettingsEffect> touch(ViewOptions& view,const ClusterState& state,const Lifecycle& life,int x,int y) {
         if(!touchVisible_||life.phase()!=Phase::Running) return std::nullopt;
@@ -50,6 +53,7 @@ private:
     PrimaryReadout primary_;
     RideInfoPanel rideInfo_;
     FuelGauge fuel_;
+    TurnGuidanceCard guidance_;guidance::TurnGuidanceState guidanceState_;bool guidanceVisible_=false;
     LifecycleOverlay overlay_;
     bool initialized_=false, previousLight_=false, previousShift_=false;
     bool touchVisible_=false,touchMenuReady_=false;

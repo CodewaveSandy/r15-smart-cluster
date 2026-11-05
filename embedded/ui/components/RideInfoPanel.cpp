@@ -15,6 +15,10 @@ RideInfoPanel::RideInfoPanel(lv_obj_t* parent) {
     infoValue_.reset(label(parent,RideInfoLayout::infoValue,"—°C",fonts::heading));
 }
 void RideInfoPanel::update(const ClusterState& s,const ViewOptions& v,const Palette& p) {
+    for(auto* label:{infoTitle_.get(),tripTitle_.get(),tripValue_.get(),infoValue_.get()})show(label,visible_);
+    show(tripUnit_.get(),visible_&&distanceVisible_);
+    paint(lowerRule_.get(),p.line);
+    if(!visible_)return;
     for(auto* label:{tripUnit_.get(),infoTitle_.get(),tripTitle_.get(),tripValue_.get(),infoValue_.get()}) ink(label,p.ink);
     paint(lowerRule_.get(),p.line);
     bool changed=lastDistance_.update(v.track?Signal<double>{}:tripReading(s,v.tripPage));
@@ -29,8 +33,8 @@ void RideInfoPanel::update(const ClusterState& s,const ViewOptions& v,const Pale
     if(!changed) return;
     initialized_=true; previousTrack_=v.track; previousImperial_=v.imperial;
     previousTrip_=v.tripPage; previousInfo_=v.infoPage;
-    const auto presentation=rideInfoPresentation(s,v);
-    show(tripUnit_.get(),presentation.showDistance);
+    const auto presentation=rideInfoPresentation(s,v);distanceVisible_=presentation.showDistance;
+    show(tripUnit_.get(),distanceVisible_);
     text(tripTitle_.get(),presentation.tripTitle);
     tripText_.update(tripValue_.get(),presentation.tripValue.value);
     text(tripUnit_.get(),presentation.tripUnit);

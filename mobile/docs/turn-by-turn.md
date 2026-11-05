@@ -1,6 +1,8 @@
 # Google Maps notification guidance — Android handoff
 
-**Removal progress — 2026-11-05:** Custom map/navigation source, menu/tab, providers/GPS and c016–c01b are removed in the working tree. Replacement turn guidance remains unimplemented; candidate protocol IDs below remain proposals. User explicitly requested removal first.
+**Firmware ready for Android source integration — 2026-11-05:** Both firmware paths now implement [the normative v1 bytes](../../docs/turn-guidance-protocol.md) with [static examples](../../shared/protocol/turn-guidance-v1-vectors.txt). These supersede every proposal below. App listener/parser/transport are still unimplemented; actual Maps payload/profile/age cadence, MTU and physical acceptance must be observed. Implement this channel inside the existing BLE owner, request MTU247 and require actual≥227, then capability→status subscription→new Open→TimeRequest/Confirm→Snapshot/Presence with display publication ACK. Clear is priority; keep global command order across streams and do not refresh core content age on Presence/ETA/retry. Firmware-first ordering was explicitly requested by the user; source feasibility remains a gate for useful real phone guidance.
+
+**Removal progress — 2026-11-05:** Custom map/navigation source, menu/tab, providers/GPS and c016–c01b are removed in the working tree. Firmware turn guidance is implemented; Android remains unimplemented. Normative v1 bytes supersede the candidate IDs/layouts below. User explicitly requested removal first.
 
 Planning only, 2026-11-05. Read [the complete cross-system plan](../../docs/turn-by-turn-plan.md) and [firmware contract proposal](../../docs/turn-by-turn-firmware.md). This replaces custom maps/routes only when implemented. No source removal, feature implementation, new permission or build occurs in this planning turn.
 

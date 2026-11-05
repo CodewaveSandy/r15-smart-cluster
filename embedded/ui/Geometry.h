@@ -46,6 +46,9 @@ struct RideInfoLayout {
     static constexpr TextArea infoTitle{267,Metrics::lowerTitleY,260};
     static constexpr TextArea infoValue{267,Metrics::lowerTitleY+22,265};
 };
+struct TurnGuidanceLayout {
+    static constexpr Rect bounds{28,392,502,86};
+};
 struct FuelLayout {
     static constexpr Rect divider{537,Metrics::lowerTitleY,1,55};
     static constexpr TextArea title{Metrics::fuelX,Metrics::lowerTitleY,110};

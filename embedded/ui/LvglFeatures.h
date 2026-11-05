@@ -17,7 +17,7 @@
 #define LV_USE_KEYBOARD 0
 #define LV_USE_LABEL 1
 #define LV_USE_LED 0
-#define LV_USE_LINE 0
+#define LV_USE_LINE 1 // Locally drawn turn glyphs; no bitmap/icon transport.
 #define LV_USE_LIST 0
 #define LV_USE_LOTTIE 0
 #define LV_USE_MENU 0

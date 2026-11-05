@@ -6,7 +6,7 @@ extern "C" { LV_FONT_DECLARE(cluster_icons_32); LV_FONT_DECLARE(cluster_icons_30
 namespace cluster::ui {
 enum class Icon { Left, Right, HighBeam, TractionControl, Abs, Engine, Coolant, Message, Call, Hazard, Phone, Fuel, Appearance, Bluetooth, Wifi, Settings, Clock };
 struct IconDefinition { Icon kind; std::uint32_t codepoint; const char* glyph; };
-inline constexpr std::array<IconDefinition,18> iconDefinitions{{
+inline constexpr std::array<IconDefinition,17> iconDefinitions{{
     {Icon::Left,0xF0731,u8"\U000F0731"},
     {Icon::Right,0xF0734,u8"\U000F0734"},
     {Icon::HighBeam,0xF0C4C,u8"\U000F0C4C"},
@@ -25,6 +25,12 @@ inline constexpr std::array<IconDefinition,18> iconDefinitions{{
     {Icon::Settings,0xF0493,u8"\U000F0493"},
     {Icon::Clock,0xF0150,u8"\U000F0150"}
 }};
+static_assert(iconDefinitions.size()==unsigned(Icon::Clock)+1,"Every icon enum needs exactly one definition");
+constexpr bool completeIconDefinitions(){
+    for(unsigned i=0;i<iconDefinitions.size();++i)if(iconDefinitions[i].kind!=Icon(i)||!iconDefinitions[i].glyph||!iconDefinitions[i].codepoint)return false;
+    return true;
+}
+static_assert(completeIconDefinitions(),"Icon entries must be populated in enum order; no null default slots");
 inline const lv_font_t* iconFont(Icon kind) { return kind==Icon::Abs?&cluster_icons_30:&cluster_icons_32; }
 // Persistent 32px glyph widget; recolor/opacity without rebuilding or decoding assets.
 lv_obj_t* createIcon(lv_obj_t* parent,int x,int y,Icon kind);

@@ -1,6 +1,8 @@
 # Vehicle ESP32: configurable discrete input test
 
-**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../../docs/navigation-removal.md).
+**Turn guidance firmware — 2026-11-05:** [Implementation and handoff](../../docs/turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
+
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](../../docs/navigation-removal.md).
 
 Separate ESP-IDF 5.5.4 / C++17 image for the user-photographed 7SEMI ESP32-S3 DevKit, reported N8R8. Generic DevKitC-1 profile selects 8 MB flash with PSRAM unused; verify module/flash before flashing. Never flash this image onto the display.
 

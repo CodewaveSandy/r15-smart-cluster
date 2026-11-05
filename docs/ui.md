@@ -1,6 +1,8 @@
 # UI, Settings and lifecycle
 
-**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
+**Turn guidance firmware — 2026-11-05:** [Implementation and handoff](turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
+
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](navigation-removal.md).
 
 Updated: 2026-10-19. Dashboard, lifecycle, Settings, Appearance and unified Phone screens implemented. Navigation, retained clock sources and full hardware integration remain pending; phone/USB clock sync, persisted formats and connected phone metadata are implemented.
 
@@ -270,3 +272,7 @@ Host tests use injected monotonic timing for lifecycle boundaries, repeated key 
 ### USB-powered display bench preview
 
 The native V3.0 desk-test target exposes shutdown through serial `o` or a lower-right fuel-area tap. It freezes the synthetic snapshot and clears only test urgent-warning overrides before requesting the shared lifecycle transition. The 2,000 ms controller sequence finishes black without cutting USB power. Once black, any tap (or serial `b`) starts the 2,000 ms bench boot and clears synthetic observations. Auto-demo input is paused during shutdown; real-warning handling in the shared dashboard is unchanged. This control exercises artwork, not an ignition adapter or retained-power circuit. Removing USB still removes the supply immediately.
+
+## Notification guidance card
+
+The implemented optional card uses x28/y392/w502/h86 in both layouts/themes, replacing only trip/info labels. It shows a local maneuver vector, explicitly supplied distance (unknown `-- m`), one ellipsized instruction line, road and optional reported summary. Printed text is ASCII profile1. Fresh supported fields use normal/accent ink; unknown age, truncated, rerouting, unsupported, old or lost content is neutral and never invents a direction/countdown. Source age30/120 s, clock expiry30 s, transport expiry5 s and arrival5 s are local firmware limits described in the [normative contract](turn-guidance-protocol.md). Settings/pairing, urgent warnings and lifecycle take precedence; no riding touch flow or Navigation menu is added. Trip/Info continue ordinary actions. Inactive/Stop returns normal trip/info without an empty card. Host guidance scenes are explicitly labelled SIMULATION; no actual phone feed is claimed.

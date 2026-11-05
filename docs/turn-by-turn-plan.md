@@ -1,8 +1,10 @@
 # Google Maps notification guidance — replacement plan
 
-**Removal progress — 2026-11-05:** Custom map/navigation source, menu/tab, providers/GPS and c016–c01b are removed in the working tree. Replacement turn guidance remains unimplemented; candidate protocol IDs below remain proposals. User explicitly requested removal first.
+**Firmware implementation — 2026-11-05:** The user requested removal and then complete firmware integration ahead of the phone feasibility spike. Both MCU paths are now implemented; the [normative v1 contract](turn-guidance-protocol.md) supersedes all proposed bytes below. [Firmware evidence/handoff](turn-by-turn-firmware.md) separates builds/host simulation from pending phone/bench acceptance. Android remains unimplemented.
 
-Status: **planning only**, 2026-11-05. Requested replacement for the entire custom map/navigation implementation. No removals, firmware/app implementation, permission changes, build, flashing or commit are authorized by this document alone. The user will ask to start implementation separately. The existing uncommitted stack/UART fixes are separate work and must be preserved.
+**Removal progress — 2026-11-05:** Custom map/navigation source, menu/tab, providers/GPS and c016–c01b are removed in the working tree. Firmware turn guidance is now implemented; Android remains pending. The normative protocol supersedes the original proposals below. User explicitly requested removal first.
+
+Original design baseline recorded2026-11-05. The user subsequently authorized removal and complete firmware implementation. The sections below retain the original proposed journey/gates; current implementation status and frozen bytes are in the linked firmware handoff and normative contract.
 
 This is the proposed product and delivery authority for the replacement. [Firmware handoff](turn-by-turn-firmware.md) and [Android handoff](../mobile/docs/turn-by-turn.md) divide ownership. Earlier map Phase1/Phase2 documents become historical once migration is implemented; they are not evidence of this feature working.
 

@@ -1,6 +1,8 @@
 # Firmware background-sync strategy and work plan
 
-**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
+**Turn guidance firmware — 2026-11-05:** [Implementation and handoff](turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
+
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](navigation-removal.md).
 
 Updated: 2026-11-01. Status: firmware continuity diagnostics and authenticated discrete-input telemetry are implemented/build-verified; mobile integration and physical B1/B2 remain pending. Start here for firmware work. App developers start at [the mobile plan](../mobile/docs/background-sync.md). [Current BLE protocol](../mobile/docs/protocol.md) is the single wire-contract authority; [bench wiring](development.md#vehicle-ble-uart-bench) remains authoritative for physical connections.
 

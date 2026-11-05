@@ -1,5 +1,6 @@
 #pragma once
 #include "shared/protocol/PhoneLink.h"
+#include "shared/application/TurnGuidanceBridge.h"
 #include "shared/protocol/PhoneMetadata.h"
 #include "shared/protocol/PhoneTelemetry.h"
 #include "freertos/FreeRTOS.h"
@@ -26,8 +27,18 @@ public:
     bool post(phonelink::Request request);
     void poll(bool displayFresh,const gearlink::Packet& inputs,std::uint32_t maxSourceGapMs);
     Snapshot snapshot(std::uint64_t now);
+    void guidanceDownstream(const guidance::Message&,std::uint64_t now);
+    bool takeGuidance(guidance::Message&);
+    bool takeGuidanceReset();
+    guidance::Bridge::Diagnostics guidanceDiagnostics();
 private:
     static BlePhone* instance_;
+    static int guidanceAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
+    void notifyGuidance(std::uint64_t now);
+    guidance::Bridge guidance_;
+    std::uint16_t guidanceHandle_=0;
+    bool guidanceSubscribed_=false,guidanceNotifyPending_=false;
+    std::uint64_t guidanceNotifyAt_=0,guidanceNextNotify_=0;
     static int gap(ble_gap_event*,void*);
     static int streamAccess(std::uint16_t,std::uint16_t,ble_gatt_access_ctxt*,void*);
     bool authenticated(std::uint16_t handle);

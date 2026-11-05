@@ -1,6 +1,8 @@
 # System architecture, status and roadmap
 
-**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](navigation-removal.md).
+**Turn guidance firmware — 2026-11-05:** [Implementation and handoff](turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
+
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](navigation-removal.md).
 
 Updated: 2026-11-01. Shared host/native display UI, vehicle discrete inputs, return UART, authenticated BLE pairing/reconnect and phone metadata/clock synchronization are implemented. Core pairing/reconnect and phone metadata behavior are user bench-confirmed. The vehicle now also implements authenticated discrete-input telemetry/capabilities/health for the app handoff. Android background/telemetry integration, full vehicle measurements, Wi-Fi and navigation/maps remain pending; extended hardware/load acceptance remains separate. [Implementation status and gates](architecture.md#current-status-and-roadmap) distinguish host evidence from hardware readiness.
 

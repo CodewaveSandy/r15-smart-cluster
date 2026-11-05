@@ -241,3 +241,7 @@ Maintain language-neutral fixtures alongside the first normative specification. 
 ## Development bridge boundary
 
 Mac c001/c002 endpoint discovery, TLS bootstrap and HTTP sessions are separate from physical c010/c011/c012. Never apply Mac session success to ESP32 feature readiness. Run and security details are in [development](development.md#mac-preview-adapter).
+
+## Notification turn guidance v1 — implemented firmware
+
+c01c capability READ, c01d command WRITE WITH RESPONSE and c01e status READ/NOTIFY use the existing authenticated one-phone service. Retired c016–c01b remain absent. [Exact normative bytes, flags, timing and state policy](../../docs/turn-guidance-protocol.md) and [static vectors](../../shared/protocol/turn-guidance-v1-vectors.txt) are the authority for Android implementation. The maximum command224 bytes requires actual MTU≥227 after a247 request. Only a matching display ACK/publication establishes sharing success; ATT admission does not. c011–c015 behavior, masks and telemetry ages are unchanged. Firmware source/build/manual simulations are implemented; Android listener/parser/ATT integration and physical acceptance are pending. No local Android build is authorized.

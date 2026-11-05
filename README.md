@@ -1,10 +1,14 @@
 # R15 Smart Cluster
 
-**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](docs/navigation-removal.md).
+**Turn guidance firmware — 2026-11-05:** [Implementation and handoff](docs/turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
+
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](docs/navigation-removal.md).
 
 A dual-ESP32 instrument cluster for the Yamaha R15 V4, with an 800 x 480 LVGL interface. The vehicle MCU acquires/validates observations and handles calculations/connectivity; the display MCU renders normalized state received over UART.
 
 The native macOS preview includes Street/Track dashboards, Midnight/Daylight themes, Settings, Appearance, Clock & Date and Phone. Both boards support discrete-input UART, return controls, authenticated BLE pairing/reconnect and phone name/battery/time sync. Android owns the background BLE service and supported telemetry. Physical reliability/background acceptance and real vehicle measurements remain pending.
+
+Current guidance references: [firmware implementation](docs/turn-by-turn-firmware.md), [exact wire contract](docs/turn-guidance-protocol.md), [Android handoff](mobile/docs/turn-by-turn.md).
 
 ## Run the preview
 

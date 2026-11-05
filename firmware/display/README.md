@@ -1,6 +1,8 @@
 # R15 display desk-test target
 
-**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../../docs/navigation-removal.md).
+**Turn guidance firmware — 2026-11-05:** [Implementation and handoff](../../docs/turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
+
+**2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](../../docs/navigation-removal.md).
 
 ESP-IDF 5.5.4 / C++17 / LVGL 9.2.2, with PlatformIO as dependency/build runner. This is separate from the root Mac simulator and does not use Arduino. The component lock pins LVGL. The pioarduino platform and ESP-IDF archive URLs are exact versions.
 

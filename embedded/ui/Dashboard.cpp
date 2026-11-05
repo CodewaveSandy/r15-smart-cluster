@@ -11,7 +11,7 @@ Dashboard::Dashboard(lv_obj_t* parent)
     : root_(box(parent,0,0,Metrics::width,Metrics::height)),
       instruments_(box(root_.get(),0,0,Metrics::width,Metrics::height)),
       header_(root_.get()), tellTales_(root_.get()), tachometer_(instruments_.get()), settings_(root_.get()), appearance_(root_.get()), phone_(root_.get()), clock_(root_.get()), primary_(root_.get()),
-      rideInfo_(instruments_.get()), fuel_(instruments_.get()), overlay_(root_.get()) {
+      rideInfo_(instruments_.get()), fuel_(instruments_.get()), guidance_(instruments_.get()), overlay_(root_.get()) {
     shiftGradient_.dir=LV_GRAD_DIR_VER; shiftGradient_.stops_count=3;
     const std::uint32_t shiftColors[]={Metrics::shiftTop,Metrics::shiftMiddle,Metrics::shiftBottom};
     for(int i=0;i<3;++i) { shiftGradient_.stops[i].color=color(shiftColors[i]); shiftGradient_.stops[i].opa=255; shiftGradient_.stops[i].frac=i*127; }
@@ -31,6 +31,7 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         ink(root_.get(),p.ink);
     }
     const auto animation=animationFrame(life,warning,now);
+    guidanceVisible_=animation.dashboardVisible&&life.phase()==Phase::Running&&settingsProgress==0&&!warning&&guidanceState_.visible;
     touchVisible_=animation.dashboardVisible;
     touchMenuReady_=settingsProgress==1000;
     // The opaque lifecycle cover makes dashboard mutations invisible. Resume
@@ -48,7 +49,9 @@ void Dashboard::update(const ClusterState& s,const ViewOptions& v,const Lifecycl
         primary_.update(s,v,p,settingsProgress);
         if(settingsProgress==0) {
             tachometer_.update(s.engineRpm,p);
+            rideInfo_.visible(!guidanceVisible_);
             rideInfo_.update(s,v,p);
+            guidance_.update(presentation::turnCard(guidanceState_),p,guidanceVisible_,v.simulated);
             fuel_.update(s.fuelPercent,p,now);
         }
     }

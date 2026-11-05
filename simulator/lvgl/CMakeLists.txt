@@ -26,6 +26,7 @@ add_library(cluster_ui STATIC
  "${CLUSTER_ROOT}/embedded/ui/components/PrimaryReadout.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/RideInfoPanel.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/FuelGauge.cpp"
+ "${CLUSTER_ROOT}/embedded/ui/components/TurnGuidanceCard.cpp"
  "${CLUSTER_ROOT}/embedded/ui/components/LifecycleOverlay.cpp"
  "${CLUSTER_ROOT}/embedded/ui/Icons.cpp"
  "${CLUSTER_ROOT}/assets/animations/lvgl/r15_signature.c"

@@ -8,6 +8,7 @@
 #include "WifiDemo.h"
 #include "PhoneBridge.h"
 #include "VehicleSerial.h"
+#include "GuidancePreview.h"
 #include "embedded/presentation/ClockPresentation.h"
 #include <cstdlib>
 #include <algorithm>
@@ -128,11 +129,11 @@ void help() {
 }
 int main(int argc,char** argv) {
     try {
-        bool render=false,animationSequence=false; std::filesystem::path output;
+        bool render=false,animationSequence=false,guidanceRender=false; std::filesystem::path output;
         const char* vehiclePort=nullptr;
-        if(argc==3&&(std::string(argv[1])=="--render"||std::string(argv[1])=="--animate")) { render=true; animationSequence=std::string(argv[1])=="--animate"; output=argv[2]; }
+        if(argc==3&&(std::string(argv[1])=="--render"||std::string(argv[1])=="--animate"||std::string(argv[1])=="--guidance-render")) { render=true; guidanceRender=std::string(argv[1])=="--guidance-render"; animationSequence=std::string(argv[1])=="--animate"; output=argv[2]; }
         else if(argc==3&&std::string(argv[1])=="--vehicle-serial") vehiclePort=argv[2];
-        else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--render directory | --animate directory | --vehicle-serial port]\n"); return 2; }
+        else if(argc!=1) { std::fprintf(stderr,"Usage: r15-preview [--guidance-render directory | --render directory | --animate directory | --vehicle-serial port]\n"); return 2; }
         cluster::host::PreferenceFile preferenceFile(render?std::filesystem::path{}:cluster::host::preferencePath());
         Preferences confirmedPreferences;
         if(!render) preferenceFile.load(confirmedPreferences);
@@ -150,6 +151,12 @@ int main(int argc,char** argv) {
             ClusterState state=demo(); cluster::ui::ViewOptions view; Lifecycle life;
             view.light=confirmedPreferences.light; view.clockPreferences=confirmedPreferences.clock; view.bluetoothDemo=true;view.simulated=true;
             if(render) {
+                if(guidanceRender){
+                    cluster::host::renderGuidance(dashboard,state,view,life,output,capture);
+                    if(warnings)throw std::runtime_error("LVGL guidance preview warnings");
+                    std::printf("Rendered guidance simulation to %s\n",output.string().c_str());
+                    return 0;
+                }
                 checkPresentation();
                 std::filesystem::create_directories(output);
                 view.time="20:55"; view.date="18 Oct 2026";
