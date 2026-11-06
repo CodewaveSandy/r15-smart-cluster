@@ -1,5 +1,7 @@
 # Google Maps notification guidance — firmware implementation
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](../mobile/docs/turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 2026-11-05: **complete firmware source integration**, board builds and manual host-preview verification. No Android listener/parser is implemented yet, no board has been flashed in this work, and target-device notification feasibility/latency/long-straight cadence/locked-screen acceptance remain pending. The user requested firmware first after [map removal](navigation-removal.md); the original G0 phone-observation order was deferred explicitly. Do not confuse implementation with physical acceptance.
 
 The [normative v1 contract](turn-guidance-protocol.md) now supersedes every provisional byte/field in the [replacement plan](turn-by-turn-plan.md). [Static wire examples](../shared/protocol/turn-guidance-v1-vectors.txt) are data, not an executable suite. Android must implement these bytes before the feature works with a real phone; the old map APK has no guidance producer.

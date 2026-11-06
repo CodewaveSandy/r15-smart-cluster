@@ -1,5 +1,7 @@
 # Turn guidance v1 — normative firmware contract
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](../mobile/docs/turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 Frozen for firmware-first implementation, 2026-11-05. This specifies the firmware bytes; Android is not implemented and real Google Maps notification feasibility/update cadence, actual MTU, latency and physical acceptance remain open. It replaces the proposals in the planning handoffs. Printable ASCII English profile only; unknowns never become directions. c011–c015 and R15G/P/N/M remain unchanged. c016–c01b remain absent.
 
 ## GATT and context

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
 import '../../home/domain/bike_telemetry.dart';
+import '../../guidance/domain/turn_guidance.dart';
 import '../data/ble_pairing.dart';
 import '../data/ble_access.dart';
 import '../data/nearby_platform.dart';
@@ -16,6 +17,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     _subscription = _platform.changes.listen(
       _observe,
       onError: (Object _) {
+        guidance = const TurnGuidance();
         error = 'Bluetooth status is unavailable. Restore access and retry.';
         _live = false;
         telemetry = const BikeTelemetry.unavailable();
@@ -49,6 +51,9 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
   Completer<void>? _connectionResult;
   bool _nativeStarted = false;
   String? error;
+  TurnGuidance guidance = const TurnGuidance();
+  Future<void> guidanceAction(String action) =>
+      _platform.guidanceAction(action);
   BikeTelemetry telemetry = const BikeTelemetry.unavailable();
   PhoneMetadataState _metadata = PhoneMetadataState.notConnected;
   bool get hasSelection => _selected != null;
@@ -67,7 +72,11 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
     clusterName: _selected?.name,
     bluetoothLinkOnly: true,
     metadata: _metadata,
-    navigation: FeatureReadiness.notImplemented,
+    navigation: guidance.fresh
+        ? FeatureReadiness.ready
+        : guidance.enabled
+        ? FeatureReadiness.stale
+        : FeatureReadiness.unavailable,
     notifications: FeatureReadiness.notImplemented,
     music: FeatureReadiness.notImplemented,
   );
@@ -95,6 +104,7 @@ class BleConnection extends ChangeNotifier with WidgetsBindingObserver {
             _ => PhoneMetadataState.unavailable,
           }
         : PhoneMetadataState.notConnected;
+    guidance = TurnGuidance.fromNative(value['guidance']);
     telemetry = _live
         ? telemetryFromNative(value['telemetry'])
         : const BikeTelemetry.unavailable();

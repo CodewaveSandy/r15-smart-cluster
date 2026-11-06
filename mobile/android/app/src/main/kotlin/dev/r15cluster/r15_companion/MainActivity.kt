@@ -87,6 +87,22 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "linkStatus" -> result.success(linkSnapshot())
+                    "guidance" -> {
+                        check(observingLink){"Open the app before changing guidance"}
+                        when(call.argument<String>("action")){
+                            "access"->{
+                                getSharedPreferences("maps-guidance",MODE_PRIVATE).edit().putBoolean("consent",true).apply()
+                                startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                            }
+                            "enable"->{check(sync!=null){"Connection service is starting"};sync!!.enableGuidance()}
+                            "stop"->sync?.stopGuidance()
+                            "retry"->{check(sync!=null){"Connection service is starting"};sync!!.retryGuidance()}
+                            "rebind"->MapsNotifications.requestRebind(this)
+                            "openMaps"->{val intent=packageManager.getLaunchIntentForPackage(MapsNotifications.PACKAGE);check(intent!=null){"Google Maps is not installed or is disabled"};startActivity(intent)}
+                            else->error("Unknown guidance action")
+                        }
+                        result.success(null)
+                    }
                     "disconnectLink" -> {
                         sync?.stopSync() ?: run {
                             getSharedPreferences("ble-selection", MODE_PRIVATE).edit().putBoolean("stopped", true).apply()
@@ -159,7 +175,7 @@ class MainActivity : FlutterActivity() {
                     }
                     else -> result.notImplemented()
                 }
-            } catch (error: Exception) { if (pending === result) finishError("unavailable", "Nearby connection is unavailable.") else result.error("storage", "Protected pairing storage is unavailable.", null) }
+            } catch (error: Exception) { if(call.method=="guidance"){result.error("guidance",error.message?.take(160)?:"Guidance action unavailable",null);return@setMethodCallHandler};if (pending === result) finishError("unavailable", "Nearby connection is unavailable.") else result.error("storage", "Protected pairing storage is unavailable.", null) }
         }
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -300,6 +316,7 @@ class MainActivity : FlutterActivity() {
     override fun onResume() {
         super.onResume(); observingLink = true
         sync?.observer = linkObserver
+        MapsNotifications.requestRebind(this)
         sync?.refresh(); linkEvents?.success(linkSnapshot())
     }
     override fun onPause() {

@@ -1,5 +1,7 @@
 # Android background-sync strategy and work plan
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 **2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../../docs/navigation-removal.md).
 
 

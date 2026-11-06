@@ -1,5 +1,7 @@
 # Google Maps notification guidance — replacement plan
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](../mobile/docs/turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 **Firmware implementation — 2026-11-05:** The user requested removal and then complete firmware integration ahead of the phone feasibility spike. Both MCU paths are now implemented; the [normative v1 contract](turn-guidance-protocol.md) supersedes all proposed bytes below. [Firmware evidence/handoff](turn-by-turn-firmware.md) separates builds/host simulation from pending phone/bench acceptance. Android remains unimplemented.
 
 **Removal progress — 2026-11-05:** Custom map/navigation source, menu/tab, providers/GPS and c016–c01b are removed in the working tree. Firmware turn guidance is now implemented; Android remains pending. The normative protocol supersedes the original proposals below. User explicitly requested removal first.

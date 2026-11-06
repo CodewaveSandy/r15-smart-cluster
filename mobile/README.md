@@ -1,5 +1,7 @@
 # R15 Companion
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](docs/turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 **2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is planned, not implemented. See the [removal record](../docs/navigation-removal.md).
 
 App workflow: finish code locally, push through the normal Git workflow, let GitHub Actions build the APK, then install with `bash scripts/install-mobile-apk.sh` and test manually. Target modern/latest Android devices at normal text size; skip small-screen/2× text checks unless requested. Do not attempt local Android builds or install an Android SDK/Studio; [app instructions](AGENTS.md#app-build-and-verification-policy-2026-11-03) preserve this user preference.

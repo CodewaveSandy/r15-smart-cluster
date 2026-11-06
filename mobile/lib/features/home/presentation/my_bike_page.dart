@@ -9,9 +9,11 @@ class MyBikePage extends StatelessWidget {
   const MyBikePage({
     required this.status,
     required this.onConnection,
+    this.guidance,
     this.telemetry = const BikeTelemetry.unavailable(),
     super.key,
   });
+  final Widget? guidance;
   final PhoneStatus status;
   final BikeTelemetry telemetry;
   final VoidCallback onConnection;
@@ -142,6 +144,7 @@ class MyBikePage extends StatelessWidget {
                   color: colors.onSurfaceVariant,
                 ),
               ),
+              if (guidance != null) ...[const SizedBox(height: 22), guidance!],
             ],
           ),
         ),

@@ -13,6 +13,7 @@ import android.os.*
 class ClusterSyncService : Service() {
     companion object {
         const val CONNECT = "dev.r15cluster.CONNECT"
+        const val STOP_GUIDANCE = "dev.r15cluster.STOP_GUIDANCE"
         const val STOP = "dev.r15cluster.STOP"
         private const val CHANNEL = "cluster-sync"
         private const val NOTIFICATION = 15
@@ -30,6 +31,23 @@ class ClusterSyncService : Service() {
     private var noticeState = ""
     private var serviceError: String? = null
     private var starting = false
+    private var mapsInfoAt = -30000L
+    private var mapsAvailable = false
+    private var mapsVersionValue: String? = null
+    private var guidanceWanted=false
+    private var guidanceStopReason=1
+    private var hadListener=false
+    private var lastSourceRefresh=0L
+    private val sourceObserver: () -> Unit = { guidanceSourceChanged() }
+    private val guidanceClock=object: Runnable {
+        override fun run(){
+            if(destroyed)return
+            guidanceSourceChanged()
+            if(guidanceWanted&&MapsNotifications.bound&&SystemClock.elapsedRealtime()-lastSourceRefresh>=2000){lastSourceRefresh=SystemClock.elapsedRealtime();MapsNotifications.refresh()}
+            if(observer!=null)observer?.invoke(snapshot())
+            handler.postDelayed(this,if(wanted||observer!=null)1000 else 5000)
+        }
+    }
     var observer: ((Map<String, Any?>) -> Unit)? = null
     private val retry = Runnable {
         retryScheduled = false
@@ -57,6 +75,8 @@ class ClusterSyncService : Service() {
         super.onCreate()
         LegacyNavigationCleanup.start(applicationContext)
         link = BleBond(applicationContext) { changed(it) }
+        MapsNotifications.observer=sourceObserver
+        handler.post(guidanceClock)
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(CHANNEL, "Cluster connection", NotificationManager.IMPORTANCE_LOW).apply {
@@ -68,6 +88,7 @@ class ClusterSyncService : Service() {
     }
     override fun onBind(intent: Intent): IBinder = binder
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if(intent?.action==STOP_GUIDANCE){stopGuidance();return START_NOT_STICKY}
         if (intent?.action == STOP) { stopSync(); return START_NOT_STICKY }
         // No boot receiver or blind restart from a persisted "connected" flag.
         if (intent?.action != CONNECT) { stopSync(); return START_NOT_STICKY }
@@ -103,12 +124,14 @@ class ClusterSyncService : Service() {
         changed(link.snapshot())
     }
     fun snapshot(): Map<String, Any?> = link.snapshot() + mapOf(
+        "guidance" to guidanceSnapshot(),
         "serviceActive" to wanted, "reconnecting" to retryScheduled,
         "stopped" to prefs.getBoolean("stopped", false),
         "notificationVisible" to (Build.VERSION.SDK_INT < 24 || getSystemService(NotificationManager::class.java).areNotificationsEnabled()),
     ) + (serviceError?.let { mapOf("error" to it) } ?: emptyMap())
     private fun changed(value: Map<String, Any?>) {
         if (destroyed) return
+        guidanceSourceChanged(false)
         if (wanted) {
             if (!permitted() || (value["state"] == "connected" && value["bonded"] != true)) {
                 stopSync("Bluetooth access or the saved bond is unavailable. Open the app to reconnect."); return
@@ -135,13 +158,18 @@ class ClusterSyncService : Service() {
         observer?.invoke(snapshot())
     }
     private fun showNotification(state: String) {
-        if (noticeState == state && foreground) return
-        noticeState = state
+        val notice=state+if(guidanceWanted) " · Maps guidance" else ""
+        if (noticeState == notice && foreground) return
+        noticeState = notice
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), flags)
         val stop = PendingIntent.getService(this, 1, Intent(this, ClusterSyncService::class.java).setAction(STOP), flags)
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
-        val notification = builder.setSmallIcon(R.drawable.ic_cluster_sync).setContentTitle("R15 Cluster · $state")
+        if(guidanceWanted){
+            val stopGuidance=PendingIntent.getService(this,2,Intent(this,ClusterSyncService::class.java).setAction(STOP_GUIDANCE),flags)
+            builder.addAction(Notification.Action.Builder(null,"Stop guidance",stopGuidance).build())
+        }
+        val notification = builder.setSmallIcon(R.drawable.ic_cluster_sync).setContentTitle("R15 Cluster · $notice")
             .setContentText("Tap to open the app. Use Stop sync to disconnect.")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .setCategory(Notification.CATEGORY_SERVICE).setVisibility(Notification.VISIBILITY_PRIVATE)
@@ -150,8 +178,50 @@ class ClusterSyncService : Service() {
         else startForeground(NOTIFICATION, notification)
         foreground = true
     }
-    fun refresh() { if (wanted) link.refreshMetadata(); observer?.invoke(snapshot()) }
+    fun refresh() { if (wanted) link.refreshMetadata();guidanceSourceChanged();observer?.invoke(snapshot()) }
+    fun enableGuidance(){
+        if(guidanceWanted){refresh();return}
+        check(wanted&&link.snapshot()["state"]=="connected"){"Connect the cluster before enabling guidance"}
+        check(getSharedPreferences("maps-guidance",MODE_PRIVATE).getBoolean("consent",false)){"Review notification access first"}
+        check(MapsNotifications.granted(this)){"Grant notification access first"}
+        check(MapsNotifications.bound){"Notification listener is starting; wait and retry Enable"}
+        guidanceWanted=true;guidanceStopReason=1;hadListener=true;link.retryGuidance()
+        MapsNotifications.setCapture(true);MapsNotifications.refresh();guidanceSourceChanged()
+        showNotification("Connected");observer?.invoke(snapshot())
+    }
+    fun retryGuidance(){check(guidanceWanted){"Enable guidance first"};link.retryGuidance();guidanceSourceChanged()}
+    fun stopGuidance(reason: Int=1){
+        guidanceWanted=false;guidanceStopReason=reason;hadListener=false
+        MapsNotifications.setCapture(false);link.updateGuidance(null,false,reason)
+        if(reason!=5&&wanted&&foreground&&permitted())showNotification(if(link.snapshot()["state"]=="connected")"Connected" else "Reconnecting")
+        observer?.invoke(snapshot())
+    }
+    private fun guidanceSnapshot(): Map<String,Any?> {
+        refreshMapsInfo()
+        return MapsNotifications.snapshot(this)+mapOf("enabled" to guidanceWanted,"stopReason" to guidanceStopReason,
+            "consent" to getSharedPreferences("maps-guidance",MODE_PRIVATE).getBoolean("consent",false),
+            "transport" to link.guidance.snapshot(SystemClock.elapsedRealtime()),"mapsInstalled" to mapsAvailable,
+            "mapsVersion" to mapsVersionValue,"androidApi" to Build.VERSION.SDK_INT)
+    }
+    @Suppress("DEPRECATION")
+    private fun refreshMapsInfo(){
+        val now=SystemClock.elapsedRealtime();if(now-mapsInfoAt<30000)return
+        mapsInfoAt=now
+        mapsAvailable=try {packageManager.getLaunchIntentForPackage(MapsNotifications.PACKAGE)!=null}catch(_: Exception){false}
+        mapsVersionValue=try {packageManager.getPackageInfo(MapsNotifications.PACKAGE,0).versionName?.take(80)}catch(_: Exception){null}
+    }
+    private fun guidanceSourceChanged(publish: Boolean=true){
+        if(destroyed)return
+        if(guidanceWanted&&(!MapsNotifications.granted(this)||(hadListener&&!MapsNotifications.bound))){
+            stopGuidance(if(!MapsNotifications.granted(this))3 else 6);return
+        }
+        if(guidanceWanted&&MapsNotifications.bound)hadListener=true
+        val selected=if(guidanceWanted&&MapsNotifications.bound&&!MapsNotifications.replacementPending())MapsNotifications.observation else null
+        link.updateGuidance(selected,guidanceWanted,if(guidanceWanted)2 else guidanceStopReason)
+        if(publish)observer?.invoke(snapshot())
+    }
     fun stopSync(error: String? = null) {
+        stopGuidance(5)
         wanted = false; serviceError = error
         handler.removeCallbacks(retry); retryScheduled = false; retryAttempt = 0
         prefs.edit().putBoolean("stopped", true).apply()
@@ -165,7 +235,9 @@ class ClusterSyncService : Service() {
     }
     fun forget() { stopSync(); link.forgetSelection(); prefs.edit().putBoolean("stopped", true).apply(); observer?.invoke(snapshot()) }
     override fun onDestroy() {
-        destroyed = true; wanted = false; observer = null
+        destroyed = true; wanted = false;guidanceWanted=false;observer = null
+        if(MapsNotifications.observer===sourceObserver)MapsNotifications.observer=null
+        MapsNotifications.setCapture(false)
         handler.removeCallbacksAndMessages(null)
         unregisterReceiver(radio)
         link.dispose()

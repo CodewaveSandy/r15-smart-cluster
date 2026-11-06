@@ -1,5 +1,7 @@
 # Phone protocol: implemented contracts and future gates
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 **Planned replacement — 2026-11-05:** the [notification guidance design](../../docs/turn-by-turn-plan.md) proposes retiring c016–c01b and adding a new lightweight guidance channel. These new bytes are a proposal pending feasibility/contract freeze; the implemented map contracts below remain present until migration. c011–c015 must remain compatible.
 
 Phase 2 firmware discovery, exact layouts, limits, session/credit rules and normative examples are implemented in the [v2 contract below](#phase-2-navigation-extension--implemented-firmware-contract). Existing v1 frames/reserved bits/UUIDs remain unchanged. Android must target that contract; its source/cache proof and actual integration are still pending.

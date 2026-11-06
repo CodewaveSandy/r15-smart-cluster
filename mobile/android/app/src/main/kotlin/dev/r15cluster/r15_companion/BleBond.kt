@@ -8,7 +8,7 @@ import java.util.UUID
 /** Sole owner of the physical GATT. All operations/callbacks are serialized on main. */
 @Suppress("DEPRECATION")
 class BleBond(private val context: Context, private val changed: (Map<String, Any?>) -> Unit) {
-    private enum class Operation { NONE, DISCOVERY, ENROLLMENT, MTU, METADATA, CAPABILITIES, SUBSCRIBE, BASELINE, HEALTH }
+    private enum class Operation { NONE, DISCOVERY, ENROLLMENT, MTU, METADATA, CAPABILITIES, SUBSCRIBE, BASELINE, HEALTH, GUIDANCE_CAP, GUIDANCE_SUBSCRIBE, GUIDANCE_STATUS, GUIDANCE_WRITE }
     private val serviceId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c010")
     private val nameId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c011")
     private val metadataId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c012")
@@ -19,6 +19,36 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
     private val capabilitiesId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c013")
     private val telemetryId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c014")
     private val healthId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c015")
+    internal val guidance = TurnGuidanceSync()
+    private val guidanceCapId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c01c")
+    private val guidanceCommandId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c01d")
+    private val guidanceStatusId = UUID.fromString("813b1240-8fd9-4d67-a53b-9f0a2531c01e")
+    private var guidanceCap: BluetoothGattCharacteristic? = null
+    private var guidanceCommand: BluetoothGattCharacteristic? = null
+    private var guidanceStatus: BluetoothGattCharacteristic? = null
+    private var pendingGuidance: Incoming? = null
+    private var guidancePosted = false
+    private var lastGuidance: Map<String, Any?>? = null
+    private val deliverGuidance = Runnable {
+        val incoming = synchronized(notificationLock) { val v=pendingGuidance;pendingGuidance=null;guidancePosted=false;v }
+        if(incoming!=null && gatt===incoming.connection && !blocked && incoming.characteristic===guidanceStatus) {
+            guidance.status(incoming.bytes,incoming.receivedAt);optional { pumpMetadata() };publish()
+        }
+    }
+    private val guidanceTick = object: Runnable {
+        override fun run() {
+            if(!ready)return
+            optional { pumpMetadata() }
+            val value=guidance.snapshot(SystemClock.elapsedRealtime())
+            if(value!=lastGuidance){lastGuidance=value;publish()}
+            if(guidance.active())handler.postDelayed(this,100)
+        }
+    }
+    internal fun updateGuidance(value: TurnObservation?,wanted: Boolean,reason: Int=2){
+        guidance.update(value,wanted,reason)
+        if(ready){handler.removeCallbacks(guidanceTick);handler.post(guidanceTick)}
+    }
+    internal fun retryGuidance(){guidance.retry();if(ready){handler.removeCallbacks(guidanceTick);handler.post(guidanceTick)}}
     private val cccdId = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     private var capabilitiesCharacteristic: BluetoothGattCharacteristic? = null
     private var telemetryCharacteristic: BluetoothGattCharacteristic? = null
@@ -151,6 +181,7 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
             "bonded" to bonded, "error" to failure, "nameStatus" to nameStatus,
             "retryAllowed" to retryAllowed, "metadataState" to (if (metadataState == "synced" &&
                 lastAccepted?.let { SystemClock.elapsedRealtime() - it >= 90000 } == true) "unavailable" else metadataState),
+            "guidanceTransport" to guidance.snapshot(SystemClock.elapsedRealtime()),
             "telemetry" to (telemetry?.snapshot(SystemClock.elapsedRealtime()) ?: mapOf("state" to telemetryState)))
     }
     private fun publish() { changed(snapshot()) }
@@ -219,6 +250,9 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
                         it.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0 && it.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0
                     }
                     healthCharacteristic = service?.getCharacteristic(healthId)?.takeIf { it.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0 }
+                    guidanceCap = service?.getCharacteristic(guidanceCapId)?.takeIf { it.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0 }
+                    guidanceCommand = service?.getCharacteristic(guidanceCommandId)?.takeIf { it.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0 }
+                    guidanceStatus = service?.getCharacteristic(guidanceStatusId)?.takeIf { it.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0 && it.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0 }
                     val enrollment = service?.getCharacteristic(nameId)
                     if (!enrollmentDone && target?.bondState == BluetoothDevice.BOND_NONE && enrollment != null) {
                         beginOperation(Operation.ENROLLMENT)
@@ -251,8 +285,11 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
         override fun onCharacteristicWrite(connection: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             handler.post {
                 if (gatt !== connection || blocked) return@post
-                if (rediscoverPending && operation in listOf(Operation.ENROLLMENT, Operation.METADATA)) {
+                if (rediscoverPending && operation in listOf(Operation.ENROLLMENT, Operation.METADATA, Operation.GUIDANCE_WRITE)) {
                     endOperation(); optional { pumpMetadata() }; return@post
+                }
+                if (characteristic === guidanceCommand && operation == Operation.GUIDANCE_WRITE) {
+                    endOperation();guidance.writeResult(status==BluetoothGatt.GATT_SUCCESS,SystemClock.elapsedRealtime());publish();optional { pumpMetadata() };return@post
                 }
                 if (characteristic.uuid == nameId && operation == Operation.ENROLLMENT) {
                     endOperation()
@@ -282,7 +319,8 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
                 if (gatt !== connection || blocked) return@post
                 // Finish the current ATT operation before rediscovering. New
                 // callbacks/notifications cannot use invalid characteristic refs.
-                resetTelemetry()
+                resetTelemetry();guidance.reset();guidanceCap=null;guidanceCommand=null;guidanceStatus=null
+                synchronized(notificationLock){pendingGuidance=null}
                 metadataCharacteristic = null; capabilitiesCharacteristic = null
                 telemetryCharacteristic = null; healthCharacteristic = null
                 stopMetadata("syncing")
@@ -304,8 +342,11 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
         }
         override fun onDescriptorWrite(connection: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
             handler.post {
-                if (gatt === connection && !blocked && rediscoverPending && operation == Operation.SUBSCRIBE) {
+                if (gatt === connection && !blocked && rediscoverPending && operation in listOf(Operation.SUBSCRIBE,Operation.GUIDANCE_SUBSCRIBE)) {
                     endOperation(); optional { pumpMetadata() }; return@post
+                }
+                if(gatt===connection && !blocked && operation==Operation.GUIDANCE_SUBSCRIBE && descriptor.uuid==cccdId && descriptor.characteristic===guidanceStatus){
+                    endOperation();guidance.subscribed(status==BluetoothGatt.GATT_SUCCESS);publish();optional { pumpMetadata() };return@post
                 }
                 if (gatt !== connection || blocked || operation != Operation.SUBSCRIBE ||
                     descriptor.uuid != cccdId || descriptor.characteristic !== telemetryCharacteristic) return@post
@@ -324,6 +365,10 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
 
     private fun receiveTelemetry(connection: BluetoothGatt, characteristic: BluetoothGattCharacteristic, bytes: ByteArray) {
         val receivedAt = SystemClock.elapsedRealtime()
+        if(characteristic.uuid==guidanceStatusId){
+            synchronized(notificationLock){pendingGuidance=Incoming(connection,characteristic,bytes,receivedAt);if(!guidancePosted){guidancePosted=true;handler.post(deliverGuidance)}}
+            return
+        }
         synchronized(notificationLock) {
             pendingNotification = Incoming(connection, characteristic, bytes, receivedAt)
             if (!notificationPosted) { notificationPosted = true; handler.post(deliverNotification) }
@@ -338,16 +383,20 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
                 Operation.CAPABILITIES -> capabilitiesCharacteristic
                 Operation.BASELINE -> telemetryCharacteristic
                 Operation.HEALTH -> healthCharacteristic
+                Operation.GUIDANCE_CAP -> guidanceCap
+                Operation.GUIDANCE_STATUS -> guidanceStatus
                 else -> null
             }
             // A service-change invalidates refs, but still consumes its outstanding callback.
-            if (rediscoverPending && active in listOf(Operation.CAPABILITIES, Operation.BASELINE, Operation.HEALTH)) {
+            if (rediscoverPending && active in listOf(Operation.CAPABILITIES, Operation.BASELINE, Operation.HEALTH, Operation.GUIDANCE_CAP, Operation.GUIDANCE_STATUS)) {
                 endOperation(); optional { pumpMetadata() }; return@post
             }
             if (expected == null || characteristic !== expected) return@post
             endOperation()
             android.util.Log.i("R15BleLink", "read operation=${active.ordinal} status=$status bytes=${bytes.size}")
             when (active) {
+                Operation.GUIDANCE_CAP -> guidance.capability(if(status==BluetoothGatt.GATT_SUCCESS)bytes else null,receivedAt)
+                Operation.GUIDANCE_STATUS -> if(status==BluetoothGatt.GATT_SUCCESS)guidance.status(bytes,receivedAt) else guidance.readFailed(receivedAt)
                 Operation.CAPABILITIES -> {
                     val caps = if (status == BluetoothGatt.GATT_SUCCESS) TelemetryWire.capabilities(bytes) else null
                     if (caps != null) {
@@ -445,7 +494,7 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
         if (!mtuAttempted) {
             mtuAttempted = true
             beginOperation(Operation.MTU)
-            if (gatt?.requestMtu(96) != true) { endOperation(); stopMetadata("unavailable"); pumpTelemetry() }
+            if (gatt?.requestMtu(247) != true) { endOperation(); stopMetadata("unavailable"); pumpTelemetry() }
             return
         }
         if (metadataCharacteristic == null) {
@@ -462,6 +511,7 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
             scheduleMetadata(0)
         }
         pumpTelemetry()
+        if(operation==Operation.NONE)pumpGuidance()
     }
     private fun pumpTelemetry() {
         if (!ready || blocked || operation != Operation.NONE) return
@@ -503,11 +553,30 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
             }
         }
     }
+    private fun pumpGuidance(){
+        if(!ready||blocked||operation!=Operation.NONE||rediscoverPending)return
+        val current=gatt?:return
+        val req=guidance.next(SystemClock.elapsedRealtime(),mtu,guidanceCap!=null&&guidanceCommand!=null&&guidanceStatus!=null)?:return
+        when(req.kind){
+            "capability"->read(current,guidanceCap!!,Operation.GUIDANCE_CAP)
+            "status"->read(current,guidanceStatus!!,Operation.GUIDANCE_STATUS)
+            "subscribe"->{
+                val c=guidanceStatus!!;val d=c.getDescriptor(cccdId)
+                if(d==null||!current.setCharacteristicNotification(c,true)){guidance.subscribed(false);return}
+                beginOperation(Operation.GUIDANCE_SUBSCRIBE)
+                val ok=if(Build.VERSION.SDK_INT>=33)current.writeDescriptor(d,BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)==BluetoothStatusCodes.SUCCESS else {d.value=BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;current.writeDescriptor(d)}
+                if(!ok){endOperation();guidance.subscribed(false)}
+            }
+            "write"->{beginOperation(Operation.GUIDANCE_WRITE);if(!write(current,guidanceCommand!!,req.bytes)){endOperation();guidance.writeResult(false,SystemClock.elapsedRealtime())}}
+        }
+    }
     private fun read(current: BluetoothGatt, characteristic: BluetoothGattCharacteristic, next: Operation) {
         beginOperation(next)
         readDispatch = SystemClock.elapsedRealtime()
         if (!current.readCharacteristic(characteristic)) {
             endOperation()
+            if(next==Operation.GUIDANCE_CAP)guidance.capability(null,SystemClock.elapsedRealtime())
+            if(next==Operation.GUIDANCE_STATUS)guidance.readFailed(SystemClock.elapsedRealtime())
             if (next == Operation.CAPABILITIES) { telemetryState = "unavailable"; publish() }
             if (next == Operation.BASELINE) {
                 handler.removeCallbacks(baselineRefresh); handler.postDelayed(baselineRefresh, 2000)
@@ -581,7 +650,9 @@ class BleBond(private val context: Context, private val changed: (Map<String, An
         clearAttempt()
         handler.removeCallbacks(operationTimeout)
         stopMetadata("notConnected")
-        resetTelemetry()
+        resetTelemetry();guidance.reset();guidanceCap=null;guidanceCommand=null;guidanceStatus=null;lastGuidance=null
+        handler.removeCallbacks(guidanceTick)
+        synchronized(notificationLock){pendingGuidance=null}
         val old = gatt; gatt = null
         try { old?.disconnect() } catch (_: Exception) {}
         try { old?.close() } catch (_: Exception) {}

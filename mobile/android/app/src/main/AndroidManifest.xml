@@ -17,6 +17,11 @@
         android:icon="@mipmap/ic_launcher">
         <service android:name=".ClusterSyncService" android:exported="false"
             android:foregroundServiceType="connectedDevice" android:stopWithTask="false" />
+        <service android:name=".MapsNotificationListener" android:label="R15 Google Maps guidance"
+            android:exported="false" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+            <meta-data android:name="android.service.notification.default_filter_types" android:value="ongoing|silent|alerting|conversations" />
+        </service>
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -51,6 +56,7 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <package android:name="com.google.android.apps.maps" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../features/home/presentation/my_bike_page.dart';
+import '../features/guidance/presentation/guidance_card.dart';
 import '../features/home/domain/bike_telemetry.dart';
 import '../features/phone/application/ble_connection.dart';
 import '../features/phone/application/preview_session.dart';
@@ -75,6 +76,14 @@ class _CompanionHomeState extends State<CompanionHome> {
           child: switch (_page) {
             _CompanionPage.bike => MyBikePage(
               status: widget.status,
+              guidance: widget.ble == null
+                  ? null
+                  : GuidanceCard(
+                      state: widget.ble!.guidance,
+                      connected: widget.ble!.live,
+                      onAction: widget.ble!.guidanceAction,
+                      onConnect: () => _select(_CompanionPage.connection),
+                    ),
               telemetry:
                   widget.ble?.telemetry ?? const BikeTelemetry.unavailable(),
               onConnection: () => _select(_CompanionPage.connection),

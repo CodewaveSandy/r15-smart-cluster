@@ -20,6 +20,8 @@ class BlePairing {
     });
   }
 
+  Future<void> guidanceAction(String action) =>
+      _channel.invokeMethod<void>('guidance', {'action': action});
   Future<void> disconnect() => _channel.invokeMethod<void>('disconnectLink');
   Future<void> forgetSelection() =>
       _channel.invokeMethod<void>('forgetSelection');

@@ -1,5 +1,7 @@
 # R15 Smart Cluster
 
+**Android integration — 2026-11-06:** The notification listener/parser, native sharing session, existing-owner BLE channel and My bike controls are now source-integrated against firmware `50f6bc2`. See the [implementation and manual APK checklist](mobile/docs/turn-guidance-implementation.md). Local verification is formatting/static analysis/syntax only; APK/Android compilation belongs to GitHub Actions and phone/board acceptance remains pending. Earlier “Android pending/unimplemented” passages describe the previous handoff state.
+
 **Turn guidance firmware — 2026-11-05:** [Implementation and handoff](docs/turn-by-turn-firmware.md) covers the new authenticated channel, bounded relay, display card, local expiry and exact v1 bytes. No custom map/menu returns; phone notification feasibility and hardware acceptance remain separate.
 
 **2026-11-05 removal:** The custom map/navigation implementation and its menu/tab have been removed. Pairing, metadata/time, telemetry and the UART/vehicle-stack fixes remain. Google Maps notification turn guidance is now source-integrated in both firmware targets; Android integration and physical acceptance remain pending. See the [removal record](docs/navigation-removal.md).
